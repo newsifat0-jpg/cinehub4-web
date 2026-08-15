@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cine Hub4</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #070b14;
+      color: #fff;
+      padding-bottom: 90px;
+    }
+
+    header {
+      padding: 22px 18px;
+      background: #0d1422;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .logo span {
+      color: #6c63ff;
+    }
+
+    .search {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      border: 1px solid #29334a;
+      background: #151d2d;
+      color: white;
+      font-size: 20px;
+    }
+
+    .hero {
+      margin: 18px;
+      padding: 25px 20px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #6857e8, #08b7d9);
+    }
+
+    .hero small {
+      opacity: .85;
+    }
+
+    .hero h1 {
+      margin: 8px 0;
+      font-size: 27px;
+    }
+
+    .hero p {
+      opacity: .9;
+      line-height: 1.5;
+    }
+
+    .hero button {
+      margin-top: 18px;
+      border: 0;
+      border-radius: 14px;
+      padding: 13px 20px;
+      font-weight: bold;
+      color: #111;
+      background: white;
+    }
+
+    .section {
+      padding: 5px 18px;
+      margin-top: 25px;
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .section-title h2 {
+      font-size: 20px;
+    }
+
+    .section-title span {
+      color: #7d8aa5;
+      font-size: 13px;
+    }
+
+    .movies {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+
+    .movie {
+      background: #101725;
+      border: 1px solid #202b40;
+      border-radius: 18px;
+      overflow: hidden;
+    }
+
+    .poster {
+      height: 210px;
+      background: linear-gradient(135deg, #242c40, #151a27);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #73809a;
+      font-size: 14px;
+    }
+
+    .movie-info {
+      padding: 12px;
+    }
+
+    .movie-title {
+      font-weight: bold;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    .meta {
+      margin-top: 9px;
+      color: #8c99b2;
+      font-size: 12px;
+    }
+
+    .watch {
+      width: 100%;
+      margin-top: 10px;
+      border: 0;
+      border-radius: 10px;
+      padding: 9px;
+      background: linear-gradient(90deg, #6957ed, #09b7d5);
+      color: white;
+      font-weight: bold;
+    }
+
+    nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 75px;
+      background: #0d1422;
+      border-top: 1px solid #263149;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 20;
+    }
+
+    nav button {
+      background: none;
+      border: 0;
+      color: #8995ad;
+      font-size: 12px;
+    }
+
+    nav .active {
+      color: #4cc9f0;
+    }
+
+    nav div {
+      font-size: 22px;
+      margin-bottom: 3px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="logo">Cine <span>Hub4</span></div>
+    <button class="search">⌕</button>
+  </header>
+
+  <section class="hero">
+    <small>WELCOME TO CINE HUB4</small>
+    <h1>Movies & Series</h1>
+    <p>
+      নতুন মুভি, ট্রেন্ডিং কনটেন্ট এবং তোমার পছন্দের সিনেমা
+      এক জায়গায়।
+    </p>
+    <button>▶ Explore Now</button>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>🔥 Trending</h2>
+      <span>See All</span>
+    </div>
+
+    <div class="movies">
+
+      <div class="movie">
+        <div class="poster">Movie Poster</div>
+        <div class="movie-info">
+          <div class="movie-title">Sample Movie 01</div>
+          <div class="meta">⭐ 8.5 • 4K • বাংলা</div>
+          <button class="watch">▶ Watch Now</button>
+        </div>
+      </div>
+
+      <div class="movie">
+        <div class="poster">Movie Poster</div>
+        <div class="movie-info">
+          <div class="movie-title">Sample Movie 02</div>
+          <div class="meta">⭐ 8.1 • 1080p • Hindi</div>
+          <button class="watch">▶ Watch Now</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>🆕 Latest Movies</h2>
+      <span>See All</span>
+    </div>
+
+    <div class="movies">
+
+      <div class="movie">
+        <div class="poster">Movie Poster</div>
+        <div class="movie-info">
+          <div class="movie-title">Latest Movie</div>
+          <div class="meta">⭐ 7.9 • 1080p</div>
+          <button class="watch">▶ Watch Now</button>
+        </div>
+      </div>
+
+      <div class="movie">
+        <div class="poster">Movie Poster</div>
+        <div class="movie-info">
+          <div class="movie-title">New Release</div>
+          <div class="meta">⭐ 8.0 • 4K</div>
+          <button class="watch">▶ Watch Now</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <nav>
+    <button class="active">
+      <div>⌂</div>
+      Home
+    </button>
+
+    <button>
+      <div>🎬</div>
+      Movies
+    </button>
+
+    <button>
+      <div>🔎</div>
+      Search
+    </button>
+
+    <button>
+      <div>♡</div>
+      Favorite
+    </button>
+
+    <button>
+      <div>👤</div>
+      Profile
+    </button>
+  </nav>
+
+</body>
+  </html>
