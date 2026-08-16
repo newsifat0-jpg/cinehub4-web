@@ -208,3 +208,53 @@ function profile(){
 }
       
       
+/* ---------- Admin ---------- */
+async function adminLoad(){
+ try{let d=await fsList("requests");state.requests=(d.documents||[]).map(x=>({id:x.name.split("/").pop(),...fsDocToObj(x)}));}catch(e){state.requests=[]}
+ let map={};for(const r of state.requests){let id=String(r.user_id||"unknown");if(!map[id])map[id]={user_id:id,first_name:r.first_name||"Unknown",username:r.username||"",requests:[]};map[id].requests.push(r)}
+ state.users=Object.values(map).sort((a,b)=>(b.requests[0]?.created_time||0)-(a.requests[0]?.created_time||0));
+ try{let d=await fsGet("config/main");state.cfg=fsDocToObj(d)}catch(e){state.cfg={...CONFIG}}
+}
+function adminShell(body){document.getElementById("app").innerHTML=`<div class="admin"><div class="toprow" style="margin-bottom:12px"><button class="iconbtn" onclick="state.page='home';render()">←</button><div class="brand">👨‍💼 Admin Panel</div><span class="pill">${isAdmin()?"ADMIN":"NO ACCESS"}</span></div>${body}</div>`}
+function adminDashboard(){
+ let pending=state.requests.filter(x=>String(x.status||"pending")!=="completed").length;
+ return `<div class="admin-nav">${["dashboard","movies","users","requests","config"].map(x=>`<button class="btn ${state.adminTab===x?"primary":""}" onclick="state.adminTab='${x}';renderAdmin()">${x}</button>`).join("")}</div>
+ <div class="grid"><div class="stat">📩<b>${state.requests.length}</b>Total Requests</div><div class="stat">🟡<b>${pending}</b>Pending</div><div class="stat">👥<b>${state.users.length}</b>Users</div><div class="stat">🎬<b>${state.movies.length}</b>Movies</div></div>
+ <div class="card"><div class="title">📊 Admin Dashboard</div><div class="muted">Central overview of movies, users and requests.</div></div>`;
+}
+function adminUsers(){
+ return `<div class="admin-nav"><button class="btn" onclick="state.adminTab='dashboard';renderAdmin()">← Dashboard</button></div><div class="section-head"><h3>👥 User List</h3></div><div class="card table"><div class="row head"><span>User</span><span>ID</span><span>Requests</span><span>Action</span></div>${state.users.map((u,i)=>`<div class="row"><span>${esc(u.first_name)}<br><small>@${esc(u.username)}</small></span><span>${esc(u.user_id)}</span><span>${u.requests.length}</span><span><button class="btn primary" onclick="adminUser(${i})">Open</button></span></div>`).join("")||`<div class="empty">No users</div>`}</div>`;
+}
+function adminUser(i){let u=state.users[i];document.getElementById("app").innerHTML=`<div class="admin"><button class="btn" onclick="state.adminTab='users';renderAdmin()">← Back</button><div class="card"><div class="title">👤 ${esc(u.first_name)}</div><div class="muted">🆔 ${esc(u.user_id)} · @${esc(u.username)}</div><h3>📨 Total Requests: ${u.requests.length}</h3></div>${u.requests.map((r,j)=>`<div class="card"><b>${j+1}. ${esc(r.movie_name)}</b><div class="muted">📅 ${esc(r.year||"N/A")} · 🕐 ${new Date(Number(r.created_time||0)).toLocaleString()} · ${String(r.status||"pending")}</div><div class="cta">${r.status!=="completed"?`<button class="btn ok" onclick="completeReq('${esc(r.id)}')">✅ Complete</button>`:""}<button class="btn danger" onclick="deleteReq('${esc(r.id)}')">🗑 Delete</button><button class="btn primary" onclick="adminReply('${esc(u.user_id)}')">💬 Reply</button></div></div>`).join("")}</div>`}
+async function completeReq(id){try{await fsSet("requests",id,{status:"completed"});toast("✅ Completed");await adminLoad();renderAdmin()}catch(e){toast("Error")}}
+async function deleteReq(id){if(!confirm("Delete this request?"))return;try{await fsDelete("requests",id);toast("🗑 Deleted");await adminLoad();renderAdmin()}catch(e){toast("Error")}}
+function adminReply(uid){let text=prompt("Reply message:");if(!text)return;try{TG?.sendData(JSON.stringify({type:"admin_reply",user_id:String(uid),text}));toast("Reply data sent to bot");}catch(e){toast("Telegram WebApp unavailable")}}
+function adminRequests(){
+ return `<div class="admin-nav"><button class="btn" onclick="state.adminTab='dashboard';renderAdmin()">← Dashboard</button></div><div class="card table"><div class="row head"><span>Movie</span><span>User</span><span>Status</span><span>Action</span></div>${state.requests.sort((a,b)=>Number(b.created_time||0)-Number(a.created_time||0)).map(r=>`<div class="row"><span>${esc(r.movie_name)}</span><span>${esc(r.first_name||r.user_id)}</span><span>${esc(r.status||"pending")}</span><span><button class="btn primary" onclick="adminRequest('${esc(r.id)}')">Open</button></span></div>`).join("")||`<div class="empty">No requests</div>`}</div>`;
+}
+function adminRequest(id){let r=state.requests.find(x=>x.id===id);if(!r)return;document.getElementById("app").innerHTML=`<div class="admin"><button class="btn" onclick="state.adminTab='requests';renderAdmin()">← Back</button><div class="card"><div class="title">📩 Request Details</div><div class="muted">👤 ${esc(r.first_name)} · 🆔 ${esc(r.user_id)}<br>🎬 ${esc(r.movie_name)}<br>📅 ${esc(r.year||"N/A")}<br>🕐 ${new Date(Number(r.created_time||0)).toLocaleString()}<br>📌 ${esc(r.status||"pending")}</div><div class="cta">${r.status!=="completed"?`<button class="btn ok" onclick="completeReq('${esc(r.id)}')">✅ Mark Complete</button>`:""}<button class="btn danger" onclick="deleteReq('${esc(r.id)}')">🗑 Delete</button><button class="btn primary" onclick="adminReply('${esc(r.user_id)}')">💬 Reply</button></div></div></div>`}
+function adminMovies(){
+ return `<div class="admin-nav"><button class="btn" onclick="state.adminTab='dashboard';renderAdmin()">← Dashboard</button><button class="btn primary" onclick="adminMovieForm()">＋ Add</button></div><div class="card table"><div class="row head"><span>Movie</span><span>Year</span><span>Rating</span><span>Action</span></div>${state.movies.map(m=>`<div class="row"><span>${esc(m.title||m.movie_name)}</span><span>${esc((m.release_date||m.year||"").slice(0,4))}</span><span>⭐${Number(m.vote_average||m.rating||0).toFixed(1)}</span><span><button class="btn danger" onclick="deleteMovie('${esc(m.id)}')">🗑</button></span></div>`).join("")}</div>`;
+}
+function adminMovieForm(){document.getElementById("app").innerHTML=`<div class="admin"><button class="btn" onclick="state.adminTab='movies';renderAdmin()">← Back</button><div class="card"><h3>🎬 Add Movie</h3><div class="form"><input id="mId" placeholder="Movie ID"><input id="mTitle" placeholder="Movie title"><input id="mPoster" placeholder="Poster path or full URL"><input id="mYear" placeholder="Year"><input id="mRating" placeholder="Rating"><input id="mGenre" placeholder="Genre"><textarea id="mOverview" placeholder="Overview"></textarea><input id="mS1" placeholder="Server 1 URL"><input id="mS2" placeholder="Server 2 URL"><input id="mS3" placeholder="Server 3 URL"><button class="btn primary" onclick="saveMovie()">Save Movie</button></div></div></div>`}
+async function saveMovie(){let id=document.getElementById("mId").value.trim();if(!id){toast("ID required");return}let m={title:document.getElementById("mTitle").value,poster:document.getElementById("mPoster").value,year:document.getElementById("mYear").value,rating:Number(document.getElementById("mRating").value||0),genre:document.getElementById("mGenre").value,overview:document.getElementById("mOverview").value,server1:document.getElementById("mS1").value,server2:document.getElementById("mS2").value,server3:document.getElementById("mS3").value,updated_time:Date.now()};try{await fsSet("movies",id,m);toast("Saved");await adminLoad();state.adminTab="movies";renderAdmin()}catch(e){toast("Save failed")}}
+async function deleteMovie(id){if(!confirm("Delete movie?"))return;try{await fsDelete("movies",id);await adminLoad();renderAdmin()}catch(e){toast("Delete failed")}}
+async function adminConfig(){
+ let c={...CONFIG,...state.cfg};return `<div class="admin-nav"><button class="btn" onclick="state.adminTab='dashboard';renderAdmin()">← Dashboard</button></div><div class="card"><h3>⚙️ Central Config</h3>
+ ${[["maintenance_mode","🚧 Maintenance mode"],["server1_enabled","🔧 Server 1"],["server2_enabled","🔧 Server 2"],["server3_enabled","🔧 Server 3"],["trending_enabled","🔥 Trending"],["recently_added_enabled","🆕 Recently Added"],["recently_viewed_enabled","📜 Recently Viewed"],["favourite_enabled","❤️ Favourite"],["broadcast_enabled","📢 Broadcast UI"]].map(([k,l])=>`<div class="switch"><span>${l}</span><input type="checkbox" ${c[k]?"checked":""} onchange="updateConfig('${k}',this.checked)"></div>`).join("")}</div>
+ <div class="card"><div class="muted">Firestore Project</div><b>${esc(CONFIG.firebaseProjectId)}</b><br><div class="muted">TMDB configured: ${CONFIG.tmdbApiKey?"YES":"NO"}</div></div>`;
+}
+async function updateConfig(k,v){try{await fsSet("config","main",{[k]:v});state.cfg[k]=v;toast("Config updated")}catch(e){toast("Config save failed")}}
+async function renderAdmin(){if(!isAdmin()){document.getElementById("app").innerHTML=`<div class="empty">Access denied</div>`;return}await adminLoad();let b=state.adminTab==="users"?adminUsers():state.adminTab==="requests"?adminRequests():state.adminTab==="movies"?adminMovies():state.adminTab==="config"?await adminConfig():adminDashboard();adminShell(b)}
+
+/* ---------- Router ---------- */
+async function render(){
+ if(state.page==="admin"){renderAdmin();return}
+ let content=state.page==="home"?home():state.page==="movies"?moviesPage():state.page==="search"?searchPage():state.page==="favourites"?`<div class="section-head"><h3>❤️ ${t("fav")}</h3></div><div class="movie-grid">${state.movies.filter(m=>localFavourite(m.id||m.tmdb_id)).map(movieCard).join("")||`<div class="empty">${t("no")}</div>`}</div>`:state.page==="profile"?profile():state.page==="request"?requestPage():state.page==="detail"?detail():home();
+ shell(content);
+ if(state.page==="search")doTMDBSearch();
+}
+(async()=>{try{await loadMovies();await saveUser()}catch(e){}render()})();
+</script>
+</body>
+</html>
