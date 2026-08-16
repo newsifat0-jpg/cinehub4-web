@@ -1,121 +1,1372 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="bn">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+
 <title>Cine Hub4</title>
+
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#070a12;--panel:#0e1421;--panel2:#141c2c;--line:#26334b;--text:#fff;--muted:#8e9bb2;--a:#7568ff;--b:#10c7da;--ok:#27d49a;--red:#ff5264;--gold:#ffd166}
-body{font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--text);padding-bottom:78px}
-button,input,textarea,select{font:inherit}button{cursor:pointer}
-header{height:64px;position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;padding:10px 15px;background:#0b111ddd;border-bottom:1px solid #18243a;backdrop-filter:blur(14px)}
-.logo{font-size:21px;font-weight:900}.logo span{color:var(--b)}
-.hbtns{display:flex;gap:7px}.icon{width:40px;height:40px;border:1px solid var(--line);background:var(--panel2);color:#fff;border-radius:12px}
-.view{display:none}.view.active{display:block}
-.hero{margin:15px;padding:24px 20px;border-radius:24px;background:linear-gradient(135deg,#6758e8,#0bbfd5);box-shadow:0 18px 40px #0006}
-.hero small{font-size:11px;font-weight:800;letter-spacing:1px}.hero h1{font-size:28px;margin:8px 0}.hero p{font-size:14px;line-height:1.55;opacity:.92}
-.primary{margin-top:16px;border:0;border-radius:13px;padding:12px 18px;background:#fff;color:#111;font-weight:900}
-.section{padding:0 15px;margin-top:22px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.top h2{font-size:18px}.see{font-size:12px;color:var(--b)}
-.movies{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
-.movie{background:var(--panel);border:1px solid #1d2940;border-radius:16px;overflow:hidden}
-.poster{height:205px;background:#141b29 center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:#66748b;font-size:12px;position:relative}
-.badge{position:absolute;top:8px;left:8px;background:var(--red);font-size:10px;padding:4px 7px;border-radius:7px;font-weight:900}
-.minfo{padding:10px}.mtitle{font-size:14px;font-weight:800;line-height:1.35;min-height:38px}.meta{font-size:11px;color:var(--muted);margin-top:6px}
-.watch{width:100%;margin-top:9px;padding:9px;border:0;border-radius:10px;background:linear-gradient(90deg,var(--a),var(--b));color:#fff;font-weight:900}
-.chips{display:flex;gap:8px;overflow:auto;padding:3px 15px 12px}.chip{white-space:nowrap;border:1px solid var(--line);background:var(--panel2);color:var(--muted);border-radius:20px;padding:8px 14px;font-size:12px}.chip.active{background:var(--a);color:#fff;border-color:var(--a)}
-.search{margin:15px}.search input,.field input,.field textarea,.field select{width:100%;border:1px solid var(--line);background:var(--panel2);color:#fff;border-radius:13px;padding:13px;outline:none}.field{margin-bottom:12px}.field label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}
-.empty{text-align:center;color:var(--muted);padding:42px 15px;font-size:13px}.loading{text-align:center;padding:35px;color:var(--muted)}
-.profile{margin:15px;padding:24px;text-align:center;border-radius:22px;background:var(--panel);border:1px solid var(--line)}.avatar{width:76px;height:76px;border-radius:50%;margin:0 auto 12px;background:linear-gradient(135deg,var(--a),var(--b));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900}
-.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin:15px}.stat{padding:15px 8px;background:var(--panel);border:1px solid var(--line);border-radius:14px;text-align:center}.stat b{display:block;color:var(--b);font-size:21px}.stat span{font-size:10px;color:var(--muted)}
-nav{position:fixed;bottom:0;left:0;right:0;height:76px;z-index:60;display:flex;background:#0a101df5;border-top:1px solid var(--line);backdrop-filter:blur(14px)}
-nav button{flex:1;border:0;background:none;color:#74829b;font-size:10px}nav button.active{color:var(--b)}nav i{display:block;font-style:normal;font-size:21px;margin:7px 0 3px}
-.overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:100;overflow:auto}.overlay.active{display:block}.otop{position:sticky;top:0;z-index:3;padding:12px;background:#0b111ddd;backdrop-filter:blur(12px)}.close{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:#fff}
-.dposter{height:390px;background:center/cover no-repeat}.detail{padding:20px}.detail h1{font-size:24px}.rating{display:inline-block;color:var(--gold);background:var(--panel2);padding:7px 10px;border-radius:9px;margin:10px 0}.desc{color:#bdc7d7;font-size:14px;line-height:1.65}.server,.outline,.danger,.btn{width:100%;padding:13px;border-radius:13px;margin-top:10px;font-weight:900}.server,.btn{border:0;background:linear-gradient(90deg,var(--a),var(--b));color:#fff}.outline{border:1px solid var(--line);background:var(--panel2);color:#fff}.danger{border:0;background:#351a24;color:#ff7281}
-.adminHead{margin:15px;padding:20px;border-radius:21px;background:linear-gradient(135deg,#1b2041,#0d3038);border:1px solid var(--line)}.adminHead p{font-size:12px;color:var(--muted);margin-top:5px}.adminGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:15px}.acard{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:16px}.acard b{font-size:23px;color:var(--b);display:block}.acard span{font-size:11px;color:var(--muted)}
-.panel{margin:15px;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:17px}.row{display:flex;gap:8px}.row>*{flex:1}.small{border:1px solid var(--line);background:var(--panel2);color:#fff;border-radius:10px;padding:10px}
-.item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px;margin-top:8px;border-radius:12px;background:var(--panel2);border:1px solid var(--line)}.item small{color:var(--muted)}
-.toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #1c273b}.toggle:last-child{border:0}.switch{width:46px;height:25px;border-radius:20px;background:#26334a;position:relative;border:0}.switch i{position:absolute;width:19px;height:19px;top:3px;left:3px;background:#fff;border-radius:50%;transition:.2s}.switch.on{background:var(--ok)}.switch.on i{left:24px}
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+  -webkit-tap-highlight-color:transparent;
+}
+
+:root{
+  --bg:#070a12;
+  --bg2:#0c1120;
+  --card:#111827;
+  --card2:#151d2d;
+  --line:#263149;
+  --text:#f7f8ff;
+  --muted:#8e9ab3;
+  --primary:#7567ff;
+  --cyan:#14c8e8;
+  --pink:#e45cff;
+  --green:#35d49a;
+  --red:#ff5570;
+  --yellow:#ffd166;
+}
+
+body{
+  font-family:Arial,Helvetica,sans-serif;
+  background:
+    radial-gradient(circle at 10% 0%,rgba(117,103,255,.16),transparent 30%),
+    radial-gradient(circle at 100% 20%,rgba(20,200,232,.10),transparent 30%),
+    var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  padding-bottom:90px;
+}
+
+button,
+input,
+textarea,
+select{
+  font-family:inherit;
+}
+
+button{
+  cursor:pointer;
+}
+
+::-webkit-scrollbar{
+  width:4px;
+  height:4px;
+}
+::-webkit-scrollbar-thumb{
+  background:#303a54;
+  border-radius:20px;
+}
+
+/* HEADER */
+
+.header{
+  position:sticky;
+  top:0;
+  z-index:50;
+  height:66px;
+  padding:0 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:rgba(8,12,22,.90);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+
+.logo{
+  font-size:21px;
+  font-weight:900;
+  letter-spacing:-.5px;
+}
+
+.logo span{
+  background:linear-gradient(90deg,var(--primary),var(--cyan));
+  -webkit-background-clip:text;
+  color:transparent;
+}
+
+.header-actions{
+  display:flex;
+  gap:8px;
+}
+
+.icon-btn{
+  width:40px;
+  height:40px;
+  border:1px solid var(--line);
+  border-radius:13px;
+  background:var(--card2);
+  color:white;
+  font-size:17px;
+}
+
+/* VIEW */
+
+.view{
+  display:none;
+  animation:fadeIn .18s ease;
+}
+
+.view.active{
+  display:block;
+}
+
+@keyframes fadeIn{
+  from{opacity:.2;transform:translateY(4px)}
+  to{opacity:1;transform:none}
+}
+
+/* HERO */
+
+.hero{
+  margin:16px;
+  padding:24px 20px;
+  border-radius:26px;
+  position:relative;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 90% 10%,rgba(255,255,255,.25),transparent 28%),
+    linear-gradient(135deg,#5949d8,#176fbb 55%,#0abbd0);
+  box-shadow:0 15px 45px rgba(28,140,210,.16);
+}
+
+.hero:after{
+  content:"";
+  position:absolute;
+  width:170px;
+  height:170px;
+  right:-70px;
+  bottom:-90px;
+  border-radius:50%;
+  background:rgba(255,255,255,.10);
+}
+
+.hero small{
+  opacity:.85;
+  font-weight:bold;
+  letter-spacing:.8px;
+}
+
+.hero h1{
+  margin-top:9px;
+  font-size:28px;
+  line-height:1.15;
+}
+
+.hero p{
+  margin-top:9px;
+  max-width:330px;
+  color:rgba(255,255,255,.88);
+  font-size:13px;
+  line-height:1.55;
+}
+
+.primary-btn{
+  margin-top:17px;
+  border:0;
+  padding:12px 18px;
+  border-radius:14px;
+  background:white;
+  color:#10131c;
+  font-weight:800;
+}
+
+/* SECTION */
+
+.section{
+  padding:0 16px;
+  margin-top:24px;
+}
+
+.section-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:12px;
+}
+
+.section-head h2{
+  font-size:17px;
+}
+
+.section-head span{
+  color:var(--cyan);
+  font-size:12px;
+}
+
+/* CHIPS */
+
+.chips{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  padding:2px 16px 8px;
+}
+
+.chip{
+  flex-shrink:0;
+  border:1px solid var(--line);
+  background:var(--card2);
+  color:#aeb9cf;
+  border-radius:20px;
+  padding:8px 15px;
+  font-size:12px;
+}
+
+.chip.active{
+  background:linear-gradient(90deg,var(--primary),var(--cyan));
+  color:white;
+  border-color:transparent;
+}
+
+/* MOVIE GRID */
+
+.movies{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+
+.movie-card{
+  overflow:hidden;
+  background:linear-gradient(180deg,#121a2a,#0e1523);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:17px;
+  box-shadow:0 8px 25px rgba(0,0,0,.16);
+}
+
+.poster{
+  height:210px;
+  position:relative;
+  background:#151b29;
+  background-size:cover;
+  background-position:center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#536079;
+}
+
+.poster:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(to top,rgba(0,0,0,.45),transparent 50%);
+  pointer-events:none;
+}
+
+.badge{
+  position:absolute;
+  z-index:2;
+  top:8px;
+  left:8px;
+  padding:4px 8px;
+  border-radius:8px;
+  background:var(--red);
+  color:white;
+  font-size:9px;
+  font-weight:bold;
+}
+
+.movie-body{
+  padding:10px;
+}
+
+.movie-title{
+  font-size:14px;
+  font-weight:800;
+  line-height:1.35;
+  min-height:38px;
+}
+
+.movie-meta{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:10px;
+}
+
+.watch-btn{
+  width:100%;
+  margin-top:9px;
+  padding:9px;
+  border:0;
+  border-radius:10px;
+  color:white;
+  font-size:12px;
+  font-weight:bold;
+  background:linear-gradient(90deg,var(--primary),var(--cyan));
+}
+
+/* SEARCH */
+
+.search-wrap{
+  padding:16px;
+}
+
+.search-box{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  background:var(--card2);
+  border:1px solid var(--line);
+  border-radius:15px;
+  padding:0 13px;
+}
+
+.search-box input{
+  width:100%;
+  padding:14px 0;
+  background:none;
+  border:0;
+  outline:0;
+  color:white;
+  font-size:14px;
+}
+
+/* PROFILE */
+
+.profile-top{
+  margin:16px;
+  padding:22px;
+  border-radius:24px;
+  text-align:center;
+  background:
+    linear-gradient(145deg,rgba(117,103,255,.18),rgba(20,200,232,.08)),
+    var(--card);
+  border:1px solid var(--line);
+}
+
+.avatar{
+  width:78px;
+  height:78px;
+  margin:auto;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:29px;
+  font-weight:900;
+  background:linear-gradient(135deg,var(--primary),var(--cyan));
+  border:3px solid rgba(255,255,255,.13);
+  overflow:hidden;
+}
+
+.avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.profile-name{
+  margin-top:12px;
+  font-size:19px;
+  font-weight:900;
+}
+
+.profile-username{
+  margin-top:5px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.profile-id{
+  margin-top:7px;
+  color:#68748d;
+  font-size:10px;
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:9px;
+  margin:0 16px;
+}
+
+.stat{
+  padding:15px 8px;
+  text-align:center;
+  border:1px solid var(--line);
+  border-radius:15px;
+  background:var(--card);
+}
+
+.stat strong{
+  display:block;
+  font-size:20px;
+  color:var(--cyan);
+}
+
+.stat span{
+  display:block;
+  margin-top:5px;
+  color:var(--muted);
+  font-size:10px;
+}
+
+/* PROFILE MENU */
+
+.profile-menu{
+  margin:20px 16px;
+  display:grid;
+  gap:9px;
+}
+
+.menu-item{
+  width:100%;
+  padding:15px;
+  border:1px solid var(--line);
+  border-radius:15px;
+  background:var(--card);
+  color:white;
+  text-align:left;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.menu-left{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.menu-icon{
+  width:38px;
+  height:38px;
+  border-radius:11px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--card2);
+}
+
+/* BOTTOM NAV */
+
+.bottom-nav{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  height:74px;
+  z-index:80;
+  display:flex;
+  justify-content:space-around;
+  align-items:center;
+  background:rgba(10,15,26,.95);
+  backdrop-filter:blur(15px);
+  border-top:1px solid var(--line);
+}
+
+.nav-btn{
+  min-width:58px;
+  background:none;
+  border:0;
+  color:#77839b;
+  font-size:10px;
+}
+
+.nav-btn div{
+  font-size:20px;
+  margin-bottom:4px;
+}
+
+.nav-btn.active{
+  color:var(--cyan);
+}
+
+/* DETAIL */
+
+.overlay{
+  position:fixed;
+  inset:0;
+  z-index:200;
+  background:var(--bg);
+  overflow-y:auto;
+  display:none;
+}
+
+.overlay.active{
+  display:block;
+}
+
+.overlay-head{
+  position:sticky;
+  top:0;
+  z-index:5;
+  padding:12px 15px;
+  background:rgba(8,12,22,.88);
+  backdrop-filter:blur(14px);
+}
+
+.close-btn{
+  width:40px;
+  height:40px;
+  border-radius:13px;
+  border:1px solid var(--line);
+  background:var(--card2);
+  color:white;
+  font-size:18px;
+}
+
+.detail-cover{
+  height:390px;
+  background-size:cover;
+  background-position:center;
+  position:relative;
+}
+
+.detail-cover:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(to top,var(--bg),transparent 55%),
+    linear-gradient(to bottom,rgba(0,0,0,.25),transparent 35%);
+}
+
+.detail-body{
+  padding:0 18px 30px;
+  margin-top:-35px;
+  position:relative;
+  z-index:2;
+}
+
+.detail-title{
+  font-size:24px;
+  font-weight:900;
+}
+
+.detail-meta{
+  margin-top:7px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.rating{
+  display:inline-flex;
+  margin-top:12px;
+  padding:7px 11px;
+  border-radius:10px;
+  background:var(--card2);
+  color:var(--yellow);
+  font-size:12px;
+  font-weight:bold;
+}
+
+.detail-overview{
+  margin-top:17px;
+  color:#c0c9da;
+  font-size:13px;
+  line-height:1.65;
+}
+
+.server-list{
+  margin-top:20px;
+}
+
+.server-btn{
+  width:100%;
+  margin-bottom:9px;
+  padding:14px;
+  border:0;
+  border-radius:14px;
+  background:linear-gradient(90deg,var(--primary),var(--cyan));
+  color:white;
+  font-weight:800;
+}
+
+.fav-action{
+  width:100%;
+  padding:14px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:var(--card2);
+  color:var(--yellow);
+  font-weight:bold;
+}
+
+/* LOADING */
+
+.loading{
+  padding:40px 20px;
+  text-align:center;
+  color:var(--muted);
+}
+
+.spinner{
+  width:30px;
+  height:30px;
+  margin:0 auto 10px;
+  border:3px solid var(--line);
+  border-top-color:var(--cyan);
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+
+@keyframes spin{
+  to{transform:rotate(360deg)}
+}
+
+.empty{
+  grid-column:1/-1;
+  padding:45px 15px;
+  text-align:center;
+  color:#65718a;
+}
+
+/* MODAL */
+
+.modal{
+  position:fixed;
+  inset:0;
+  z-index:300;
+  background:rgba(0,0,0,.72);
+  display:none;
+  align-items:flex-end;
+}
+
+.modal.active{
+  display:flex;
+}
+
+.modal-box{
+  width:100%;
+  max-height:90vh;
+  overflow-y:auto;
+  padding:20px;
+  border-radius:25px 25px 0 0;
+  background:#0d1422;
+  border-top:1px solid var(--line);
+}
+
+.modal-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:18px;
+}
+
+.modal-head h3{
+  font-size:18px;
+}
+
+.form-group{
+  margin-bottom:12px;
+}
+
+.form-group label{
+  display:block;
+  margin-bottom:6px;
+  color:#aeb9ce;
+  font-size:11px;
+}
+
+.form-control{
+  width:100%;
+  padding:12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  outline:0;
+  background:var(--card2);
+  color:white;
+}
+
+textarea.form-control{
+  min-height:90px;
+  resize:vertical;
+}
+
+.save-btn{
+  width:100%;
+  padding:13px;
+  border:0;
+  border-radius:13px;
+  background:linear-gradient(90deg,var(--primary),var(--cyan));
+  color:white;
+  font-weight:800;
+}
+
+/* ADMIN */
+
+.admin-wrap{
+  padding:16px;
+}
+
+.admin-title{
+  font-size:22px;
+  font-weight:900;
+}
+
+.admin-sub{
+  margin-top:5px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.admin-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+  margin-top:18px;
+}
+
+.admin-stat{
+  padding:16px;
+  border-radius:16px;
+  background:var(--card);
+  border:1px solid var(--line);
+}
+
+.admin-stat .num{
+  font-size:23px;
+  font-weight:900;
+  color:var(--cyan);
+}
+
+.admin-stat .label{
+  margin-top:5px;
+  color:var(--muted);
+  font-size:11px;
+}
+
+.admin-actions{
+  display:grid;
+  gap:9px;
+  margin-top:18px;
+}
+
+.admin-action{
+  width:100%;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--card);
+  color:white;
+  text-align:left;
+}
+
+.admin-list{
+  margin-top:15px;
+  display:grid;
+  gap:8px;
+}
+
+.admin-row{
+  padding:13px;
+  border-radius:13px;
+  background:var(--card);
+  border:1px solid var(--line);
+}
+
+.admin-row-title{
+  font-weight:bold;
+  font-size:13px;
+}
+
+.admin-row-meta{
+  margin-top:5px;
+  color:var(--muted);
+  font-size:10px;
+}
+
+.row-actions{
+  display:flex;
+  gap:7px;
+  margin-top:9px;
+}
+
+.small-btn{
+  padding:7px 10px;
+  border-radius:9px;
+  border:1px solid var(--line);
+  background:var(--card2);
+  color:white;
+  font-size:10px;
+}
+
+.small-btn.danger{
+  color:#ff6d83;
+}
+
+/* TOAST */
+
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:90px;
+  transform:translateX(-50%) translateY(20px);
+  z-index:500;
+  max-width:90%;
+  padding:11px 16px;
+  border-radius:12px;
+  background:#182237;
+  border:1px solid var(--line);
+  color:white;
+  font-size:12px;
+  opacity:0;
+  pointer-events:none;
+  transition:.25s;
+}
+
+.toast.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+}
+
+/* DESKTOP */
+
+@media(min-width:700px){
+  body{
+    max-width:760px;
+    margin:auto;
+  }
+
+  .bottom-nav{
+    max-width:760px;
+    left:50%;
+    transform:translateX(-50%);
+  }
+
+  .movies{
+    grid-template-columns:repeat(3,1fr);
+  }
+}
 </style>
 </head>
+
 <body>
-<header><div class="logo">Cine <span>Hub4</span></div><div class="hbtns"><button class="icon" id="langBtn">EN</button><button class="icon" onclick="go('search')">⌕</button></div></header>
 
-<section id="home" class="view active">
-<div class="hero"><small id="welcome">WELCOME TO CINE HUB4</small><h1 id="heroTitle">Movies & Series</h1><p id="heroDesc">নতুন মুভি, ট্রেন্ডিং কনটেন্ট এবং তোমার পছন্দের সিনেমা এক জায়গায়।</p><button class="primary" onclick="go('movies')" id="explore">▶ Explore Now</button></div>
-<section class="section"><div class="top"><h2 id="trendTitle">🔥 Trending</h2><span class="see" onclick="go('movies')">See All</span></div><div id="trending" class="movies"></div></section>
-<section class="section"><div class="top"><h2 id="recentTitle">🆕 Recently Added</h2><span class="see" onclick="go('movies')">See All</span></div><div id="recent" class="movies"></div></section>
-<section class="section"><div class="top"><h2 id="viewedTitle">📜 Recently Viewed</h2></div><div id="recentViewed" class="movies"></div></section>
-</section>
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">Cine <span>Hub4</span></div>
 
-<section id="movies" class="view"><section class="section"><div class="top"><h2>🎬 <span id="allTitle">Movies</span></h2></div></section><div id="chips" class="chips"></div><section class="section" style="margin-top:0"><div id="allMovies" class="movies"></div></section></section>
+  <div class="header-actions">
+    <button class="icon-btn" id="languageBtn">EN</button>
+    <button class="icon-btn" onclick="switchView('search')">⌕</button>
+  </div>
+</header>
 
-<section id="search" class="view"><section class="section"><div class="top"><h2>🔎 <span id="searchTitle">Search</span></h2></div></section><div class="search"><input id="searchInput" oninput="searchMovies()" placeholder="মুভির নাম লিখুন..."></div><section class="section" style="margin-top:0"><div id="searchResults" class="movies"></div><div id="searchEmpty" class="empty">মুভির নাম লিখুন</div></section></section>
+<!-- ================= HOME ================= -->
 
-<section id="favorite" class="view"><section class="section"><div class="top"><h2>❤️ <span id="favTitle">Favourite</span></h2></div></section><section class="section" style="margin-top:0"><div id="favMovies" class="movies"></div></section></section>
+<div class="view active" id="view-home">
 
-<section id="profile" class="view"><div class="profile"><div id="avatar" class="avatar">?</div><h2 id="profileName">Guest</h2><p id="profileUser" style="color:var(--muted);margin-top:5px">@guest</p></div><div class="stats"><div class="stat"><b id="favCount">0</b><span>Favourite</span></div><div class="stat"><b id="reqCount">0</b><span>Requests</span></div><div class="stat"><b id="viewCount">0</b><span>Viewed</span></div></div><div class="panel"><button class="btn" onclick="openRequests()">📩 My Requests</button></div></section>
+  <section class="hero">
+    <small id="heroWelcome">স্বাগতম Cine Hub4 এ</small>
 
-<section id="admin" class="view">
-<div class="adminHead"><h2>👨‍💼 Admin Panel</h2><p>Central control for Cine Hub4 WebApp</p></div>
-<div class="adminGrid"><div class="acard"><b id="admMovies">0</b><span>Movies</span></div><div class="acard"><b id="admUsers">0</b><span>Users</span></div><div class="acard"><b id="admRequests">0</b><span>Requests</span></div><div class="acard"><b id="admFavs">0</b><span>Favourites</span></div></div>
-<div class="panel"><h3>🎬 Movie Management</h3><div class="row"><button class="btn" onclick="adminMovieForm()">➕ Add</button><button class="small" onclick="adminMovieList()">Manage</button></div></div>
-<div class="panel"><h3>👥 User List</h3><button class="btn" onclick="adminUserList()">Open Users</button></div>
-<div class="panel"><h3>📩 Request Management</h3><button class="btn" onclick="adminRequestList()">Open Requests</button></div>
-<div class="panel"><h3>⚙️ Central Config</h3>
-<div class="field"><label>TMDB API Key</label><input id="tmdbKey"></div>
-<div class="field"><label>Default Language</label><select id="defaultLang"><option value="bn">বাংলা</option><option value="en">English</option></select></div>
-<div class="toggle">Server 1 <button id="s1" class="switch" onclick="toggleSetting('server1_enabled',this)"><i></i></button></div>
-<div class="toggle">Server 2 <button id="s2" class="switch" onclick="toggleSetting('server2_enabled',this)"><i></i></button></div>
-<div class="toggle">Server 3 <button id="s3" class="switch" onclick="toggleSetting('server3_enabled',this)"><i></i></button></div>
-<div class="toggle">🚧 Maintenance Mode <button id="maint" class="switch" onclick="toggleSetting('maintenance_mode',this)"><i></i></button></div>
-<div class="toggle">📢 Broadcast UI <button id="broadcast" class="switch" onclick="toggleSetting('broadcast_enabled',this)"><i></i></button></div>
-<button class="btn" onclick="saveConfig()">Save Central Config</button></div>
-</section>
+    <h1 id="heroTitle">মুভি ও সিরিজ</h1>
 
-<nav><button data-view="home" class="active" onclick="go('home')"><i>⌂</i>Home</button><button data-view="movies" onclick="go('movies')"><i>🎬</i>Movies</button><button data-view="search" onclick="go('search')"><i>🔎</i>Search</button><button data-view="favorite" onclick="go('favorite')"><i>♡</i>Favourite</button><button data-view="profile" onclick="go('profile')"><i>👤</i>Profile</button></nav>
+    <p id="heroDescription">
+      নতুন মুভি, ট্রেন্ডিং কনটেন্ট এবং তোমার পছন্দের সিনেমা এক জায়গায়।
+    </p>
 
-<div id="detailOverlay" class="overlay"><div class="otop"><button class="close" onclick="closeOverlay('detailOverlay')">✕</button></div><div id="detailContent"></div></div>
-<div id="adminOverlay" class="overlay"><div class="otop"><button class="close" onclick="closeOverlay('adminOverlay')">✕</button></div><div id="adminContent"></div></div>
+    <button class="primary-btn"
+            onclick="switchView('movies')"
+            id="exploreBtn">
+      ▶ Explore Now
+    </button>
+  </section>
 
-<script>
-/* ================= CENTRAL CONFIG ================= */
-const CONFIG={
- projectId:"cinehub4-d1773",
- firebaseApiKey:"AIzaSyBdoLUyIh83s7w72eOU_cEdF5AcqfDdQ",
- tmdbApiKey:"2f84235873a478ed4c3601374daaf7d4",
- ownerId:"5605543865",
- adminIds:["7830499211","1904834862"],
- botUsername:"Cinehub4bot",
- collections:{movies:"movies",users:"users",favourites:"favourites",requests:"requests",config:"config"},
- fields:{title:"title",year:"year",poster:"poster",tmdbId:"tmdb_id",genres:"genres",overview:"overview",rating:"rating",created:"created_time",server1:"server1_link",server1Status:"server1_status",server2:"server2_link",server2Status:"server2_status",server3:"server3_link",server3Status:"server3_status"}
-};
-firebase.initializeApp({apiKey:CONFIG.firebaseApiKey,authDomain:CONFIG.projectId+".firebaseapp.com",projectId:CONFIG.projectId});
-const db=firebase.firestore();
-const tg=window.Telegram?.WebApp||null;if(tg){tg.ready();tg.expand()}
-const tgUser=tg?.initDataUnsafe?.user||null;const UID=tgUser?String(tgUser.id):"guest";
-let lang=localStorage.getItem("ch4_lang")||"bn",movies=[],centralConfig={};
+  <section class="section">
 
-function esc(x){return String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
-function poster(m){let p=m[CONFIG.fields.poster];return p?(String(p).startsWith("http")?p:"https://image.tmdb.org/t/p/w500"+p):""}
-function isAdmin(){return UID===String(CONFIG.ownerId)||CONFIG.adminIds.map(String).includes(UID)}
-function go(name){document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));document.getElementById(name).classList.add("active");document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===name));if(name==="favorite")loadFavs();if(name==="profile")loadProfile();if(name==="admin"&&isAdmin())loadAdmin()}
-function card(m,newBadge=false){let p=poster(m),f=CONFIG.fields;return `<article class="movie" onclick="openMovie('${esc(m._id)}')"><div class="poster" ${p?`style="background-image:url('${esc(p)}')"`:""}>${p?"":(lang==="bn"?"পোস্টার নেই":"No Poster")}${newBadge?'<span class="badge">NEW</span>':""}</div><div class="minfo"><div class="mtitle">${esc(m[f.title]||"Untitled")}</div><div class="meta">⭐ ${esc(m[f.rating]??"—")} • ${esc(m[f.year]||"")} </div><button class="watch">▶ ${lang==="bn"?"দেখুন":"Watch Now"}</button></div></article>`}
-function render(list,id){let el=document.getElementById(id);el.innerHTML=list.length?list.map((m,i)=>card(m,i<2&&id==="recent")).join(""):`<div class="empty">${lang==="bn"?"কোনো মুভি নেই":"No movies found"}</div>`}
-async function loadMovies(){try{let s=await db.collection(CONFIG.collections.movies).limit(300).get();movies=s.docs.map(d=>({_id:d.id,...d.data()}));render([...movies].sort((a,b)=>(b.rating||0)-(a.rating||0)).slice(0,6),"trending");render([...movies].sort((a,b)=>new Date(b.created_time||0)-new Date(a.created_time||0)).slice(0,6),"recent");render(movies,"allMovies");renderRecentViewed();renderChips()}catch(e){document.getElementById("trending").innerHTML=`<div class="empty">⚠️ ${esc(e.message)}</div>`}}
-function renderChips(){let set=new Set();movies.forEach(m=>String(m.genres||"").split(",").forEach(x=>x.trim()&&set.add(x.trim())));document.getElementById("chips").innerHTML=`<button class="chip active" onclick="filterCat('')">${lang==="bn"?"সব":"All"}</button>`+[...set].map(x=>`<button class="chip" onclick="filterCat('${esc(x)}')">${esc(x)}</button>`).join("")}
-function filterCat(c){let x=c?movies.filter(m=>String(m.genres||"").includes(c)):movies;render(x,"allMovies")}
-function searchMovies(){let q=document.getElementById("searchInput").value.trim().toLowerCase(),r=q?movies.filter(m=>String(m.title||"").toLowerCase().includes(q)):[];document.getElementById("searchEmpty").style.display=r.length?"none":"block";render(r,"searchResults")}
-async function openMovie(id){let m=movies.find(x=>x._id===id);if(!m)return;document.getElementById("detailOverlay").classList.add("active");let p=poster(m),tm=m.tmdb_id,data=null;if(tm&&CONFIG.tmdbApiKey)try{data=await fetch(`https://api.themoviedb.org/3/movie/${tm}?api_key=${CONFIG.tmdbApiKey}&language=${lang==="bn"?"bn-BD":"en-US"}`).then(r=>r.json())}catch(e){}let f=CONFIG.fields,title=data?.title||m[f.title]||"Untitled",overview=data?.overview||m[f.overview]||"",rating=data?Number(data.vote_average||0).toFixed(1):m[f.rating]||"—",genres=data?.genres?.map(x=>x.name).join(", ")||m[f.genres]||"",image=data?.poster_path?"https://image.tmdb.org/t/p/w780"+data.poster_path:p;let servers="";[1,2,3].forEach(n=>{let link=m[f["server"+n]],enabled=centralConfig["server"+n+"_enabled"]!==false;if(link&&enabled)servers+=`<button class="server" onclick="window.open('${esc(link)}','_blank')">▶ Server ${n}</button>`});document.getElementById("detailContent").innerHTML=`<div class="dposter" ${image?`style="background-image:url('${esc(image)}')"`:""}></div><div class="detail"><h1>${esc(title)}</h1><div class="rating">⭐ ${esc(rating)}</div><p style="color:var(--muted);font-size:12px;margin-bottom:12px">${esc(genres)} ${m[f.year]?`• ${esc(m[f.year])}`:""}</p><p class="desc">${esc(overview)}</p>${servers||`<div class="empty">No active server</div>`}<button class="outline" onclick="toggleFav('${esc(id)}')">❤️ ${lang==="bn"?"ফেভারিটে যোগ/বাদ":"Add / Remove Favourite"}</button><button class="outline" onclick="requestMovie('${esc(title)}')">📩 ${lang==="bn"?"মুভি রিকোয়েস্ট":"Request Movie"}</button></div>`;saveViewed(id)}
-async function saveViewed(id){let ref=db.collection("users").doc(UID);try{await ref.set({recently_viewed:firebase.firestore.FieldValue.arrayUnion(id)},{merge:true})}catch(e){}}
-function closeOverlay(id){document.getElementById(id).classList.remove("active")}
-async function toggleFav(id){try{let ref=db.collection("favourites").doc(UID+"_"+id),d=await ref.get();if(d.exists)await ref.delete();else await ref.set({user_id:UID,movie_id:id,created_at:new Date().toISOString()});loadFavs()}catch(e){alert(e.message)}}
-async function loadFavs(){let box=document.getElementById("favMovies");try{let s=await db.collection("favourites").where("user_id","==",UID).get(),ids=s.docs.map(x=>x.data().movie_id),r=movies.filter(m=>ids.includes(m._id));document.getElementById("favCount").textContent=r.length;render(r,"favMovies")}catch(e){box.innerHTML=`<div class="empty">${esc(e.message)}</div>`}}
-async function loadProfile(){let name=tgUser?.first_name||"Guest",username=tgUser?.username?("@"+tgUser.username):"@guest";document.getElementById("profileName").textContent=name;document.getElementById("profileUser").textContent=username;document.getElementById("avatar").textContent=name.charAt(0).toUpperCase();try{let d=await db.collection("users").doc(UID).get(),x=d.data()||{};document.getElementById("viewCount").textContent=(x.recently_viewed||[]).length;let r=await db.collection("requests").where("user_id","==",UID).get();document.getElementById("reqCount").textContent=r.size}catch(e){}}
-async function renderRecentViewed(){try{let d=await db.collection("users").doc(UID).get(),ids=d.data()?.recently_viewed||[];render(ids.map(id=>movies.find(m=>m._id===id)).filter(Boolean).slice(-6).reverse(),"recentViewed")}catch(e){document.getElementById("recentViewed").innerHTML='<div class="empty">No recently viewed</div>'}}
-async function requestMovie(title){let text=prompt(lang==="bn"?"রিকোয়েস্টের তথ্য লিখুন:":"Enter request details:",title);if(!text)return;try{await db.collection("requests").add({user_id:UID,title:text,status:"pending",created_at:new Date().toISOString()});alert(lang==="bn"?"রিকোয়েস্ট পাঠানো হয়েছে":"Request sent")}catch(e){alert(e.message)}}
-async function openRequests(){let s=await db.collection("requests").where("user_id","==",UID).get();document.getElementById("adminOverlay").classList.add("active");document.getElementById("adminContent").innerHTML=`<div class="panel"><h2>📩 My Requests</h2>${s.docs.map(d=>`<div class="item"><span>${esc(d.data().title)}</span><small>${esc(d.data().status||"pending")}</small></div>`).join("")||'<div class="empty">No requests</div>'}</div>`}
-async function loadAdmin(){document.getElementById("tmdbKey").value=centralConfig.tmdb_api_key||CONFIG.tmdbAp
+    <div class="section-head">
+      <h2 id="trendingTitle">🔥 ট্রেন্ডিং</h2>
+
+      <span onclick="switchView('movies')"
+            id="trendingSeeAll">
+        See All
+      </span>
+    </div>
+
+    <div class="movies" id="trendingGrid">
+      <div class="loading">
+        <div class="spinner"></div>
+        Loading...
+      </div>
+    </div>
+
+  </section>
+
+  <section class="section">
+
+    <div class="section-head">
+      <h2 id="latestTitle">🆕 নতুন মুভি</h2>
+
+      <span onclick="switchView('movies')">
+        See All
+      </span>
+    </div>
+
+    <div class="movies" id="latestGrid">
+      <div class="loading">
+        <div class="spinner"></div>
+        Loading...
+      </div>
+    </div>
+
+  </section>
+
+</div>
+
+<!-- ================= MOVIES ================= -->
+
+<div class="view" id="view-movies">
+
+  <section class="section" style="margin-top:18px">
+
+    <div class="section-head">
+      <h2 id="allMoviesTitle">🎬 সব মুভি</h2>
+    </div>
+
+  </section>
+
+  <div class="chips" id="categoryChips"></div>
+
+  <section class="section" style="margin-top:5px">
+
+    <div class="movies" id="allMoviesGrid">
+      <div class="loading">
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+  </section>
+
+</div>
+
+<!-- ================= SEARCH ================= -->
+
+<div class="view" id="view-search">
+
+  <div class="search-wrap">
+
+    <div class="search-box">
+      <span>🔍</span>
+
+      <input
+        id="searchInput"
+        type="text"
+        placeholder="মুভির নাম লিখুন..."
+        oninput="onSearchInput()"
+      >
+    </div>
+
+  </div>
+
+  <section class="section" style="margin-top:0">
+
+    <div class="movies" id="searchGrid"></div>
+
+    <div class="empty"
+         id="searchEmpty">
+      মুভির নাম লিখে সার্চ করুন
+    </div>
+
+  </section>
+
+</div>
+
+<!-- ================= FAVOURITE ================= -->
+
+<div class="view" id="view-favorite">
+
+  <section class="section" style="margin-top:18px">
+
+    <div class="section-head">
+      <h2 id="favoriteTitle">❤️ Favourite</h2>
+    </div>
+
+    <div class="movies" id="favGrid">
+      <div class="loading">
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+  </section>
+
+</div>
+
+<!-- ================= PROFILE ================= -->
+
+<div class="view" id="view-profile">
+
+  <div class="profile-top">
+
+    <div class="avatar" id="profileAvatar">?</div>
+
+    <div class="profile-name" id="profileName">
+      Guest User
+    </div>
+
+    <div class="profile-username" id="profileUsername">
+      @username
+    </div>
+
+    <div class="profile-id" id="profileId">
+      ID: —
+    </div>
+
+  </div>
+
+  <div class="stats">
+
+    <div class="stat">
+      <strong id="statFav">0</strong>
+      <span id="favStatText">Favourites</span>
+    </div>
+
+    <div class="stat">
+      <strong id="statReq">0</strong>
+      <span id="reqStatText">Requests</span>
+    </div>
+
+    <div class="stat">
+      <strong id="statView">0</strong>
+      <span id="viewStatText">Viewed</span>
+    </div>
+
+  </div>
+
+  <div class="profile-menu">
+
+    <button class="menu-item"
+            onclick="switchView('favorite')">
+
+      <div class="menu-left">
+        <div class="menu-icon">❤️</div>
+        <span id="profileFavMenu">My Favourite</span>
+      </div>
+
+      <span>›</span>
+
+    </button>
+
+    <button class="menu-item"
+            onclick="showRequestModal()">
+
+      <div class="menu-left">
+        <div class="menu-icon">📩</div>
+        <span id="profileRequestMenu">Request Movie</span>
+      </div>
+
+      <span>›</span>
+
+    </button>
+
+    <button class="menu-item"
+            onclick="showHistory()">
+
+      <div class="menu-left">
+        <div class="menu-icon">🕘</div>
+        <span id="historyMenu">Recently Viewed</span>
+      </div>
+
+      <span>›</span>
+
+    </button>
+
+    <button class="menu-item"
+            id="adminMenuButton"
+            onclick="openAdmin()"
+            style="display:none">
+
+      <div class="menu-left">
+        <div class="menu-icon">🛠️</div>
+        <span>Admin Panel</span>
+      </div>
+
+      <span>›</span>
+
+    </button>
+
+  </div>
+
+</div>
+
+<!-- ================= ADMIN ================= -->
+
+<div class="view" id="view-admin">
+
+  <div class="admin-wrap">
+
+    <div class="admin-title">
+      Admin Panel
+    </div>
+
+    <div class="admin-sub">
+      Cine Hub4 Control Center
+    </div>
+
+    <div class="admin-grid">
+
+      <div class="admin-stat">
+        <div class="num" id="adminUsers">0</div>
+        <div class="label">Users</div>
+      </div>
+
+      <div class="admin-stat">
+        <div class="num" id="adminMovies">0</div>
+        <div class="label">Movies</div>
+      </div>
+
+      <div class="admin-stat">
+        <div class="num" id="adminFavs">0</div>
+        <div class="label">Favourites</div>
+      </div>
+
+      <div class="admin-stat">
+        <div class="num" id="adminRequests">0</div>
+        <div class="label">Requests</div>
+      </div>
+
+    </div>
+
+    <div class="admin-actions">
+
+      <button class="admin-action"
+              onclick="adminMovies()">
+        🎬 Movie Management
+      </button>
+
+      <button class="admin-action"
+              onclick="adminUsers()">
+        👥 User Management
+      </button>
+
+      <button class="admin-action"
+              onclick="adminRequests()">
+        📩 Movie Requests
+      </button>
+
+      <button class="admin-action"
+              onclick="adminConfig()">
+        ⚙️ Bot Configuration
+      </button>
+
+      <button class="admin-action"
+              onclick="adminBroadcast()">
+        📢 Broadcast
+      </button>
+
+      <button class="admin-action"
+              onclick="switchView('profile')">
+        ← Back to Profile
+      </button>
+
+    </div>
+
+    <div id="adminContent"></div>
+
+  </div>
+
+</div>
+
+<!-- ================= BOTTOM NAV ================= -->
+
+<nav class="bottom-nav">
+
+  <button class="nav-btn active"
+          data-view="home"
+          onclick="switchView('home')">
+    <div>⌂</div>
+    <span data-en="Home" data-bn="হোম">হোম</span>
+  </button>
+
+  <button class="nav-btn"
+          data-view="movies"
+          onclick="switchView('movies')">
+    <div>🎬</div>
+    <span data-en="Movies" data-bn="মুভি">মুভি</span>
+  </button>
+
+  <button class="nav-btn"
+          data-view="search"
+          onclick="switchView('search')">
+    <div>🔎</div>
+    <span data-en="Search" data-bn="সার্চ">সার্চ</span>
+  </button>
+
+  <button class="nav-btn"
+          data-view="favorite"
+          onclick="switchView('favorite')">
+    <div>♡</div>
+    <span data-en="Favourite" data-bn="ফেভারিট">ফেভারিট</span>
+  </button>
+
+  <button class="nav-btn"
+          data-view="profile"
+          onclick="switchView('profile')">
+    <div>👤</div>
+    <span data-en="Profile" data-bn="প্রোফাইল">প্রোফাইল</span>
+  </button>
+
+</nav>
+
+<!-- ================= MOVIE DETAIL ================= -->
+<div class="overlay" id="detailOverlay">
+
+  <div class="overlay-head">
+
+    <button class="close-btn"
+            onclick="closeDetail()">
+      ←
+    </button>
+
+  </div>
+
+  <div id="detailContent">
+
+    <div class="loading">
+      <div class="spinner"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ================= REQUEST MODAL ================= -->
+
+<div class="modal" id="requestModal">
+
+  <div class="modal-box">
+
+    <div class="modal-head">
+
+      <h3 id="requestModalTitle">
+        📩 Request Movie
+      </h3>
+
+      <button class="close-btn"
+              onclick="closeModal('requestModal')">
+        ✕
+      </button>
+
+    </div>
+
+    <div class="form-group">
+
+      <label id="requestNameLabel">
+        Movie Name
+      </label>
+
+      <input
+        class="form-control"
+        id="requestMovieName"
+        placeholder="Movie name"
+      >
+
+    </div>
+
+    <div class="form-group">
+
+      <label>
+        Message
+      </label>
+
+      <textarea
+        class="form-control"
+        id="requestMessage"
+        placeholder="Optional message..."
+      ></textarea>
+
+    </div>
+
+    <button class="save-btn"
+            onclick="submitRequest()">
+      Submit Request
+    </button>
+
+  </div>
+
+</div>
+ 
+ <!-- ================= MOVIE MODAL ================= -->
+
+<div class="modal" id="movieModal">
+
+  <div class="modal-box">
+
+    <div class="modal-head">
+
+      <h3 id="movieModalTitle">
+        Add Movie
+      </h3>
+
+      <button class="close-btn"
+              onclick="closeModal('movieModal')">
+        ✕
+      </button>
+
+    </div>
+
+    <input type="hidden" id="movieDocId">
+
+    <div class="form-group">
+      <label>Title</label>
+      <input class="form-control" id="movieTitleInput">
+    </div>
+
+    <div class="form-group">
+      <label>Year</label>
+      <input class="form-control" id="movieYearInput">
+    </div>
+
+    <div class="form-group">
+      <label>TMDB ID</label>
+      <input class="form-control" id="movieTmdbInput">
+    </div>
+
+    <div class="form-group">
+      <label>Poster URL</label>
+      <input class="form-control" id="moviePosterInput">
+    </div>
+
+    <div class="form-group">
+      <label>Genres</label>
+      <input class="form-control" id="movieGenresInput"
+             placeholder="Action, Drama">
+    </div>
+
+    <div class="form-group">
+      <label>Overview</label>
+      <textarea class="form-control"
+                id="movieOverviewInput"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Server 1 Link</label>
+      <input class="form-control" id="server1LinkInput">
+    </div>
+
+    <div class="form-group">
+      <label>Server 2 Link</label>
+      <input class="form-control" id="server2LinkInput">
+    </div>
+
+    <div class="form-group">
+      <label>Server 3 Link</label>
+      <input class="form-control" id="server3LinkInput">
+    </div>
+
+    <button class="save-btn"
+            onclick="saveMovie()">
+      Save Movie
+    </button>
+
+  </div>
+
+</div>
+
+<!-- TOAST -->
+
+<div class="toast" id="toast"></div>
+
+<!-- PART 1 END -->
