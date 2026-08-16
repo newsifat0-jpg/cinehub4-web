@@ -1,1372 +1,210 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="bn">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
 <title>Cine Hub4</title>
-
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
 <style>
-*{
-  box-sizing:border-box;
-  margin:0;
-  padding:0;
-  -webkit-tap-highlight-color:transparent;
-}
-
 :root{
-  --bg:#070a12;
-  --bg2:#0c1120;
-  --card:#111827;
-  --card2:#151d2d;
-  --line:#263149;
-  --text:#f7f8ff;
-  --muted:#8e9ab3;
-  --primary:#7567ff;
-  --cyan:#14c8e8;
-  --pink:#e45cff;
-  --green:#35d49a;
-  --red:#ff5570;
-  --yellow:#ffd166;
-}
-
-body{
-  font-family:Arial,Helvetica,sans-serif;
-  background:
-    radial-gradient(circle at 10% 0%,rgba(117,103,255,.16),transparent 30%),
-    radial-gradient(circle at 100% 20%,rgba(20,200,232,.10),transparent 30%),
-    var(--bg);
-  color:var(--text);
-  min-height:100vh;
-  padding-bottom:90px;
-}
-
-button,
-input,
-textarea,
-select{
-  font-family:inherit;
-}
-
-button{
-  cursor:pointer;
-}
-
-::-webkit-scrollbar{
-  width:4px;
-  height:4px;
-}
-::-webkit-scrollbar-thumb{
-  background:#303a54;
-  border-radius:20px;
-}
-
-/* HEADER */
-
-.header{
-  position:sticky;
-  top:0;
-  z-index:50;
-  height:66px;
-  padding:0 16px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  background:rgba(8,12,22,.90);
-  backdrop-filter:blur(14px);
-  border-bottom:1px solid rgba(255,255,255,.06);
-}
-
-.logo{
-  font-size:21px;
-  font-weight:900;
-  letter-spacing:-.5px;
-}
-
-.logo span{
-  background:linear-gradient(90deg,var(--primary),var(--cyan));
-  -webkit-background-clip:text;
-  color:transparent;
-}
-
-.header-actions{
-  display:flex;
-  gap:8px;
-}
-
-.icon-btn{
-  width:40px;
-  height:40px;
-  border:1px solid var(--line);
-  border-radius:13px;
-  background:var(--card2);
-  color:white;
-  font-size:17px;
-}
-
-/* VIEW */
-
-.view{
-  display:none;
-  animation:fadeIn .18s ease;
-}
-
-.view.active{
-  display:block;
-}
-
-@keyframes fadeIn{
-  from{opacity:.2;transform:translateY(4px)}
-  to{opacity:1;transform:none}
-}
-
-/* HERO */
-
-.hero{
-  margin:16px;
-  padding:24px 20px;
-  border-radius:26px;
-  position:relative;
-  overflow:hidden;
-  background:
-    radial-gradient(circle at 90% 10%,rgba(255,255,255,.25),transparent 28%),
-    linear-gradient(135deg,#5949d8,#176fbb 55%,#0abbd0);
-  box-shadow:0 15px 45px rgba(28,140,210,.16);
-}
-
-.hero:after{
-  content:"";
-  position:absolute;
-  width:170px;
-  height:170px;
-  right:-70px;
-  bottom:-90px;
-  border-radius:50%;
-  background:rgba(255,255,255,.10);
-}
-
-.hero small{
-  opacity:.85;
-  font-weight:bold;
-  letter-spacing:.8px;
-}
-
-.hero h1{
-  margin-top:9px;
-  font-size:28px;
-  line-height:1.15;
-}
-
-.hero p{
-  margin-top:9px;
-  max-width:330px;
-  color:rgba(255,255,255,.88);
-  font-size:13px;
-  line-height:1.55;
-}
-
-.primary-btn{
-  margin-top:17px;
-  border:0;
-  padding:12px 18px;
-  border-radius:14px;
-  background:white;
-  color:#10131c;
-  font-weight:800;
-}
-
-/* SECTION */
-
-.section{
-  padding:0 16px;
-  margin-top:24px;
-}
-
-.section-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin-bottom:12px;
-}
-
-.section-head h2{
-  font-size:17px;
-}
-
-.section-head span{
-  color:var(--cyan);
-  font-size:12px;
-}
-
-/* CHIPS */
-
-.chips{
-  display:flex;
-  gap:8px;
-  overflow-x:auto;
-  padding:2px 16px 8px;
-}
-
-.chip{
-  flex-shrink:0;
-  border:1px solid var(--line);
-  background:var(--card2);
-  color:#aeb9cf;
-  border-radius:20px;
-  padding:8px 15px;
-  font-size:12px;
-}
-
-.chip.active{
-  background:linear-gradient(90deg,var(--primary),var(--cyan));
-  color:white;
-  border-color:transparent;
-}
-
-/* MOVIE GRID */
-
-.movies{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:12px;
-}
-
-.movie-card{
-  overflow:hidden;
-  background:linear-gradient(180deg,#121a2a,#0e1523);
-  border:1px solid rgba(255,255,255,.07);
-  border-radius:17px;
-  box-shadow:0 8px 25px rgba(0,0,0,.16);
-}
-
-.poster{
-  height:210px;
-  position:relative;
-  background:#151b29;
-  background-size:cover;
-  background-position:center;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:#536079;
-}
-
-.poster:after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:linear-gradient(to top,rgba(0,0,0,.45),transparent 50%);
-  pointer-events:none;
-}
-
-.badge{
-  position:absolute;
-  z-index:2;
-  top:8px;
-  left:8px;
-  padding:4px 8px;
-  border-radius:8px;
-  background:var(--red);
-  color:white;
-  font-size:9px;
-  font-weight:bold;
-}
-
-.movie-body{
-  padding:10px;
-}
-
-.movie-title{
-  font-size:14px;
-  font-weight:800;
-  line-height:1.35;
-  min-height:38px;
-}
-
-.movie-meta{
-  margin-top:6px;
-  color:var(--muted);
-  font-size:10px;
-}
-
-.watch-btn{
-  width:100%;
-  margin-top:9px;
-  padding:9px;
-  border:0;
-  border-radius:10px;
-  color:white;
-  font-size:12px;
-  font-weight:bold;
-  background:linear-gradient(90deg,var(--primary),var(--cyan));
-}
-
-/* SEARCH */
-
-.search-wrap{
-  padding:16px;
-}
-
-.search-box{
-  display:flex;
-  align-items:center;
-  gap:9px;
-  background:var(--card2);
-  border:1px solid var(--line);
-  border-radius:15px;
-  padding:0 13px;
-}
-
-.search-box input{
-  width:100%;
-  padding:14px 0;
-  background:none;
-  border:0;
-  outline:0;
-  color:white;
-  font-size:14px;
-}
-
-/* PROFILE */
-
-.profile-top{
-  margin:16px;
-  padding:22px;
-  border-radius:24px;
-  text-align:center;
-  background:
-    linear-gradient(145deg,rgba(117,103,255,.18),rgba(20,200,232,.08)),
-    var(--card);
-  border:1px solid var(--line);
-}
-
-.avatar{
-  width:78px;
-  height:78px;
-  margin:auto;
-  border-radius:50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:29px;
-  font-weight:900;
-  background:linear-gradient(135deg,var(--primary),var(--cyan));
-  border:3px solid rgba(255,255,255,.13);
-  overflow:hidden;
-}
-
-.avatar img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-
-.profile-name{
-  margin-top:12px;
-  font-size:19px;
-  font-weight:900;
-}
-
-.profile-username{
-  margin-top:5px;
-  color:var(--muted);
-  font-size:12px;
-}
-
-.profile-id{
-  margin-top:7px;
-  color:#68748d;
-  font-size:10px;
-}
-
-.stats{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:9px;
-  margin:0 16px;
-}
-
-.stat{
-  padding:15px 8px;
-  text-align:center;
-  border:1px solid var(--line);
-  border-radius:15px;
-  background:var(--card);
-}
-
-.stat strong{
-  display:block;
-  font-size:20px;
-  color:var(--cyan);
-}
-
-.stat span{
-  display:block;
-  margin-top:5px;
-  color:var(--muted);
-  font-size:10px;
-}
-
-/* PROFILE MENU */
-
-.profile-menu{
-  margin:20px 16px;
-  display:grid;
-  gap:9px;
-}
-
-.menu-item{
-  width:100%;
-  padding:15px;
-  border:1px solid var(--line);
-  border-radius:15px;
-  background:var(--card);
-  color:white;
-  text-align:left;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-}
-
-.menu-left{
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-.menu-icon{
-  width:38px;
-  height:38px;
-  border-radius:11px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:var(--card2);
-}
-
-/* BOTTOM NAV */
-
-.bottom-nav{
-  position:fixed;
-  left:0;
-  right:0;
-  bottom:0;
-  height:74px;
-  z-index:80;
-  display:flex;
-  justify-content:space-around;
-  align-items:center;
-  background:rgba(10,15,26,.95);
-  backdrop-filter:blur(15px);
-  border-top:1px solid var(--line);
-}
-
-.nav-btn{
-  min-width:58px;
-  background:none;
-  border:0;
-  color:#77839b;
-  font-size:10px;
-}
-
-.nav-btn div{
-  font-size:20px;
-  margin-bottom:4px;
-}
-
-.nav-btn.active{
-  color:var(--cyan);
-}
-
-/* DETAIL */
-
-.overlay{
-  position:fixed;
-  inset:0;
-  z-index:200;
-  background:var(--bg);
-  overflow-y:auto;
-  display:none;
-}
-
-.overlay.active{
-  display:block;
-}
-
-.overlay-head{
-  position:sticky;
-  top:0;
-  z-index:5;
-  padding:12px 15px;
-  background:rgba(8,12,22,.88);
-  backdrop-filter:blur(14px);
-}
-
-.close-btn{
-  width:40px;
-  height:40px;
-  border-radius:13px;
-  border:1px solid var(--line);
-  background:var(--card2);
-  color:white;
-  font-size:18px;
-}
-
-.detail-cover{
-  height:390px;
-  background-size:cover;
-  background-position:center;
-  position:relative;
-}
-
-.detail-cover:after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:
-    linear-gradient(to top,var(--bg),transparent 55%),
-    linear-gradient(to bottom,rgba(0,0,0,.25),transparent 35%);
-}
-
-.detail-body{
-  padding:0 18px 30px;
-  margin-top:-35px;
-  position:relative;
-  z-index:2;
-}
-
-.detail-title{
-  font-size:24px;
-  font-weight:900;
-}
-
-.detail-meta{
-  margin-top:7px;
-  color:var(--muted);
-  font-size:12px;
-}
-
-.rating{
-  display:inline-flex;
-  margin-top:12px;
-  padding:7px 11px;
-  border-radius:10px;
-  background:var(--card2);
-  color:var(--yellow);
-  font-size:12px;
-  font-weight:bold;
-}
-
-.detail-overview{
-  margin-top:17px;
-  color:#c0c9da;
-  font-size:13px;
-  line-height:1.65;
-}
-
-.server-list{
-  margin-top:20px;
-}
-
-.server-btn{
-  width:100%;
-  margin-bottom:9px;
-  padding:14px;
-  border:0;
-  border-radius:14px;
-  background:linear-gradient(90deg,var(--primary),var(--cyan));
-  color:white;
-  font-weight:800;
-}
-
-.fav-action{
-  width:100%;
-  padding:14px;
-  border-radius:14px;
-  border:1px solid var(--line);
-  background:var(--card2);
-  color:var(--yellow);
-  font-weight:bold;
-}
-
-/* LOADING */
-
-.loading{
-  padding:40px 20px;
-  text-align:center;
-  color:var(--muted);
-}
-
-.spinner{
-  width:30px;
-  height:30px;
-  margin:0 auto 10px;
-  border:3px solid var(--line);
-  border-top-color:var(--cyan);
-  border-radius:50%;
-  animation:spin .8s linear infinite;
-}
-
-@keyframes spin{
-  to{transform:rotate(360deg)}
-}
-
-.empty{
-  grid-column:1/-1;
-  padding:45px 15px;
-  text-align:center;
-  color:#65718a;
-}
-
-/* MODAL */
-
-.modal{
-  position:fixed;
-  inset:0;
-  z-index:300;
-  background:rgba(0,0,0,.72);
-  display:none;
-  align-items:flex-end;
-}
-
-.modal.active{
-  display:flex;
-}
-
-.modal-box{
-  width:100%;
-  max-height:90vh;
-  overflow-y:auto;
-  padding:20px;
-  border-radius:25px 25px 0 0;
-  background:#0d1422;
-  border-top:1px solid var(--line);
-}
-
-.modal-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin-bottom:18px;
-}
-
-.modal-head h3{
-  font-size:18px;
-}
-
-.form-group{
-  margin-bottom:12px;
-}
-
-.form-group label{
-  display:block;
-  margin-bottom:6px;
-  color:#aeb9ce;
-  font-size:11px;
-}
-
-.form-control{
-  width:100%;
-  padding:12px;
-  border-radius:12px;
-  border:1px solid var(--line);
-  outline:0;
-  background:var(--card2);
-  color:white;
-}
-
-textarea.form-control{
-  min-height:90px;
-  resize:vertical;
-}
-
-.save-btn{
-  width:100%;
-  padding:13px;
-  border:0;
-  border-radius:13px;
-  background:linear-gradient(90deg,var(--primary),var(--cyan));
-  color:white;
-  font-weight:800;
-}
-
-/* ADMIN */
-
-.admin-wrap{
-  padding:16px;
-}
-
-.admin-title{
-  font-size:22px;
-  font-weight:900;
-}
-
-.admin-sub{
-  margin-top:5px;
-  color:var(--muted);
-  font-size:12px;
-}
-
-.admin-grid{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:10px;
-  margin-top:18px;
-}
-
-.admin-stat{
-  padding:16px;
-  border-radius:16px;
-  background:var(--card);
-  border:1px solid var(--line);
-}
-
-.admin-stat .num{
-  font-size:23px;
-  font-weight:900;
-  color:var(--cyan);
-}
-
-.admin-stat .label{
-  margin-top:5px;
-  color:var(--muted);
-  font-size:11px;
-}
-
-.admin-actions{
-  display:grid;
-  gap:9px;
-  margin-top:18px;
-}
-
-.admin-action{
-  width:100%;
-  padding:14px;
-  border:1px solid var(--line);
-  border-radius:14px;
-  background:var(--card);
-  color:white;
-  text-align:left;
-}
-
-.admin-list{
-  margin-top:15px;
-  display:grid;
-  gap:8px;
-}
-
-.admin-row{
-  padding:13px;
-  border-radius:13px;
-  background:var(--card);
-  border:1px solid var(--line);
-}
-
-.admin-row-title{
-  font-weight:bold;
-  font-size:13px;
-}
-
-.admin-row-meta{
-  margin-top:5px;
-  color:var(--muted);
-  font-size:10px;
-}
-
-.row-actions{
-  display:flex;
-  gap:7px;
-  margin-top:9px;
-}
-
-.small-btn{
-  padding:7px 10px;
-  border-radius:9px;
-  border:1px solid var(--line);
-  background:var(--card2);
-  color:white;
-  font-size:10px;
-}
-
-.small-btn.danger{
-  color:#ff6d83;
-}
-
-/* TOAST */
-
-.toast{
-  position:fixed;
-  left:50%;
-  bottom:90px;
-  transform:translateX(-50%) translateY(20px);
-  z-index:500;
-  max-width:90%;
-  padding:11px 16px;
-  border-radius:12px;
-  background:#182237;
-  border:1px solid var(--line);
-  color:white;
-  font-size:12px;
-  opacity:0;
-  pointer-events:none;
-  transition:.25s;
-}
-
-.toast.show{
-  opacity:1;
-  transform:translateX(-50%) translateY(0);
-}
-
-/* DESKTOP */
-
-@media(min-width:700px){
-  body{
-    max-width:760px;
-    margin:auto;
-  }
-
-  .bottom-nav{
-    max-width:760px;
-    left:50%;
-    transform:translateX(-50%);
-  }
-
-  .movies{
-    grid-template-columns:repeat(3,1fr);
-  }
-}
+  --bg:#07101d;--panel:#101a2b;--panel2:#151f33;--text:#f5f7ff;--muted:#9aa7bd;
+  --line:#25314a;--a:#7b5cff;--b:#16c8e8;--ok:#25d366;--warn:#ffbd3e;--danger:#ff4d67;
+  --radius:18px;--shadow:0 12px 35px rgba(0,0,0,.28)
+}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#08111f,#050a13 75%);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+button,input,textarea,select{font:inherit}button{border:0;color:#fff;cursor:pointer}
+.app{max-width:560px;margin:auto;min-height:100vh;padding-bottom:84px}.top{position:sticky;top:0;z-index:20;background:rgba(7,16,29,.9);backdrop-filter:blur(14px);padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.05)}
+.toprow{display:flex;align-items:center;gap:10px}.brand{font-weight:900;font-size:17px;flex:1}.pill{background:#252d3e;padding:4px 8px;border-radius:8px;font-size:11px}.pill b{background:#19bfe2;padding:3px 6px;border-radius:6px}
+.iconbtn{width:38px;height:38px;border-radius:12px;background:#172236}.screen{padding:12px}.hidden{display:none!important}
+.hero-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hero-tab{padding:14px;border-radius:15px;background:#16233a;text-align:left}.hero-tab.active{background:linear-gradient(135deg,#7354ff,#18c8e5);box-shadow:0 8px 25px rgba(83,100,255,.25)}.hero-tab small{display:block;font-size:9px;opacity:.8}
+.chips{display:flex;gap:8px;overflow:auto;padding:12px 0}.chip{white-space:nowrap;background:#182238;border:1px solid #27344d;border-radius:20px;padding:8px 13px;font-size:11px}.chip.active{background:linear-gradient(90deg,#8b5cf6,#12cce8);border:0}
+.card{background:linear-gradient(145deg,#142238,#0e1829);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);padding:15px;margin:10px 0;box-shadow:var(--shadow)}
+.eyebrow{font-size:10px;color:#b9c4d8;text-transform:uppercase;letter-spacing:.12em}.title{font-size:18px;font-weight:900;margin:5px 0}.muted{color:var(--muted);font-size:12px;line-height:1.5}
+.cta{display:flex;gap:8px;margin-top:12px}.btn{padding:11px 14px;border-radius:12px;background:#1a2840}.btn.primary{background:linear-gradient(90deg,#7655ff,#10c8e8);font-weight:800}.btn.ok{background:#168e55}.btn.danger{background:#b92f49}.btn.warn{background:#9a6b00}.btn.full{width:100%}
+.movie-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.movie{overflow:hidden;background:#111c2e;border-radius:15px;border:1px solid #24314a}.poster{aspect-ratio:2/3;background:#1a2538;object-fit:cover;width:100%;display:block}.movie-body{padding:9px}.movie-title{font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.movie-meta{font-size:10px;color:var(--muted);margin-top:4px}.rating{color:#ffd45a}
+.bottom{position:fixed;bottom:0;left:50%;transform:translateX(-50%);max-width:560px;width:100%;background:rgba(8,15,27,.96);border-top:1px solid #202c42;display:grid;grid-template-columns:repeat(4,1fr);padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:30}.nav{background:transparent;color:#93a0b7;padding:6px 2px;font-size:10px}.nav.active{color:#fff}.nav span{display:block;font-size:19px;margin-bottom:2px}
+.detail-backdrop{height:220px;border-radius:18px;object-fit:cover;width:100%;filter:brightness(.65)}.detail-poster{width:110px;border-radius:14px;margin-top:-55px;margin-left:16px;position:relative;border:3px solid #0d1727}.badge{display:inline-block;font-size:10px;background:#20304a;border-radius:9px;padding:5px 8px;margin:3px 3px 3px 0}.server{display:flex;gap:8px}.server .btn{flex:1}.search{display:flex;gap:8px}.search input,.form input,.form textarea,.form select{width:100%;background:#0b1525;border:1px solid #28364e;color:#fff;border-radius:12px;padding:12px;outline:none}.form{display:grid;gap:10px}.section-head{display:flex;align-items:center;justify-content:space-between;margin:18px 0 8px}.section-head h3{margin:0;font-size:15px}.empty{text-align:center;color:var(--muted);padding:35px 10px}
+.menu{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50}.drawer{width:82%;max-width:360px;height:100%;background:#0d1728;padding:18px;box-shadow:var(--shadow)}.drawer .btn{width:100%;text-align:left;margin:6px 0}
+.admin{max-width:900px;margin:auto;padding:14px}.admin .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stat{padding:16px;border-radius:16px;background:#121f34;border:1px solid #25334d}.stat b{display:block;font-size:25px;margin-top:5px}.table{overflow:auto}.row{display:grid;grid-template-columns:1.4fr .7fr .8fr .8fr;gap:8px;padding:10px;border-bottom:1px solid #25314a;font-size:11px;align-items:center}.row.head{font-weight:900;color:#aebbd0}.admin-nav{display:flex;gap:7px;overflow:auto;padding-bottom:8px}.admin-nav .btn{white-space:nowrap}.switch{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #25314a}.switch input{width:22px;height:22px}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#172238;border:1px solid #33425e;padding:10px 14px;border-radius:12px;z-index:100;box-shadow:var(--shadow);font-size:12px}
+@media(min-width:700px){.app{max-width:1100px}.bottom{max-width:1100px}.movie-grid{grid-template-columns:repeat(5,1fr)}.admin .grid{grid-template-columns:repeat(4,1fr)}}
 </style>
 </head>
-
 <body>
-
-<!-- HEADER -->
-<header class="header">
-  <div class="logo">Cine <span>Hub4</span></div>
-
-  <div class="header-actions">
-    <button class="icon-btn" id="languageBtn">EN</button>
-    <button class="icon-btn" onclick="switchView('search')">⌕</button>
-  </div>
-</header>
-
-<!-- ================= HOME ================= -->
-
-<div class="view active" id="view-home">
-
-  <section class="hero">
-    <small id="heroWelcome">স্বাগতম Cine Hub4 এ</small>
-
-    <h1 id="heroTitle">মুভি ও সিরিজ</h1>
-
-    <p id="heroDescription">
-      নতুন মুভি, ট্রেন্ডিং কনটেন্ট এবং তোমার পছন্দের সিনেমা এক জায়গায়।
-    </p>
-
-    <button class="primary-btn"
-            onclick="switchView('movies')"
-            id="exploreBtn">
-      ▶ Explore Now
-    </button>
-  </section>
-
-  <section class="section">
-
-    <div class="section-head">
-      <h2 id="trendingTitle">🔥 ট্রেন্ডিং</h2>
-
-      <span onclick="switchView('movies')"
-            id="trendingSeeAll">
-        See All
-      </span>
-    </div>
-
-    <div class="movies" id="trendingGrid">
-      <div class="loading">
-        <div class="spinner"></div>
-        Loading...
-      </div>
-    </div>
-
-  </section>
-
-  <section class="section">
-
-    <div class="section-head">
-      <h2 id="latestTitle">🆕 নতুন মুভি</h2>
-
-      <span onclick="switchView('movies')">
-        See All
-      </span>
-    </div>
-
-    <div class="movies" id="latestGrid">
-      <div class="loading">
-        <div class="spinner"></div>
-        Loading...
-      </div>
-    </div>
-
-  </section>
-
-</div>
-
-<!-- ================= MOVIES ================= -->
-
-<div class="view" id="view-movies">
-
-  <section class="section" style="margin-top:18px">
-
-    <div class="section-head">
-      <h2 id="allMoviesTitle">🎬 সব মুভি</h2>
-    </div>
-
-  </section>
-
-  <div class="chips" id="categoryChips"></div>
-
-  <section class="section" style="margin-top:5px">
-
-    <div class="movies" id="allMoviesGrid">
-      <div class="loading">
-        <div class="spinner"></div>
-      </div>
-    </div>
-
-  </section>
-
-</div>
-
-<!-- ================= SEARCH ================= -->
-
-<div class="view" id="view-search">
-
-  <div class="search-wrap">
-
-    <div class="search-box">
-      <span>🔍</span>
-
-      <input
-        id="searchInput"
-        type="text"
-        placeholder="মুভির নাম লিখুন..."
-        oninput="onSearchInput()"
-      >
-    </div>
-
-  </div>
-
-  <section class="section" style="margin-top:0">
-
-    <div class="movies" id="searchGrid"></div>
-
-    <div class="empty"
-         id="searchEmpty">
-      মুভির নাম লিখে সার্চ করুন
-    </div>
-
-  </section>
-
-</div>
-
-<!-- ================= FAVOURITE ================= -->
-
-<div class="view" id="view-favorite">
-
-  <section class="section" style="margin-top:18px">
-
-    <div class="section-head">
-      <h2 id="favoriteTitle">❤️ Favourite</h2>
-    </div>
-
-    <div class="movies" id="favGrid">
-      <div class="loading">
-        <div class="spinner"></div>
-      </div>
-    </div>
-
-  </section>
-
-</div>
-
-<!-- ================= PROFILE ================= -->
-
-<div class="view" id="view-profile">
-
-  <div class="profile-top">
-
-    <div class="avatar" id="profileAvatar">?</div>
-
-    <div class="profile-name" id="profileName">
-      Guest User
-    </div>
-
-    <div class="profile-username" id="profileUsername">
-      @username
-    </div>
-
-    <div class="profile-id" id="profileId">
-      ID: —
-    </div>
-
-  </div>
-
-  <div class="stats">
-
-    <div class="stat">
-      <strong id="statFav">0</strong>
-      <span id="favStatText">Favourites</span>
-    </div>
-
-    <div class="stat">
-      <strong id="statReq">0</strong>
-      <span id="reqStatText">Requests</span>
-    </div>
-
-    <div class="stat">
-      <strong id="statView">0</strong>
-      <span id="viewStatText">Viewed</span>
-    </div>
-
-  </div>
-
-  <div class="profile-menu">
-
-    <button class="menu-item"
-            onclick="switchView('favorite')">
-
-      <div class="menu-left">
-        <div class="menu-icon">❤️</div>
-        <span id="profileFavMenu">My Favourite</span>
-      </div>
-
-      <span>›</span>
-
-    </button>
-
-    <button class="menu-item"
-            onclick="showRequestModal()">
-
-      <div class="menu-left">
-        <div class="menu-icon">📩</div>
-        <span id="profileRequestMenu">Request Movie</span>
-      </div>
-
-      <span>›</span>
-
-    </button>
-
-    <button class="menu-item"
-            onclick="showHistory()">
-
-      <div class="menu-left">
-        <div class="menu-icon">🕘</div>
-        <span id="historyMenu">Recently Viewed</span>
-      </div>
-
-      <span>›</span>
-
-    </button>
-
-    <button class="menu-item"
-            id="adminMenuButton"
-            onclick="openAdmin()"
-            style="display:none">
-
-      <div class="menu-left">
-        <div class="menu-icon">🛠️</div>
-        <span>Admin Panel</span>
-      </div>
-
-      <span>›</span>
-
-    </button>
-
-  </div>
-
-</div>
-
-<!-- ================= ADMIN ================= -->
-
-<div class="view" id="view-admin">
-
-  <div class="admin-wrap">
-
-    <div class="admin-title">
-      Admin Panel
-    </div>
-
-    <div class="admin-sub">
-      Cine Hub4 Control Center
-    </div>
-
-    <div class="admin-grid">
-
-      <div class="admin-stat">
-        <div class="num" id="adminUsers">0</div>
-        <div class="label">Users</div>
-      </div>
-
-      <div class="admin-stat">
-        <div class="num" id="adminMovies">0</div>
-        <div class="label">Movies</div>
-      </div>
-
-      <div class="admin-stat">
-        <div class="num" id="adminFavs">0</div>
-        <div class="label">Favourites</div>
-      </div>
-
-      <div class="admin-stat">
-        <div class="num" id="adminRequests">0</div>
-        <div class="label">Requests</div>
-      </div>
-
-    </div>
-
-    <div class="admin-actions">
-
-      <button class="admin-action"
-              onclick="adminMovies()">
-        🎬 Movie Management
-      </button>
-
-      <button class="admin-action"
-              onclick="adminUsers()">
-        👥 User Management
-      </button>
-
-      <button class="admin-action"
-              onclick="adminRequests()">
-        📩 Movie Requests
-      </button>
-
-      <button class="admin-action"
-              onclick="adminConfig()">
-        ⚙️ Bot Configuration
-      </button>
-
-      <button class="admin-action"
-              onclick="adminBroadcast()">
-        📢 Broadcast
-      </button>
-
-      <button class="admin-action"
-              onclick="switchView('profile')">
-        ← Back to Profile
-      </button>
-
-    </div>
-
-    <div id="adminContent"></div>
-
-  </div>
-
-</div>
-
-<!-- ================= BOTTOM NAV ================= -->
-
-<nav class="bottom-nav">
-
-  <button class="nav-btn active"
-          data-view="home"
-          onclick="switchView('home')">
-    <div>⌂</div>
-    <span data-en="Home" data-bn="হোম">হোম</span>
-  </button>
-
-  <button class="nav-btn"
-          data-view="movies"
-          onclick="switchView('movies')">
-    <div>🎬</div>
-    <span data-en="Movies" data-bn="মুভি">মুভি</span>
-  </button>
-
-  <button class="nav-btn"
-          data-view="search"
-          onclick="switchView('search')">
-    <div>🔎</div>
-    <span data-en="Search" data-bn="সার্চ">সার্চ</span>
-  </button>
-
-  <button class="nav-btn"
-          data-view="favorite"
-          onclick="switchView('favorite')">
-    <div>♡</div>
-    <span data-en="Favourite" data-bn="ফেভারিট">ফেভারিট</span>
-  </button>
-
-  <button class="nav-btn"
-          data-view="profile"
-          onclick="switchView('profile')">
-    <div>👤</div>
-    <span data-en="Profile" data-bn="প্রোফাইল">প্রোফাইল</span>
-  </button>
-
-</nav>
-
-<!-- ================= MOVIE DETAIL ================= -->
-<div class="overlay" id="detailOverlay">
-
-  <div class="overlay-head">
-
-    <button class="close-btn"
-            onclick="closeDetail()">
-      ←
-    </button>
-
-  </div>
-
-  <div id="detailContent">
-
-    <div class="loading">
-      <div class="spinner"></div>
-    </div>
-
-  </div>
-
-</div>
-
-<!-- ================= REQUEST MODAL ================= -->
-
-<div class="modal" id="requestModal">
-
-  <div class="modal-box">
-
-    <div class="modal-head">
-
-      <h3 id="requestModalTitle">
-        📩 Request Movie
-      </h3>
-
-      <button class="close-btn"
-              onclick="closeModal('requestModal')">
-        ✕
-      </button>
-
-    </div>
-
-    <div class="form-group">
-
-      <label id="requestNameLabel">
-        Movie Name
-      </label>
-
-      <input
-        class="form-control"
-        id="requestMovieName"
-        placeholder="Movie name"
-      >
-
-    </div>
-
-    <div class="form-group">
-
-      <label>
-        Message
-      </label>
-
-      <textarea
-        class="form-control"
-        id="requestMessage"
-        placeholder="Optional message..."
-      ></textarea>
-
-    </div>
-
-    <button class="save-btn"
-            onclick="submitRequest()">
-      Submit Request
-    </button>
-
-  </div>
-
-</div>
- 
- <!-- ================= MOVIE MODAL ================= -->
-
-<div class="modal" id="movieModal">
-
-  <div class="modal-box">
-
-    <div class="modal-head">
-
-      <h3 id="movieModalTitle">
-        Add Movie
-      </h3>
-
-      <button class="close-btn"
-              onclick="closeModal('movieModal')">
-        ✕
-      </button>
-
-    </div>
-
-    <input type="hidden" id="movieDocId">
-
-    <div class="form-group">
-      <label>Title</label>
-      <input class="form-control" id="movieTitleInput">
-    </div>
-
-    <div class="form-group">
-      <label>Year</label>
-      <input class="form-control" id="movieYearInput">
-    </div>
-
-    <div class="form-group">
-      <label>TMDB ID</label>
-      <input class="form-control" id="movieTmdbInput">
-    </div>
-
-    <div class="form-group">
-      <label>Poster URL</label>
-      <input class="form-control" id="moviePosterInput">
-    </div>
-
-    <div class="form-group">
-      <label>Genres</label>
-      <input class="form-control" id="movieGenresInput"
-             placeholder="Action, Drama">
-    </div>
-
-    <div class="form-group">
-      <label>Overview</label>
-      <textarea class="form-control"
-                id="movieOverviewInput"></textarea>
-    </div>
-
-    <div class="form-group">
-      <label>Server 1 Link</label>
-      <input class="form-control" id="server1LinkInput">
-    </div>
-
-    <div class="form-group">
-      <label>Server 2 Link</label>
-      <input class="form-control" id="server2LinkInput">
-    </div>
-
-    <div class="form-group">
-      <label>Server 3 Link</label>
-      <input class="form-control" id="server3LinkInput">
-    </div>
-
-    <button class="save-btn"
-            onclick="saveMovie()">
-      Save Movie
-    </button>
-
-  </div>
-
-</div>
-
-<!-- TOAST -->
-
-<div class="toast" id="toast"></div>
-
-<!-- PART 1 END -->
+<div id="app" class="app"></div>
+<div id="toast" class="toast hidden"></div>
+
+<script>
+/* =========================================================
+   CENTRAL CONFIG — ONLY CHANGE API/IDs HERE
+   Data collections used:
+   config/main
+   movies
+   users
+   requests
+   ========================================================= */
+const CONFIG={
+  botName:"Cine Hub4",
+  botUsername:"Cinehub4bot",
+  ownerId:"5605543865",
+  adminIds:["7830499211","1904834862"],
+  firebaseProjectId:"cinehub4-d1773",
+  firestoreApiKey:"AIzaSyBdoLUyIh83s7w72eOU_cEdF5aAcqfDdQ",
+  tmdbApiKey:"2f84235873a478ed4c3601374da7f4",
+  tmdbLang:"en-US",
+  forceJoin:true,
+  channelUsername:"chinehub4",
+  server1Enabled:true,server2Enabled:true,server3Enabled:true,
+  maintenanceMode:false
+};
+
+const TG=window.Telegram?.WebApp;
+TG?.ready(); TG?.expand();
+
+const state={
+  lang:localStorage.getItem("lang")||"bn",
+  page:"home",movies:[],selected:null,search:"",
+  favourites:JSON.parse(localStorage.getItem("favourites")||"[]"),
+  viewed:JSON.parse(localStorage.getItem("viewed")||"[]"),
+  adminTab:"dashboard",requests:[],users:[],cfg:{}
+};
+
+const T={
+ bn:{home:"হোম",movies:"মুভি",search:"সার্চ",fav:"ফেভারিট",profile:"প্রোফাইল",request:"মুভি রিকোয়েস্ট",recent:"সম্প্রতি যোগ",trend:"ট্রেন্ডিং",viewed:"সাম্প্রতিক দেখা",admin:"এডমিন প্যানেল",details:"মুভি ডিটেইলস",send:"রিকোয়েস্ট পাঠান",save:"সেভ",back:"ফিরে যান",loading:"লোড হচ্ছে...",no:"কিছু পাওয়া যায়নি"},
+ en:{home:"Home",movies:"Movies",search:"Search",fav:"Favourite",profile:"Profile",request:"Movie Request",recent:"Recently Added",trend:"Trending",viewed:"Recently Viewed",admin:"Admin Panel",details:"Movie Details",send:"Send Request",save:"Save",back:"Back",loading:"Loading...",no:"Nothing found"},
+ hi:{home:"होम",movies:"मूवी",search:"सर्च",fav:"फेवरेट",profile:"प्रोफाइल",request:"मूवी रिक्वेस्ट",recent:"हाल में जोड़े गए",trend:"ट्रेंडिंग",viewed:"हाल ही में देखे",admin:"एडमिन पैनल",details:"मूवी डिटेल्स",send:"रिक्वेस्ट भेजें",save:"सेव",back:"वापस",loading:"लोड हो रहा है...",no:"कुछ नहीं मिला"}
+};
+const t=k=>T[state.lang]?.[k]||T.en[k]||k;
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+function toast(x){let e=document.getElementById("toast");e.textContent=x;e.classList.remove("hidden");setTimeout(()=>e.classList.add("hidden"),2300);}
+function isAdmin(){let id=String(TG?.initDataUnsafe?.user?.id||"");return id===String(CONFIG.ownerId)||CONFIG.adminIds.includes(id);}
+function uid(){return String(TG?.initDataUnsafe?.user?.id||"0");}
+function userName(){return TG?.initDataUnsafe?.user?.first_name||"Guest";}
+
+/* ---------- Firestore REST ---------- */
+function fsBase(){return `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(CONFIG.firebaseProjectId)}/databases/(default)/documents`;}
+async function fsGet(path){let r=await fetch(`${fsBase()}/${path}?key=${encodeURIComponent(CONFIG.firestoreApiKey)}`);if(!r.ok)throw new Error("Firestore GET "+r.status);return r.json();}
+async function fsList(collection){let r=await fetch(`${fsBase()}/${collection}?pageSize=1000&key=${encodeURIComponent(CONFIG.firestoreApiKey)}`);if(!r.ok)throw new Error("Firestore LIST "+r.status);return r.json();}
+function fsFields(o){let f={};for(const[k,v]of Object.entries(o)){if(v===null)f[k]={nullValue:null};else if(typeof v==="boolean")f[k]={booleanValue:v};else if(typeof v==="number")f[k]=Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};else if(Array.isArray(v))f[k]={arrayValue:{values:v.map(x=>typeof x==="number"?{integerValue:String(x)}:{stringValue:String(x)})}};else f[k]={stringValue:String(v)}}return f;}
+function fsDocToObj(d){let o={};for(const[k,v]of Object.entries(d.fields||{})){if(v.stringValue!==undefined)o[k]=v.stringValue;else if(v.integerValue!==undefined)o[k]=Number(v.integerValue);else if(v.doubleValue!==undefined)o[k]=v.doubleValue;else if(v.booleanValue!==undefined)o[k]=v.booleanValue;else if(v.nullValue!==undefined)o[k]=null;else o[k]=v}return o;}
+async function fsSet(collection,id,obj,merge=false){
+  let url=`${fsBase()}/${collection}/${encodeURIComponent(id)}?key=${encodeURIComponent(CONFIG.firestoreApiKey)}`;
+  let method=merge?"PATCH":"PATCH";
+  let r=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify({fields:fsFields(obj)})});
+  if(!r.ok)throw new Error("Firestore SET "+r.status);return r.json();
+}
+async function fsDelete(collection,id){let r=await fetch(`${fsBase()}/${collection}/${encodeURIComponent(id)}?key=${encodeURIComponent(CONFIG.firestoreApiKey)}`,{method:"DELETE"});if(!r.ok)throw new Error("Firestore DELETE "+r.status);}
+
+/* ---------- TMDB ---------- */
+const IMG=p=>p?`https://image.tmdb.org/t/p/w500${p}`:"";
+async function tmdb(path,params={}){
+  const u=new URL(`https://api.themoviedb.org/3/${path}`);
+  u.searchParams.set("api_key",CONFIG.tmdbApiKey);
+  u.searchParams.set("language",state.lang==="bn"?"bn-BD":state.lang==="hi"?"hi-IN":CONFIG.tmdbLang);
+  Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v));
+  let r=await fetch(u);if(!r.ok)throw new Error("TMDB "+r.status);return r.json();
+}
+async function searchTMDB(q){return tmdb("search/movie",{query:q,include_adult:"false",page:"1"});}
+
+/* ---------- User data ---------- */
+async function saveUser(){
+  if(!uid()||uid()==="0")return;
+  let u=TG?.initDataUnsafe?.user||{};
+  await fsSet("users",uid(),{telegram_id:uid(),username:u.username||"",first_name:u.first_name||"",language:state.lang,last_active:Date.now()});
+}
+function localFavourite(id){return state.favourites.includes(String(id));}
+function toggleFavourite(id){id=String(id);if(localFavourite(id))state.favourites=state.favourites.filter(x=>x!==id);else state.favourites.unshift(id);localStorage.setItem("favourites",JSON.stringify(state.favourites));toast(localFavourite(id)?"❤️ Added":"Removed");render();}
+function addViewed(id){id=String(id);state.viewed=[id,...state.viewed.filter(x=>x!==id)].slice(0,20);localStorage.setItem("viewed",JSON.stringify(state.viewed));}
+
+/* ---------- UI shell ---------- */
+function shell(content){
+  document.getElementById("app").innerHTML=`
+  <header class="top"><div class="toprow">
+    <button class="iconbtn" onclick="openMenu()">☰</button>
+    <div class="brand">${esc(CONFIG.botName)}</div><span class="pill">Prime <b>Scene</b></span>
+    <button class="iconbtn" onclick="state.page='search';render()">⌕</button>
+  </div></header>
+  <main class="screen">${content}</main>
+  ${state.page!=="admin"?`<nav class="bottom">
+    <button class="nav ${state.page==='home'?'active':''}" onclick="state.page='home';render()"><span>🏠</span>${t("home")}</button>
+    <button class="nav ${state.page==='movies'?'active':''}" onclick="state.page='movies';render()"><span>🎬</span>${t("movies")}</button>
+    <button class="nav ${state.page==='favourites'?'active':''}" onclick="state.page='favourites';render()"><span>❤️</span>${t("fav")}</button>
+    <button class="nav ${state.page==='profile'?'active':''}" onclick="state.page='profile';render()"><span>👤</span>${t("profile")}</button>
+  </nav>`:""}`;
+}
+function openMenu(){
+ document.body.insertAdjacentHTML("beforeend",`<div id="menu" class="menu" onclick="if(event.target.id==='menu')closeMenu()"><aside class="drawer">
+ <div class="toprow"><b style="flex:1">Menu</b><button class="iconbtn" onclick="closeMenu()">×</button></div>
+ ${["movies","favourites","profile"].map(x=>`<button class="btn" onclick="closeMenu();state.page='${x}';render()">🎬 ${t(x==='favourites'?'fav':x)}</button>`).join("")}
+ <button class="btn" onclick="closeMenu();state.page='request';render()">📩 ${t("request")}</button>
+ <button class="btn" onclick="setLang('bn')">🇧🇩 বাংলা</button><button class="btn" onclick="setLang('en')">🇬🇧 English</button><button class="btn" onclick="setLang('hi')">🇮🇳 हिन्दी</button>
+ ${isAdmin()?`<button class="btn primary" onclick="closeMenu();state.page='admin';renderAdmin()">👨‍💼 ${t("admin")}</button>`:""}
+ <button class="btn" onclick="closeMenu()">◉ Telegram</button>
+ </aside></div>`);
+}
+function closeMenu(){document.getElementById("menu")?.remove()}
+function setLang(l){state.lang=l;localStorage.setItem("lang",l);closeMenu();render();saveUser().catch(()=>{});}
+
+/* ---------- Movies ---------- */
+function movieCard(m){
+ let id=m.id||m.tmdb_id;return `<article class="movie" onclick='openMovie(${JSON.stringify(m).replace(/'/g,"&#39;")})'>
+ <img class="poster" src="${esc(IMG(m.poster_path||m.poster))}" onerror="this.style.display='none'">
+ <div class="movie-body"><div class="movie-title">${esc(m.title||m.movie_name||"Untitled")}</div>
+ <div class="movie-meta"><span class="rating">★ ${Number(m.vote_average||m.rating||0).toFixed(1)}</span> · ${esc((m.release_date||m.year||"").slice(0,4))}</div></div></article>`;
+}
+async function loadMovies(){
+ try{
+  let d=await fsList("movies");state.movies=(d.documents||[]).map(x=>({id:x.name.split("/").pop(),...fsDocToObj(x)}));
+ }catch(e){state.movies=[]}
+ if(!state.movies.length){try{let d=await tmdb("movie/popular",{page:1});state.movies=d.results||[]}catch(e){}}
+}
+function home(){
+ let movies=state.movies.slice(0,10);
+ return `<div class="hero-tabs"><div class="hero-tab active">🆕 New Movies<small>LATEST UPLOADS</small></div><div class="hero-tab">🔥 Trending<small>MOST WATCHED</small></div></div>
+ <div class="chips"><span class="chip active">All Movies</span><span class="chip">Hollywood Movie Hindi</span><span class="chip">Bangla Movies</span></div>
+ <div class="card"><div class="eyebrow">▣ MOVIE ZONE</div><div class="title">Cinema Library</div><div class="muted">Curated movies, web series and premium entertainment updates.</div><div class="cta"><button class="btn primary full" onclick="state.page='movies';render()">◉ How to Watch</button></div></div>
+ <div class="section-head"><h3>🆕 ${t("recent")}</h3><button class="btn" onclick="state.page='movies';render()">See all</button></div>
+ <div class="movie-grid">${movies.length?movies.map(movieCard).join(""):`<div class="empty">${t("loading")}</div>`}</div>`;
+}
+function moviesPage(){
+ let list=state.movies;
+ if(state.search)list=list.filter(m=>(m.title||m.movie_name||"").toLowerCase().includes(state.search.toLowerCase()));
+ return `<div class="search"><input value="${esc(state.search)}" placeholder="Search movies..." oninput="state.search=this.value;render()"><button class="btn primary">⌕</button></div>
+ <div class="section-head"><h3>🎬 ${t("movies")}</h3><span class="muted">${list.length}</span></div>
+ <div class="movie-grid">${list.length?list.map(movieCard).join(""):`<div class="empty">${t("no")}</div>`}</div>`;
+}
+async function openMovie(m){state.selected=m;addViewed(m.id||m.tmdb_id);render();}
+function detail(){
+ let m=state.selected||{};return `<button class="btn" onclick="state.page='movies';render()">← ${t("back")}</button>
+ <img class="detail-backdrop" src="${esc(IMG(m.backdrop_path||m.poster_path||m.poster))}">
+ <img class="detail-poster" src="${esc(IMG(m.poster_path||m.poster))}">
+ <div class="section-head"><h2>${esc(m.title||m.movie_name||"Untitled")}</h2><button class="btn" onclick="toggleFavourite('${esc(m.id||m.tmdb_id)}')">${localFavourite(m.id||m.tmdb_id)?"❤️":"🤍"}</button></div>
+ <div><span class="badge">⭐ ${Number(m.vote_average||m.rating||0).toFixed(1)}</span><span class="badge">📅 ${esc((m.release_date||m.year||"").slice(0,4))}</span><span class="badge">🎭 ${esc((m.genres||m.genre||"").toString())}</span></div>
+ <div class="card"><div class="eyebrow">OVERVIEW</div><div class="muted">${esc(m.overview||"No overview available.")}</div></div>
+ <div class="card"><div class="title">▶️ Servers</div><div class="server">
+ ${CONFIG.server1Enabled?`<button class="btn primary" onclick="playServer(1)">Server 1</button>`:""}
+ ${CONFIG.server2Enabled?`<button class="btn primary" onclick="playServer(2)">Server 2</button>`:""}
+ ${CONFIG.server3Enabled?`<button class="btn primary" onclick="playServer(3)">Server 3</button>`:""}
+ </div></div>
+ <div class="card"><button class="btn primary full" onclick="state.page='request';render()">📩 ${t("request")}</button></div>`;
+}
+function playServer(n){toast("Server "+n+" selected");}
+
+/* ---------- Search / request / profile ---------- */
+function searchPage(){return `<div class="search"><input autofocus value="${esc(state.search)}" placeholder="Movie name..." oninput="state.search=this.value;render()"><button class="btn primary" onclick="doTMDBSearch()">Search</button></div><div id="searchResults" class="movie-grid"></div>`}
+async function doTMDBSearch(){let box=document.getElementById("searchResults");if(!box)return;box.innerHTML=`<div class="empty">${t("loading")}</div>`;try{let d=await searchTMDB(state.search);box.innerHTML=(d.results||[]).map(movieCard).join("")||`<div class="empty">${t("no")}</div>`}catch(e){box.innerHTML=`<div class="empty">TMDB Error</div>`}}
+async function submitRequest(){
+ let name=document.getElementById("reqName")?.value.trim();if(!name){toast("Movie name required");return}
+ let year=document.getElementById("reqYear")?.value.trim()||"";
+ let id=uid()+"_"+name.toLowerCase().replace(/[^a-z0-9\u0980-\u09ff ]/g,"").replace(/\s+/g,"_").slice(0,60);
+ let r={user_id:uid(),username:TG?.initDataUnsafe?.user?.username||"",first_name:userName(),movie_name:name,year,status:"pending",source:"webapp",language:state.lang,created_time:Date.now()};
+ try{await fsSet("requests",id,{...r,document_id:id});toast("✅ "+t("send"));document.getElementById("reqName").value="";document.getElementById("reqYear").value=""}catch(e){toast("❌ Firestore error")}}
+function requestPage(){return `<div class="card"><div class="eyebrow">📩 MOVIE REQUEST</div><div class="title">${t("request")}</div><div class="muted">Send any movie name and release year. It will appear in Admin → User Requests.</div><div class="form" style="margin-top:12px"><input id="reqName" placeholder="Movie Name"><input id="reqYear" inputmode="numeric" placeholder="Release Year (optional)"><button class="btn primary" onclick="submitRequest()">${t("send")}</button></div></div>`}
+function profile(){
+ let u=TG?.initDataUnsafe?.user||{};return `<div class="card"><div class="toprow"><div style="font-size:42px">👤</div><div style="flex:1"><div class="title">${esc(u.first_name||"Guest")}</div><div class="muted">@${esc(u.username||"no_username")}</div></div><button class="btn" onclick="setLang('bn')">বাংলা</button><button class="btn" onclick="setLang('en')">EN</button></div></div>
+ <div class="card"><div class="section-head"><h3>OVERVIEW</h3></div><div class="movie-grid"><div class="stat">❤️<b>${state.favourites.length}</b><span class="muted">Favourite</span></div><div class="stat">👁<b>${state.viewed.length}</b><span class="muted">Viewed</span></div></div></div>
+ <div class="card"><button class="btn full" onclick="state.page='request';render()">📩 ${t("request")}</button></div>`;
+}
+      
+      
