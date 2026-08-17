@@ -245,8 +245,209 @@
 
 
 /* app layout: sticky pills while movie list scrolls */
-html,body{#app-parent-fix}
+
 #app{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;overflow:hidden}
 #screen{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 12px 88px;min-height:0}
 .hero-pills-sticky{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,#0a0c14 85%,transparent);padding:6px 0 10px;margin-bottom:4px}
-        
+
+
+/* ========== FINAL OVERRIDES v20260818h ========== */
+html,body{margin:0;padding:0;height:100%;background:#0a0c14;overflow:hidden}
+#app{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;position:relative}
+#screen{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  padding:10px 12px 90px;
+}
+.topbar,.topbar-hidden{display:none!important;height:0!important;max-height:0!important;overflow:hidden!important;border:0!important;padding:0!important;margin:0!important}
+
+/* Bottom nav — 5 equal items in one row */
+.bottom-nav{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  height:64px;
+  padding:4px 2px calc(4px + env(safe-area-inset-bottom));
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  gap:0;
+  background:#0c101cf2;
+  backdrop-filter:blur(16px);
+  border-top:1px solid #1e2538;
+  box-sizing:border-box;
+}
+.nav-item{
+  border:0;background:transparent;color:#6b738a;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;padding:4px 0;min-width:0;border-radius:12px;
+  font-size:9px;font-weight:700;line-height:1.1;
+}
+.nav-item .nav-ico{font-size:16px;line-height:1;font-style:normal;display:block}
+.nav-item .nav-lbl{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-item.active{color:#eef1ff;background:#171d2e}
+.nav-item[data-page="search"].active{color:#c4b5fd}
+
+/* Sticky New Movies / Trending — never scroll away */
+.hero-pills-sticky{
+  position:sticky!important;
+  top:0!important;
+  z-index:25!important;
+  background:#0a0c14!important;
+  padding:4px 0 10px!important;
+  margin:0 0 8px!important;
+}
+.hero-pills{
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:10px!important;
+  margin:0!important;
+}
+.hero-pill{
+  border:0!important;border-radius:16px!important;padding:14px 12px!important;
+  text-align:left!important;color:#fff!important;position:relative!important;
+  overflow:hidden!important;min-height:56px!important;cursor:pointer;
+  transition:box-shadow .2s,filter .2s,transform .15s;
+}
+/* Both always glow from the sides */
+.hero-pill.blue{
+  background:linear-gradient(135deg,#3b82f6,#1d4ed8 60%,#2563eb)!important;
+  box-shadow:
+    -6px 0 18px #3b82f688,
+    6px 0 18px #60a5fa66,
+    0 6px 20px #1d4ed866!important;
+}
+.hero-pill.orange{
+  background:linear-gradient(135deg,#fb923c,#ea580c 60%,#f59e0b)!important;
+  box-shadow:
+    -6px 0 18px #fb923c88,
+    6px 0 18px #fbbf2466,
+    0 6px 20px #ea580c66!important;
+}
+/* Selected = stronger light */
+.hero-pill.active.blue{
+  filter:brightness(1.12)!important;
+  box-shadow:
+    -10px 0 28px #60a5facc,
+    10px 0 28px #93c5fd99,
+    0 0 0 2px #bfdbfe,
+    0 8px 28px #2563ebaa!important;
+}
+.hero-pill.active.orange{
+  filter:brightness(1.12)!important;
+  box-shadow:
+    -10px 0 28px #fdba74cc,
+    10px 0 28px #fde68a99,
+    0 0 0 2px #fed7aa,
+    0 8px 28px #ea580caa!important;
+}
+.hero-pill .hp-label{display:block;font-size:14px;font-weight:800;color:#fff}
+.hero-pill .hp-sub{display:block;font-size:9px;font-weight:700;color:#ffffffd0;margin-top:3px;letter-spacing:.6px}
+
+/* In-page back bar (only on sub pages) */
+.page-back-bar{
+  display:flex;align-items:center;gap:10px;
+  margin:0 0 12px;padding:4px 0;
+  position:sticky;top:0;z-index:20;
+  background:#0a0c14;
+}
+.page-back-btn{
+  width:36px;height:36px;border:0;border-radius:11px;
+  background:#161b2c;color:#e8ecf8;font-size:22px;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+}
+.page-back-title{font-size:15px;font-weight:800;color:#e8ecf8}
+
+
+
+/* ========== Rotating thin border light on pills ========== */
+.hero-pill{isolation:isolate}
+.hero-pill::before{
+  content:"";
+  position:absolute;
+  inset:-3px;
+  border-radius:19px;
+  background:conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 250deg,
+    var(--beam) 280deg,
+    var(--beam) 300deg,
+    transparent 330deg,
+    transparent 360deg
+  );
+  animation:pillOrbit 2.6s linear infinite;
+  pointer-events:none;
+  z-index:0;
+  /* thin ring only */
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  padding:2px;
+  box-sizing:border-box;
+}
+.hero-pill.blue::before{
+  --beam:#fdba74; /* orange light travels on blue card */
+  filter:drop-shadow(0 0 4px #fb923c);
+}
+.hero-pill.orange::before{
+  --beam:#93c5fd; /* blue light travels on orange card */
+  filter:drop-shadow(0 0 4px #60a5fa);
+}
+.hero-pill.active::before{
+  padding:2.5px;
+  filter:brightness(1.4) drop-shadow(0 0 8px var(--beam));
+  animation-duration:2s;
+}
+.hero-pill > *{position:relative;z-index:2}
+@keyframes pillOrbit{
+  from{transform:rotate(0deg)}
+  to{transform:rotate(360deg)}
+}
+
+
+/* Voice mic button — polished */
+.search-bar{
+  display:flex;gap:10px;align-items:center;
+  background:#121826;border:1px solid #2a334d;
+  border-radius:16px;padding:8px 8px 8px 14px;margin-bottom:14px;
+  box-shadow:inset 0 1px 0 #ffffff08;
+}
+.search-bar input{
+  flex:1;background:transparent;border:0;outline:0;
+  color:#f0f2f8;font-size:14px;font-weight:500;
+}
+.search-bar input::placeholder{color:#6b738a}
+.search-bar .mic-btn{
+  width:44px;height:44px;border:0;border-radius:14px;
+  background:linear-gradient(145deg,#7c5cff 0%,#5b8cff 100%);
+  color:#fff;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  box-shadow:0 4px 14px #5b8cff55, inset 0 1px 0 #ffffff44;
+  transition:transform .15s,box-shadow .2s,filter .2s;
+  position:relative;overflow:hidden;
+}
+.search-bar .mic-btn:active{transform:scale(.94)}
+.search-bar .mic-btn .mic-svg{display:block;filter:drop-shadow(0 1px 1px #0004)}
+.search-bar .mic-btn.listening{
+  background:linear-gradient(145deg,#ff5b6b 0%,#ff8a5b 100%);
+  box-shadow:0 0 0 3px #ff5b6b44,0 4px 18px #ff5b6b88;
+  animation:pulseMic 1.1s ease-in-out infinite;
+}
+.search-bar .mic-btn.listening::after{
+  content:"";position:absolute;inset:0;border-radius:14px;
+  border:2px solid #fff6;animation:micRing 1.1s ease-out infinite;
+}
+@keyframes pulseMic{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.06)}
+}
+@keyframes micRing{
+  0%{transform:scale(1);opacity:.7}
+  100%{transform:scale(1.35);opacity:0}
+}
