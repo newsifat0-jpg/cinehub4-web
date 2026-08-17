@@ -1,1 +1,1 @@
-window.CINEHUB4_CONFIG={botName:"Cine Hub4",botUsername:"Cinehub4bot",backendUrl:"",adsgram:{enabled:true,blockId:"43222"},unlock:{defaultHours:15,defaultCostPoints:10},language:"bn"};
+window.CINEHUB4_CONFIG={botName:'Cine Hub4',botUsername:'Cinehub4bot',backendUrl:'',ads:{provider:'Adsgram',enabled:true,blockId:'43222',rewardPoints:3,dailyPointAdLimit:10},unlock:{pointsCost:10,hours:15,adUnlockEnabled:true},servers:{server1:true,server2:true,server3:true},language:'bn',admin:{ownerId:'5605543865',adminIds:['7830499211','1904834862']}};
