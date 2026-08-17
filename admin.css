@@ -10,4 +10,14 @@
 .dots-menu button:hover{background:#1e2640}
 .dots-menu button.danger{color:#f87171}
 .dots-menu button.danger:hover{background:#3b1a22}
-  
+
+/* Mobile sidebar backdrop + reliable open/close */
+.side-backdrop{display:none}
+@media(max-width:900px){
+  .side-backdrop{display:block;position:fixed;inset:0;background:#0009;z-index:9;opacity:1;transition:opacity .2s}
+  .side-backdrop.hidden{display:none!important;opacity:0;pointer-events:none}
+  .sidebar{z-index:20;box-shadow:12px 0 40px #000a}
+  .sidebar.open{transform:translateX(0)!important}
+  #sideNav button{min-height:44px;touch-action:manipulation}
+  #sideNav button.active{background:linear-gradient(90deg,#3d4a6a,#2a3550);color:#fff}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           }
