@@ -1,50 +1,792 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="bn">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#080a12">
-  <title>Cine Hub4</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
+
+    <meta
+        name="theme-color"
+        content="#080912"
+    >
+
+    <meta
+        name="apple-mobile-web-app-capable"
+        content="yes"
+    >
+
+    <title>Cine Hub4</title>
+
+    <!--
+        Cine Hub4
+        Telegram Movie Mini App
+    -->
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
 </head>
+
+
 <body>
-  <div id="splash" class="splash">
-    <div class="logo">C4</div>
-    <h1>Cine Hub4</h1>
-    <p>Movie • Download • Entertainment</p>
-    <div class="loader"></div>
-  </div>
 
-  <div id="app" class="hidden">
-    <header class="topbar">
-      <button class="round" id="menuBtn">☰</button>
-      <div class="brand"><div class="mini-logo">C4</div><div><strong>Cine Hub4</strong><small>Movie Mini App</small></div></div>
-      <button class="round" onclick="openPage('profile')">👤</button>
-    </header>
+    <!-- =====================================================
+         APP LOADING SCREEN
+    ====================================================== -->
 
-    <main id="content"></main>
+    <div
+        id="appLoader"
+        class="app-loader"
+    >
 
-    <nav class="bottom-nav">
-      <button onclick="openPage('home')">⌂<span data-bn="হোম" data-en="Home">হোম</span></button>
-      <button onclick="openPage('movies')">▣<span data-bn="মুভি" data-en="Movies">মুভি</span></button>
-      <button onclick="openPage('search')">⌕<span data-bn="সার্চ" data-en="Search">সার্চ</span></button>
-      <button onclick="openPage('points')">★<span data-bn="পয়েন্ট" data-en="Points">পয়েন্ট</span></button>
-      <button onclick="openPage('profile')">●<span data-bn="প্রোফাইল" data-en="Profile">প্রোফাইল</span></button>
-    </nav>
-  </div>
+        <div class="loader-logo">
+            C4
+        </div>
 
-  <div id="drawer" class="drawer">
-    <div class="drawer-card">
-      <div class="drawer-head"><div class="brand"><div class="mini-logo">C4</div><strong>Cine Hub4</strong></div><button class="round" onclick="closeDrawer()">×</button></div>
-      <div id="drawerItems"></div>
+        <div class="loader-brand">
+            Cine Hub4
+        </div>
+
+        <div class="loader-subtitle">
+            Movie • Download • Entertainment
+        </div>
+
+        <div class="loader-progress">
+            <span></span>
+        </div>
+
     </div>
-  </div>
 
-  <div id="modal" class="modal"><div id="modalBox" class="modal-box"></div></div>
-  <div id="toast" class="toast"></div>
 
-  <script src="config.js"></script>
-  <script src="app.js"></script>
+    <!-- =====================================================
+         MAIN APPLICATION
+    ====================================================== -->
+
+    <div
+        id="app"
+        class="app hidden"
+    >
+
+
+        <!-- =================================================
+             TOP HEADER
+        ================================================== -->
+
+        <header class="top-header">
+
+            <button
+                id="menuButton"
+                class="icon-button"
+                type="button"
+                aria-label="Open Menu"
+            >
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+
+            <div class="header-brand">
+
+                <div class="header-logo">
+                    C4
+                </div>
+
+                <div class="header-brand-text">
+
+                    <strong>
+                        Cine Hub4
+                    </strong>
+
+                    <small>
+                        Movie Mini App
+                    </small>
+
+                </div>
+
+            </div>
+
+
+            <button
+                id="profileButton"
+                class="profile-button"
+                type="button"
+                aria-label="Profile"
+            >
+
+                <img
+                    id="headerProfileImage"
+                    src=""
+                    alt="Profile"
+                >
+
+                <span
+                    id="headerProfileFallback"
+                >
+                    U
+                </span>
+
+            </button>
+
+        </header>
+
+
+        <!-- =================================================
+             SIDE DRAWER
+        ================================================== -->
+
+        <div
+            id="drawerOverlay"
+            class="drawer-overlay"
+        ></div>
+
+
+        <aside
+            id="sideDrawer"
+            class="side-drawer"
+        >
+
+            <div class="drawer-header">
+
+                <div class="drawer-user">
+
+                    <div class="drawer-avatar">
+
+                        <img
+                            id="drawerProfileImage"
+                            src=""
+                            alt="Telegram Profile"
+                        >
+
+                        <span
+                            id="drawerProfileFallback"
+                        >
+                            U
+                        </span>
+
+                    </div>
+
+
+                    <div>
+
+                        <strong
+                            id="drawerUserName"
+                        >
+                            Telegram User
+                        </strong>
+
+                        <small
+                            id="drawerUsername"
+                        >
+                            @username
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+                <button
+                    id="closeDrawerButton"
+                    class="drawer-close"
+                    type="button"
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <div class="drawer-balance">
+
+                <div>
+
+                    <small>
+                        My Points
+                    </small>
+
+                    <strong>
+                        ★
+                        <span id="drawerPoints">
+                            0
+                        </span>
+                    </strong>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    onclick="navigate('points')"
+                >
+                    Earn
+                </button>
+
+            </div>
+
+
+            <nav class="drawer-navigation">
+
+
+                <button
+                    class="drawer-item active"
+                    data-page="home"
+                    onclick="navigate('home')"
+                >
+
+                    <span class="drawer-icon">
+                        🏠
+                    </span>
+
+                    <span>
+                        Home
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="drawer-item"
+                    data-page="movies"
+                    onclick="navigate('movies')"
+                >
+
+                    <span class="drawer-icon">
+                        🎬
+                    </span>
+
+                    <span>
+                        Movies
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="drawer-item"
+                    data-page="search"
+                    onclick="navigate('search')"
+                >
+
+                    <span class="drawer-icon">
+                        🔎
+                    </span>
+
+                    <span>
+                        Search
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="drawer-item"
+                    data-page="trending"
+                    onclick="navigate('trending')"
+                >
+
+                    <span class="drawer-icon">
+                        🔥
+                    </span>
+
+                    <span>
+                        Trending
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="drawer-item"
+                    data-page="recent"
+                    onclick="navigate('recent')"
+                >
+
+                    <span class="drawer-icon">
+                        🆕
+                    </span>
+
+                    <span>
+                        Recently Added
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="drawer-item"
+                    data-page="favourite"
+                    onclick="navigate('favourite')"
+                >
+
+                    <span class="drawer-icon">
+                        ❤️
+                    </span>
+
+                    <span>
+                        Favourite
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="drawer-item"
+                    data-page="viewed"
+                    onclick="navigate('viewed')"
+                >
+
+                    <span class="drawer-icon">
+                        🕘
+                    </span>
+
+                    <span>
+                        Recently Viewed
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="drawer-item"
+                    data-page="request"
+                    onclick="navigate('request')"
+                >
+
+                    <span class="drawer-icon">
+                        📩
+                    </span>
+
+                    <span>
+                        Movie Request
+                    </span>
+
+                </button>
+
+
+                <div class="drawer-divider"></div>
+
+
+                <button
+                    class="drawer-item points-item"
+                    data-page="points"
+                    onclick="navigate('points')"
+                >
+
+                    <span class="drawer-icon">
+                        ⭐
+                    </span>
+
+                    <span>
+                        My Points
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="drawer-item"
+                    data-page="tasks"
+                    onclick="navigate('tasks')"
+                >
+
+                    <span class="drawer-icon">
+                        🎯
+                    </span>
+
+                    <span>
+                        Daily Tasks
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="drawer-item"
+                    data-page="referral"
+                    onclick="navigate('referral')"
+                >
+
+                    <span class="drawer-icon">
+                        👥
+                    </span>
+
+                    <span>
+                        Referral
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="drawer-item"
+                    data-page="adult"
+                    onclick="navigate('adult')"
+                >
+
+                    <span class="drawer-icon">
+                        🔞
+                    </span>
+
+                    <span>
+                        Adult
+                    </span>
+
+                </button>
+
+
+                <div class="drawer-divider"></div>
+
+
+                <button
+                    class="drawer-item"
+                    data-page="profile"
+                    onclick="navigate('profile')"
+                >
+
+                    <span class="drawer-icon">
+                        👤
+                    </span>
+
+                    <span>
+                        Profile
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="drawer-item"
+                    data-page="settings"
+                    onclick="navigate('settings')"
+                >
+
+                    <span class="drawer-icon">
+                        ⚙️
+                    </span>
+
+                    <span>
+                        Settings
+                    </span>
+
+                </button>
+
+
+                <!--
+                    DEMO ADMIN BUTTON
+
+                    Production version:
+                    This element will only be created
+                    after secure Telegram Admin verification.
+                -->
+
+                <div
+                    id="demoAdminNavigation"
+                    class="admin-navigation hidden"
+                >
+
+                    <div class="drawer-divider"></div>
+
+
+                    <button
+                        class="drawer-item admin-item"
+                        data-page="admin"
+                        onclick="navigate('admin')"
+                    >
+
+                        <span class="drawer-icon">
+                            👨‍💼
+                        </span>
+
+                        <span>
+                            Admin Panel
+                        </span>
+
+                        <span class="admin-badge">
+                            DEMO
+                        </span>
+
+                    </button>
+
+                </div>
+
+            </nav>
+
+
+            <div class="drawer-footer">
+
+                <span>
+                    Cine Hub4
+                </span>
+
+                <small>
+                    v2.0 Professional
+                </small>
+
+            </div>
+
+        </aside>
+
+
+        <!-- =================================================
+             PAGE CONTAINER
+        ================================================== -->
+
+        <main
+            id="pageContainer"
+            class="page-container"
+        >
+
+            <!-- JavaScript renders pages here -->
+
+        </main>
+
+
+        <!-- =================================================
+             BOTTOM NAVIGATION
+        ================================================== -->
+
+        <nav class="bottom-navigation">
+
+
+            <button
+                class="bottom-item active"
+                data-page="home"
+                onclick="navigate('home')"
+            >
+
+                <span class="bottom-icon">
+                    🏠
+                </span>
+
+                <span>
+                    Home
+                </span>
+
+            </button>
+
+
+            <button
+                class="bottom-item"
+                data-page="movies"
+                onclick="navigate('movies')"
+            >
+
+                <span class="bottom-icon">
+                    🎬
+                </span>
+
+                <span>
+                    Movies
+                </span>
+
+            </button>
+
+
+            <button
+                class="bottom-search"
+                onclick="navigate('search')"
+                aria-label="Search"
+            >
+
+                <span>
+                    🔎
+                </span>
+
+            </button>
+
+
+            <button
+                class="bottom-item"
+                data-page="points"
+                onclick="navigate('points')"
+            >
+
+                <span class="bottom-icon">
+                    ⭐
+                </span>
+
+                <span>
+                    Points
+                </span>
+
+            </button>
+
+
+            <button
+                class="bottom-item"
+                data-page="profile"
+                onclick="navigate('profile')"
+            >
+
+                <span class="bottom-icon">
+                    👤
+                </span>
+
+                <span>
+                    Profile
+                </span>
+
+            </button>
+
+
+        </nav>
+
+
+        <!-- =================================================
+             MOVIE DETAILS MODAL
+        ================================================== -->
+
+        <div
+            id="movieModal"
+            class="modal"
+        >
+
+            <div
+                class="modal-backdrop"
+                onclick="closeMovieModal()"
+            ></div>
+
+
+            <div class="movie-modal">
+
+                <button
+                    class="modal-close"
+                    onclick="closeMovieModal()"
+                >
+                    ×
+                </button>
+
+
+                <div
+                    id="movieModalContent"
+                    class="movie-modal-content"
+                >
+
+                    <!-- Movie details rendered here -->
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             GENERIC MODAL
+        ================================================== -->
+
+        <div
+            id="appModal"
+            class="modal"
+        >
+
+            <div
+                class="modal-backdrop"
+                onclick="closeAppModal()"
+            ></div>
+
+
+            <div class="app-modal">
+
+                <button
+                    class="modal-close"
+                    onclick="closeAppModal()"
+                >
+                    ×
+                </button>
+
+
+                <div
+                    id="appModalContent"
+                ></div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             TOAST
+        ================================================== -->
+
+        <div
+            id="toast"
+            class="toast"
+        >
+
+            <span id="toastIcon">
+                ✓
+            </span>
+
+            <span id="toastMessage">
+                Done
+            </span>
+
+        </div>
+
+
+        <!-- =================================================
+             GLOBAL LOADING
+        ================================================== -->
+
+        <div
+            id="globalLoading"
+            class="global-loading hidden"
+        >
+
+            <div class="loading-card">
+
+                <div class="loading-spinner"></div>
+
+                <strong id="loadingText">
+                    Please Wait...
+                </strong>
+
+                <small>
+                    Cine Hub4
+                </small>
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- =====================================================
+         TELEGRAM WEB APP
+    ====================================================== -->
+
+    <script
+        src="https://telegram.org/js/telegram-web-app.js"
+    ></script>
+
+
+    <!-- =====================================================
+         CINE HUB4 CONFIG
+    ====================================================== -->
+
+    <script
+        src="config.js"
+    ></script>
+
+
+    <!-- =====================================================
+         CINE HUB4 APPLICATION
+    ====================================================== -->
+
+    <script
+        src="app.js"
+    ></script>
+
+
 </body>
-                                                                                                             </html>
-                                                                                                             
+
+  </html>
