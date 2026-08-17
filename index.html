@@ -1,1 +1,35 @@
-<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#10162a"><title>Cine Hub4</title><link rel="stylesheet" href="style.css"></head><body><div class="app"><header class="top"><button class="topbtn" id="menuBtn">☰</button><h1>🎬 Cine Hub4</h1><button class="topbtn" id="profileBtn">👤</button></header><main id="screen" class="screen"></main><nav class="bottom"><button data-page="home">🏠<small data-i="home">Home</small></button><button data-page="movies">🎬<small data-i="movies">Movies</small></button><button data-page="search">🔎<small data-i="search">Search</small></button><button data-page="points">⭐<small data-i="points">Points</small></button><button data-page="profile">👤<small data-i="profile">Profile</small></button></nav></div><div id="drawer" class="drawer"><aside class="panel"><div class="panelhead"><b>🎬 Cine Hub4</b><button class="topbtn" id="closeMenu">×</button></div><div id="menuItems"></div></aside></div><script src="config.js"></script><script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101426">
+<title>Cine Hub4</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="left-controls">
+    <button id="back">‹</button>
+    <button id="menu">⋮</button>
+  </div>
+  <b>🎬 Cine Hub4</b>
+  <button id="profile">👤</button>
+</header>
+
+<div id="menuPanel" class="menu-panel"></div>
+
+<main id="screen"></main>
+
+<nav>
+  <button data-p="home">🏠<small>Home</small></button>
+  <button data-p="movies">🎬<small>Movies</small></button>
+  <button data-p="search">🔎<small>Search</small></button>
+  <button data-p="points">⭐<small>Points</small></button>
+  <button data-p="profile">👤<small>Profile</small></button>
+</nav>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
