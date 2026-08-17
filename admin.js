@@ -2,9 +2,12 @@ const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 const DEFAULT={appName:"Cine Hub4",botUsername:"@Cinehub4bot",telegramBotLink:"https://t.me/Cinehub4bot",telegramChannelLink:"",howToEarnVideo:"",unlockCost:5,unlockHours:15,adReward:2,dailyAdLimit:20,categories:["All Movies","Bangla Moves","Hollywood Movie Hindi"],adBlocks:{rewarded:"43222",interstitial:"",banner:"",task:"",adult:""}};
 const A={section:"dashboard",settings:{...DEFAULT,...JSON.parse(localStorage.getItem("cinehub4_settings")||"{}")},movies:JSON.parse(localStorage.getItem("cinehub4_movies")||"null")||[{id:1,title:"PRINCE",type:"Movie",year:2026,rating:8.7,clicks:1842,downloads:921,status:"Published",category:"Bangla Moves"},{id:2,title:"ROCKSTAR",type:"Movie",year:2026,rating:8.1,clicks:1421,downloads:702,status:"Published",category:"Bangla Moves"},{id:3,title:"SPIDER-MAN: Brand New Day",type:"Movie",year:2026,rating:8.5,clicks:1207,downloads:641,status:"Draft",category:"Hollywood Movie Hindi"}],users:12480,points:156240,adultEnabled:true};
 A.settings.adBlocks={...DEFAULT.adBlocks,...(A.settings.adBlocks||{})};A.settings.categories=A.settings.categories||DEFAULT.categories;
-const content=$("#content"),title=$("#pageTitle"),toastEl=$("#toast");
+function el(id){return document.getElementById(id)}
+function contentEl(){return el("content")}
+function titleEl(){return el("pageTitle")}
+const toastEl=$("#toast");
 function save(){localStorage.setItem("cinehub4_movies",JSON.stringify(A.movies));localStorage.setItem("cinehub4_settings",JSON.stringify(A.settings))}
-function toast(t){toastEl.textContent=t;toastEl.classList.add('show');setTimeout(()=>toastEl.classList.remove('show'),1700)}
+function toast(msg){const te=el('toast')||toastEl;if(!te)return;te.textContent=msg;te.classList.add('show');setTimeout(()=>te.classList.remove('show'),1700)}
 function money(n){return Number(n).toLocaleString()}
 function getTelegramUserId(){try{return window.Telegram?.WebApp?.initDataUnsafe?.user?.id?String(window.Telegram.WebApp.initDataUnsafe.user.id):''}catch(e){return ''}}
 function allowedAdminIds(){return (window.APP_CONFIG?.adminIds||[window.APP_CONFIG?.adminDemoId]).map(String)}
@@ -15,7 +18,16 @@ function boot(){try{window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.ex
 function sectionTitle(s){const map={dashboard:'Dashboard',movies:'Movies',categories:'Categories',users:'Users',points:'Points & Unlocks',ads:'Ads & Ad IDs',tasks:'Daily Tasks',payments:'Payments',adult:'Adult Library',requests:'Movie Requests',content:'Links & Videos',broadcast:'Broadcast',settings:'Settings'};return map[s]||s}
 function closeSidebar(){const sb=document.querySelector('.sidebar');if(sb)sb.classList.remove('open');const bd=document.getElementById('sideBackdrop');if(bd)bd.classList.add('hidden')}
 function openSidebar(){const sb=document.querySelector('.sidebar');if(sb)sb.classList.add('open');const bd=document.getElementById('sideBackdrop');if(bd)bd.classList.remove('hidden')}
-function setSection(s){A.section=s;title.textContent=sectionTitle(s);document.querySelectorAll('#sideNav button').forEach(b=>b.classList.toggle('active',b.dataset.section===s));render();closeSidebar()}
+function setSection(s){
+  try{
+    A.section=s;
+    const tt=titleEl();
+    if(tt) tt.textContent=sectionTitle(s);
+    document.querySelectorAll('#sideNav button').forEach(b=>b.classList.toggle('active',b.dataset.section===s));
+    render();
+    closeSidebar();
+  }catch(err){console.error('setSection',err);toast('Section error: '+err.message)}
+}
 function wireAdminNav(){
   document.querySelectorAll('#sideNav button[data-section]').forEach(btn=>{
     btn.onclick=function(e){
@@ -38,7 +50,8 @@ function wireAdminNav(){
   if(lo) lo.onclick=()=>{localStorage.removeItem('cinehub4_admin_session');location.reload()};
   const bd=document.getElementById('sideBackdrop');
   if(bd) bd.onclick=function(){closeSidebar()};
-}
+  }
+
 wireAdminNav();
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSidebar()});
 function dashboard(){return `<div class="grid stats"><div class="card stat"><span class="label">Total Users</span><div class="num">${money(A.users)}</div><span class="up">↑ 8.4%</span><span class="ico">♙</span></div><div class="card stat"><span class="label">Movies</span><div class="num">${A.movies.length}</div><span class="up">Live library</span><span class="ico">🎬</span></div><div class="card stat"><span class="label">Points Issued</span><div class="num">${money(A.points)}</div><span class="up">Economy active</span><span class="ico">◈</span></div><div class="card stat"><span class="label">Pending Payments</span><div class="num">3</div><span class="up">Needs review</span><span class="ico">৳</span></div></div><div class="grid section-grid"><div class="card"><h3>Platform Activity</h3><div class="muted smalltext">Clicks, downloads and ad rewards</div><div class="chart">${[38,55,48,72,66,91,76].map(x=>`<div class="bar" style="height:${x}%"></div>`).join('')}</div></div><div class="card"><h3>Quick Controls</h3><div class="quick"><button onclick="openMovie()"><b>＋ Add Movie</b>Publish title</button><button onclick="setSection('ads')"><b>◉ Ad IDs</b>Manage every ad block</button><button onclick="setSection('content')"><b>🔗 Links & Video</b>Telegram + How to Earn</button><button onclick="setSection('categories')"><b>▦ Categories</b>Add / rename / delete</button></div></div></div><div class="card" style="margin-top:14px"><h3>System Status</h3><div class="switch"><span>Movie Library</span><span class="badge green">ONLINE</span></div><div class="switch"><span>Points & 15-hour unlock</span><span class="badge green">ACTIVE</span></div><div class="switch"><span>Adult Library</span><span class="badge ${A.adultEnabled?'green':'red'}">${A.adultEnabled?'ENABLED':'DISABLED'}</span></div></div>`}
@@ -70,12 +83,4 @@ function editMovie(id){openMovie(id)}function deleteMovie(id){if(confirm('Delete
 function openCategory(index=null){const old=index===null?'':A.settings.categories[index];showModal(`<div class="modal-head"><h2>${index===null?'Add':'Edit'} Category</h2><button class="btn" onclick="closeModal()">×</button></div><div class="field"><label>Category name</label><input id="catName" value="${old}"></div><button class="btn primary" style="margin-top:15px" onclick="saveCategory(${index===null?-1:index})">Save Category</button>`)}
 function editCategory(i){openCategory(i)}function saveCategory(i){const n=$('#catName').value.trim();if(!n)return;if(i<0)A.settings.categories.push(n);else A.settings.categories[i]=n;save();closeModal();render();toast('Category saved')}
 function deleteCategory(i){if(A.settings.categories[i]==='All'){toast('All category cannot be deleted');return}if(confirm('Delete this category?')){A.settings.categories.splice(i,1);save();render();toast('Category deleted')}}
-function openTask(name=''){showModal(`<div class="modal-head"><h2>${name?'Edit':'Add'} Daily Task</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Task name</label><input id="taskName" value="${name}"></div><div class="field"><label>Reward points</label><input id="taskReward" type="number" value="5"></div><div class="field"><label>Daily limit</label><input id="taskLimit" type="number" value="1"></div></div><button class="btn primary" style="margin-top:15px" onclick="closeModal();toast('Task saved')">Save Task</button>`)}
-function openAdBlock(){showModal(`<div class="modal-head"><h2>Add Ad Block</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Ad Block Name</label><input id="extraAdName" placeholder="e.g. Home Reward"></div><div class="field"><label>Ad Block ID</label><input id="extraAdId" placeholder="43222"></div></div><button class="btn primary" style="margin-top:15px" onclick="saveExtraAd()">Add Ad Block</button>`)}
-function saveExtraAd(){const n=$('#extraAdName').value.trim(),id=$('#extraAdId').value.trim();if(!n||!id)return;A.settings.adBlocks.extra=A.settings.adBlocks.extra||{};A.settings.adBlocks.extra[n]=id;save();closeModal();render();toast('Ad block added')}
-function openAdultMovie(){showModal(`<div class="modal-head"><h2>Add Adult Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="adultTitle" placeholder="Adult title"></div><div class="field"><label>Poster URL</label><input id="adultPoster" placeholder="https://..."></div></div><button class="btn primary" style="margin-top:15px" onclick="saveAdultMovie()">Save Adult Movie</button>`)}
-function saveAdultMovie(){const t=$('#adultTitle').value.trim();if(!t)return;A.movies.unshift({id:Date.now(),title:t,type:'Adult',year:new Date().getFullYear(),rating:0,category:'Adult',adult:true,poster:$('#adultPoster').value.trim(),clicks:0,downloads:0,status:'Published'});save();closeModal();toast('Adult movie added')}
-function showModal(body){$('#modal').innerHTML=`<div class="modal-box">${body}</div>`;$('#modal').classList.remove('hidden')}function closeModal(){$('#modal').classList.add('hidden')}
-function render(){const views={dashboard,movies,categories,users,points,ads,tasks,payments,adult,requests,content:contentPage,broadcast,settings};content.innerHTML=views[A.section]();if(A.section==='ads'){const extra=A.settings.adBlocks.extra||{};$('#extraAds').innerHTML=Object.entries(extra).map(([n,id])=>`<div class="tag-item"><span><b>${n}</b> <small>#${id}</small></span><button class="btn danger" onclick="deleteExtraAd('${n.replace(/'/g,"\\'")}')">Delete</button></div>`).join('')||'<div class="muted smalltext">No extra ad blocks yet.</div>'}}
-function deleteExtraAd(n){delete A.settings.adBlocks.extra[n];save();render();toast('Ad block removed')}
-boot();
+function openTask(name=''){showModal(`<div class="modal-head"><h2>${name?'Edit':'Add'} Daily Task</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Task name</label><input id="taskName" value="${name}"></div><div class="field"><label>Reward points</label><input id="taskReward" type="number" value="5"></div><div class="field"><label>Daily limit
