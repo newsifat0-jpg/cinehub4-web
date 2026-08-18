@@ -1,92 +1,29 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0a0c14">
-<title>Cine Hub4</title>
-<link rel="stylesheet" href="style.css?v=20260818p">
-<style id="critical">
-html,body{margin:0;padding:0;background:#0a0c14;color:#eef1ff;font-family:system-ui,-apple-system,sans-serif}
-#app{min-height:100vh;position:relative}
-#screen{display:block!important;visibility:visible!important;opacity:1!important;min-height:70vh!important;padding:12px 12px 100px!important;color:#eef1ff!important;position:relative;z-index:2}
-#appSplash{position:fixed;inset:0;z-index:9999;background:#0a0c14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;transition:opacity .4s}
-#appSplash.gone{opacity:0;visibility:hidden;pointer-events:none;display:none!important}
-.bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:50;height:64px;padding-bottom:env(safe-area-inset-bottom);display:grid;grid-template-columns:repeat(5,1fr);background:#0c101cf5;border-top:1px solid #1e2538}
-.nav-item{border:0;background:0;color:#6b738a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:9px;font-weight:700;padding:6px 0}
-.nav-item.active{color:#fff;background:#171d2e;border-radius:12px;margin:4px}
-.nav-ico{font-size:16px;line-height:1}
-.hero-pills-sticky{position:sticky;top:0;z-index:20;background:#0a0c14;padding:4px 0 10px}
-.hero-pills{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.hero-pill{border:0;border-radius:16px;padding:14px 12px;color:#fff;text-align:left;position:relative;overflow:hidden;min-height:56px}
-.hero-pill.blue{background:linear-gradient(135deg,#3b82f6,#1d4ed8)}
-.hero-pill.orange{background:linear-gradient(135deg,#fb923c,#ea580c)}
-.prime-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-.menu-ham{width:34px;height:34px;border:0;border-radius:10px;background:#161b2c;color:#c8d0e8;font-size:16px}
-.prime-title{font-size:15px;font-weight:800}
-.scene-pill{background:linear-gradient(90deg,#7b5cff,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}
-</style>
-<script src="language.js?v=20260818p"></script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#090b12"><title>Cine Hub4</title><link rel="stylesheet" href="style.css">
+<script src="language.js"></script>
 </head>
-<body>
-<div id="appSplash"><div class="splash-logo">C4</div><div class="splash-name">CINE <span>HUB4</span></div><div class="splash-line"></div></div>
+<body><div id="appSplash"><div class="splash-logo">C4</div><div class="splash-name">CINE <span>HUB4</span></div><div class="splash-line"></div></div>
 <div id="app">
-<main id="screen"><div style="padding:20px;color:#8b93a7;text-align:center">Loading Cine Hub4…</div></main>
-<nav class="bottom-nav" id="bottomNav">
-<button data-page="movies" class="nav-item active" type="button"><span class="nav-ico">🎬</span><span class="nav-lbl">Movies</span></button>
-<button data-page="series" class="nav-item" type="button"><span class="nav-ico">📺</span><span class="nav-lbl">Series</span></button>
-<button data-page="search" class="nav-item" type="button"><span class="nav-ico">🔍</span><span class="nav-lbl">Search</span></button>
-<button data-page="adult" class="nav-item" type="button"><span class="nav-ico">🔞</span><span class="nav-lbl">18+</span></button>
-<button data-page="profile" class="nav-item" type="button"><span class="nav-ico">👤</span><span class="nav-lbl">Profile</span></button>
+<header class="topbar">
+<button class="icon-btn" id="backBtn">‹</button>
+<div class="brand"><div class="brand-mark">C4</div><div class="brand-text">CINE <span>HUB4</span></div></div>
+<button class="icon-btn" id="menuBtn">⋮</button>
+</header>
+<main id="screen"></main>
+<nav class="bottom-nav">
+<button data-page="home" class="nav-item active"><b>⌂</b><span data-i18n="Home">Home</span></button>
+<button data-page="movies" class="nav-item"><b>🎬</b><span data-i18n="Movies">Movies</span></button>
+<button data-page="adult" class="nav-item"><b>18+</b><span>Adult</span></button>
+<button data-page="profile" class="nav-item"><b>◉</b><span data-i18n="Profile">Profile</span></button>
 </nav>
-<div id="drawer" class="drawer-wrap hidden">
-<div class="drawer-backdrop"></div>
-<aside class="drawer">
-<div class="drawer-head"><div><strong>Cine Hub4</strong><small>Movie Mini App</small></div><button id="closeDrawer" type="button">×</button></div>
-<button type="button" data-page="movies">🎬 <span data-i18n="Movies">Movies</span></button>
-<button type="button" data-page="series">▤ <span data-i18n="Series">Series</span></button>
-<button type="button" data-page="adult">🔞 <span data-i18n="Adult">Adult</span></button>
-<button type="button" data-page="points">🪙 <span data-i18n="My Points">My Points</span></button>
-<button type="button" data-page="tasks">✓ <span data-i18n="Daily Tasks">Daily Tasks</span></button>
-<button type="button" data-page="profile">◉ <span data-i18n="Profile">Profile</span></button>
-<div class="lang-switch" id="langSwitch">
-  <span class="lang-label" data-i18n="Language">Language</span>
-  <div class="lang-toggle">
-    <button type="button" class="lang-btn" data-lang="bn" id="langBn">বাংলা</button>
-    <button type="button" class="lang-btn" data-lang="en" id="langEn">English</button>
-  </div>
-</div>
-<div class="drawer-spacer"></div>
-<button type="button" data-page="telegram">◉ <span>Telegram</span></button>
-<button id="adminPanelBtn" class="admin-only hidden" type="button">🛡️ <span data-i18n="Admin Panel">Admin Panel</span></button>
-</aside>
-</div>
-<div id="pageTransition" class="page-transition hidden" aria-hidden="true">
-  <div class="pt-blur"></div>
-  <div class="pt-center">
-    <div class="pt-logo">C4</div>
-    <div class="pt-name"><span class="pt-line">CINE</span> <span class="pt-line pt-accent">HUB4</span></div>
-    <div class="pt-bar"></div>
-  </div>
-</div>
-<div id="toast"></div>
-</div>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="config.js?v=20260818p"></script>
-<script src="app.js?v=20260818p"></script>
-<script>
-/* safety boot */
-(function(){
-  function kill(){var s=document.getElementById("appSplash");if(s){s.className="gone";s.style.display="none";}}
-  setTimeout(kill,300);setTimeout(kill,1000);setTimeout(kill,2000);
-  setTimeout(function(){
-    var sc=document.getElementById("screen");
-    if(sc && sc.innerHTML.indexOf("Loading Cine Hub4")>=0){
-      sc.innerHTML='<div style="padding:24px;color:#f88;text-align:center"><b>App script did not load</b><br><small>Upload app.js + style.css again</small></div>';
-    }
-  },3500);
-})();
-</script>
-</body>
-  </html>
-    
+<div id="drawer" class="drawer-wrap hidden"><div class="drawer-backdrop"></div><aside class="drawer">
+<div class="drawer-head"><div><strong>Cine Hub4</strong><small>Movie Mini App</small></div><button id="closeDrawer">×</button></div>
+<button data-page="home">⌂ <span>Home</span></button><button data-page="movies">🎬 <span>Movies</span></button><button data-page="series">▤ <span>Series</span></button><button data-page="adult">🔞 <span>Adult</span></button>
+<button data-page="points">🪙 <span>My Points</span></button><button data-page="tasks">✓ <span>Daily Tasks</span></button><button data-page="profile">◉ <span>Profile</span></button>
+<div class="drawer-spacer"></div><button data-page="settings">⚙ <span data-i18n="Settings">Settings</span></button><button data-page="telegram">◉ <span>Telegram</span></button><button id="adminPanelBtn" class="admin-only hidden" type="button">🛡️ <span data-i18n="Admin Panel">Admin Panel</span></button>
+</aside></div><div id="toast"></div></div>
+<script src="https://telegram.org/js/telegram-web-app.js"></script><script src="config.js"></script><script src="app.js"></script>
+</body></html>
