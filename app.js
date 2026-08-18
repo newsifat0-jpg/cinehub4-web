@@ -14,12 +14,45 @@ function t(k){try{return (window.CINEHUB4_LANG&&window.CINEHUB4_LANG.t)?window.C
 window.__cinehub_rerender=function(){try{render(false)}catch(e){}};
 
 function howToEarn(){const u=cfg.howToEarnVideo||cfg.telegramBotLink;if(u)openLink(u);else toast(t("How to Watch link not set"));}
+function watchTutorial(){const u=cfg.tutorialVideo||cfg.telegramBotLink;if(u)openLink(u);else toast(t("Tutorial video not set"));}
 
-
+/* Build Mini App deep link that OPENS the Mini App (not bot chat).
+   Correct format: https://t.me/BotUsername/app?startapp=PARAM
+   Wrong (opens bot only): https://t.me/BotUsername?startapp=PARAM
+*/
+function getBotUsername(){
+  let u=(cfg.botUsername||"").replace(/^@/,"").trim();
+  if(u) return u;
+  const link=(cfg.telegramBotLink||cfg.miniAppLink||"").trim();
+  const m=link.match(/t\.me\/([A-Za-z0-9_]+)/i);
+  return m?m[1]:"Cinehub4bot";
+}
+function getMiniAppShortName(){
+  // BotFather short name for this project is Hub4 → t.me/Cinehub4bot/Hub4
+  const n=(cfg.miniAppName||cfg.miniAppShortName||"Hub4").replace(/^\/+|\/+$/g,"").trim();
+  return n||"Hub4";
+}
+function buildMiniAppLink(startParam){
+  // If admin set a full mini app base URL like https://t.me/bot/app — use it
+  let base=(cfg.miniAppLink||"").trim().replace(/\/$/,"");
+  if(base && /t\.me\//i.test(base)){
+    // strip existing query
+    base=base.split("?")[0].replace(/\/$/,"");
+  }else{
+    const bot=getBotUsername();
+    const short=getMiniAppShortName();
+    base="https://t.me/"+bot+"/"+short;
+  }
+  if(startParam){
+    const p=String(startParam).replace(/[^A-Za-z0-9_\-]/g,"").slice(0,64);
+    return base+"?startapp="+encodeURIComponent(p);
+  }
+  return base;
+}
 function nativeShare(opts){
   const title=opts.title||"Cine Hub4";
   const text=opts.text||"";
-  const url=opts.url||(cfg.telegramBotLink||"https://t.me/Cinehub4bot");
+  const url=opts.url||buildMiniAppLink();
   const shareUrl="https://t.me/share/url?url="+encodeURIComponent(url)+"&text="+encodeURIComponent(text||title||"");
   try{
     if(window.Telegram&&window.Telegram.WebApp){
@@ -47,32 +80,29 @@ function telegramShare(text,url){
   nativeShare({text:text,url:url});
 }
 function shareMovie(id){
-  const m=movies.find(x=>x.id===id);
-  const t=m?(m.title||"").split("|")[0].trim():"Movie";
-  const bot=(cfg.telegramBotLink||"https://t.me/Cinehub4bot").replace(/\/$/,"");
-  // startapp deep-link opens Mini App directly with movie id
-  const link=bot+(bot.includes("?")?"&":"?")+"startapp=movie_"+id;
-  const text=t+" — watch on Cine Hub4";
-  nativeShare({title:t+" | Cine Hub4", text:text, url:link});
+  const mid=Number(id);
+  const m=movies.find(x=>x.id===mid||x.id===id);
+  const title=m?(m.title||"").split("|")[0].trim():"Movie";
+  // Deep link: opens Mini App → exact movie detail page
+  // Format: https://t.me/BotUsername/app?startapp=movie_ID
+  const link=buildMiniAppLink("movie_"+mid);
+  const text=title+" — watch on Cine Hub4\n"+link;
+  nativeShare({title:title+" | Cine Hub4", text:text, url:link});
 }
 function shareRef(){shareRefLink()}
 function shareRefLink(){
+  const uid=(function(){try{return String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id||"")}catch(e){return ""}})();
+  const param="ref_"+(uid||"friend");
+  let link=buildMiniAppLink(param);
+  // If profile already shows a link, prefer that only if it already has /app?startapp=
   const el=document.getElementById("refLinkText");
-  let link=(el&&el.textContent?el.textContent.trim():"")||"";
-  if(!link){
-    const bot=(cfg.telegramBotLink||"https://t.me/Cinehub4bot").replace(/\/$/,"");
-    const uid=(function(){try{return String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id||"")}catch(e){return ""}})();
-    link=bot+(bot.includes("?")?"&":"?")+"startapp=ref_"+(uid||"friend");
-  }
-  // Prefer startapp form so Mini App opens
-  if(link.indexOf("startapp=")<0 && link.indexOf("start=")>=0){
-    link=link.replace("start=","startapp=");
-  }
+  const shown=(el&&el.textContent?el.textContent.trim():"");
+  if(shown && /t\.me\/.+\/.+[?&]startapp=/i.test(shown)) link=shown;
   nativeShare({title:"Cine Hub4 Referral", text:"Join me on Cine Hub4 and earn points!", url:link});
 }
 function openLink(u){if(!u)return;try{window.Telegram?.WebApp?.openTelegramLink?.(u)||window.Telegram?.WebApp?.openLink?.(u)||window.open(u,"_blank")}catch(e){window.open(u,"_blank")}}
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
-const defaults={appName:"Cine Hub4",botUsername:"@Cinehub4bot",telegramBotLink:"https://t.me/Cinehub4bot",telegramChannelLink:"",howToEarnVideo:"",howToWatchText:"Unlock this content using ads or points.",unlockCost:5,unlockHours:15,adReward:2,dailyAdLimit:20,joinBonus:10,referralReward:20,categories:["All Movies","Bangla Moves","Hollywood Movie Hindi"],adultCategories:["All","Adult Movie","Anime"],tickerText:"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ",adultTickerText:"18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ",libraryBadge:"MOVIE ZONE",libraryTitle:"Cinema Library",libraryDesc:"Curated movies, web series and premium entertainment updates.",adultLibraryBadge:"ADULT ZONE",adultLibraryTitle:"Adult Library",adultLibraryDesc:"Curated 18+ content and premium entertainment updates.",howToWatchLabel:"▶ How to Watch",adultHowToWatchLabel:"▶ How to Watch",newMoviesLabel:"New Movies",newMoviesSub:"LATEST UPLOADS",trendingLabel:"Trending",trendingSub:"MOST WATCHED",adultNewLabel:"New Movies",adultNewSub:"LATEST UPLOADS",adultTrendingLabel:"Trending",adultTrendingSub:"MOST WATCHED",packages:[
+const defaults={appName:"Cine Hub4",botUsername:"@Cinehub4bot",telegramBotLink:"https://t.me/Cinehub4bot",miniAppName:"Hub4",miniAppLink:"https://t.me/Cinehub4bot/Hub4",telegramChannelLink:"",howToEarnVideo:"",tutorialVideo:"",howToWatchText:"Unlock this content using ads or points.",unlockCost:5,unlockHours:15,adsForUnlock:5,downloadServers:3,adReward:2,dailyAdLimit:20,joinBonus:10,referralReward:20,categories:["All Movies","Bangla Moves","Hollywood Movie Hindi"],adultCategories:["All","Adult Movie","Anime"],tickerText:"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ",adultTickerText:"18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ",libraryBadge:"MOVIE ZONE",libraryTitle:"Cinema Library",libraryDesc:"Curated movies, web series and premium entertainment updates.",adultLibraryBadge:"ADULT ZONE",adultLibraryTitle:"Adult Library",adultLibraryDesc:"Curated 18+ content and premium entertainment updates.",howToWatchLabel:"▶ How to Watch",adultHowToWatchLabel:"▶ How to Watch",newMoviesLabel:"New Movies",newMoviesSub:"LATEST UPLOADS",trendingLabel:"Trending",trendingSub:"MOST WATCHED",adultNewLabel:"New Movies",adultNewSub:"LATEST UPLOADS",adultTrendingLabel:"Trending",adultTrendingSub:"MOST WATCHED",packages:[
     {name:"Basic Package",price:0.99,points:110,tag:"SMART CHOICE"},
     {name:"Standard Package",price:4.99,points:550,tag:"STARTER"},
     {name:"Premium Package",price:9.99,points:1200,tag:"BEST VALUE"},
@@ -81,7 +111,7 @@ const defaults={appName:"Cine Hub4",botUsername:"@Cinehub4bot",telegramBotLink:"
   wallets:[{name:"USDT TRC20",address:"",network:"TRC20"}],
   tasks:[],
   customPointRate:100,
-  adBlocks:{rewarded:"43222",interstitial:"",banner:"",task:"",adult:""}};
+  adBlocks:{rewarded:"",interstitial:"",banner:"",bannerAdult:"",task:"",adult:""},showMovieBanner:true,showAdultBanner:true,movieBannerImg:"",movieBannerLink:"",adultBannerImg:"",adultBannerLink:""};
 let cfg={...defaults,...JSON.parse(localStorage.getItem("cinehub4_settings")||"{}")};
 if(!cfg.categories||!cfg.categories.length)cfg.categories=defaults.categories.slice();
 if(!cfg.adultCategories||!cfg.adultCategories.length)cfg.adultCategories=defaults.adultCategories.slice();
@@ -121,8 +151,14 @@ function nav(p,opts={}){
   if(p==="telegram"){openLink(cfg.telegramBotLink);return}
   if(p===state.page&&!opts.force)return;
   if(!opts.fromBack){
-    state.history.push(state.page);
-    if(state.history.length>30)state.history.shift();
+    const mainTabs=["movies","home","series","adult","profile","search"];
+    if(mainTabs.includes(p)){
+      // Switching main tabs: reset history so home back = leave dialog
+      state.history=[];
+    }else{
+      state.history.push(state.page);
+      if(state.history.length>30)state.history.shift();
+    }
     sessionStorage.setItem("cinehub4_history",JSON.stringify(state.history));
   }
   const go=function(){
@@ -138,14 +174,17 @@ function nav(p,opts={}){
   showPageTransition(go);
 }
 function goBack(){
+  // Main tabs + movie detail → leave dialog (no history walk)
+  const mainTabs=["movies","home","series","adult","profile","search"];
+  if(mainTabs.includes(state.page) || state.page==="detail"){
+    showLeaveDialog();
+    return;
+  }
+  // Sub pages (tasks, points, buy, settings) → previous page
   let prev=null;
   try{prev=state.history.pop()}catch(e){}
   try{sessionStorage.setItem("cinehub4_history",JSON.stringify(state.history||[]))}catch(e){}
-  // If no history left (on home / first page) → leave dialog
-  if(!prev){
-    if(state.page==="movies"||state.page==="home"){showLeaveDialog();return}
-    prev="movies";
-  }
+  if(!prev) prev="movies";
   const go=function(){
     state.page=prev;
     localStorage.setItem("cinehub4_page",prev);
@@ -173,7 +212,7 @@ function card(m,idx){
     </div>
   </article>`;
 }
-function pageBackBar(title){return`<div class="page-back-bar"><button type="button" class="page-back-btn" id="pageBackBtn" onclick="goBack()">‹</button><span class="page-back-title">${title||""}</span></div>`}
+function pageBackBar(title,subtitle){return`<div class="page-back-bar"><button type="button" class="page-back-btn" id="pageBackBtn" onclick="goBack()">‹</button><div class="page-back-textwrap"><span class="page-back-title">${title||""}</span>${subtitle?`<span class="page-back-sub">🪙 ${subtitle}</span>`:""}</div></div>`}
 function menuOnlyHeader(title){return`<div class="page-back-bar"><button type="button" class="menu-ham" id="hamBtn">☰</button><span class="page-back-title">${title||""}</span></div>`}
 function bindPageBack(){const b=$("#pageBackBtn");if(b)b.onclick=()=>goBack()}
 function primeHeader(){return`<div class="prime-row"><button type="button" class="menu-ham" id="hamBtn">☰</button><div class="prime-title">Cine <span class="scene-pill">Hub4</span></div></div>`}
@@ -187,6 +226,87 @@ function ticker(){
   const t=cfg.tickerText||"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ";
   return `<div class="ticker"><span>${t}${t}</span></div>`;
 }
+/** Banner under scrolling ticker — Adsgram Task or image (admin controlled) */
+function bannerSlot(zone){
+  loadSharedSettings();
+  const isAdult = zone==="adult";
+  const show = isAdult ? (cfg.showAdultBanner!==false) : (cfg.showMovieBanner!==false);
+  if(!show) return "";
+  const blocks = cfg.adBlocks||{};
+  const blockId = String(isAdult ? (blocks.bannerAdult||blocks.banner||"") : (blocks.banner||"")).trim();
+  const img = isAdult ? (cfg.adultBannerImg||"") : (cfg.movieBannerImg||"");
+  const link = isAdult ? (cfg.adultBannerLink||"") : (cfg.movieBannerLink||"");
+  const label = isAdult ? "18+ Ad" : "Ad";
+
+  // 1) Adsgram Task format (block-id like task-123) — native component under ticker
+  if(blockId && /^task[-_]?/i.test(blockId)){
+    const tid = blockId.startsWith("task")?blockId:("task-"+blockId.replace(/^task[-_]?/i,""));
+    return `<div class="home-banner home-banner-adsgram" data-zone="${zone}">
+      <adsgram-task block-id="${tid.replace(/"/g,"")}" class="adsgram-task-banner"></adsgram-task>
+      <span class="home-banner-tag">${label}</span>
+    </div>`;
+  }
+
+  // 2) Adsgram Reward/Interstitial block ID — clickable native slot
+  if(blockId){
+    return `<div class="home-banner home-banner-adsgram" data-zone="${zone}" data-ad="${blockId.replace(/"/g,"")}">
+      <button type="button" class="adsgram-banner-btn" onclick="showAdsgramBanner('${blockId.replace(/'/g,"\\'")}','${zone}')">
+        <span class="hb-ph-ico">▶</span>
+        <b>${label} · Adsgram</b>
+        <small>ID: ${blockId.replace(/</g,"")}</small>
+      </button>
+      <span class="home-banner-tag">${label}</span>
+    </div>`;
+  }
+
+  // 3) Custom image banner
+  if(img){
+    const inner = `<img src="${img.replace(/"/g,"&quot;")}" alt="banner ad" loading="lazy">`;
+    if(link){
+      return `<div class="home-banner" data-zone="${zone}">
+        <a class="home-banner-link" href="#" onclick="event.preventDefault();openLink('${link.replace(/'/g,"\\'")}');return false;">
+          ${inner}<span class="home-banner-tag">${label}</span>
+        </a>
+      </div>`;
+    }
+    return `<div class="home-banner" data-zone="${zone}">${inner}<span class="home-banner-tag">${label}</span></div>`;
+  }
+
+  // 4) Empty placeholder
+  return `<div class="home-banner home-banner-placeholder" data-zone="${zone}" onclick="toast(t('Set Adsgram Block ID in Admin → Ads'))">
+    <div class="hb-ph">
+      <span class="hb-ph-ico">▦</span>
+      <b>${label} Banner</b>
+      <small>${t("Set Adsgram Block ID in Admin → Ads")}</small>
+    </div>
+    <span class="home-banner-tag">${label}</span>
+  </div>`;
+}
+function showAdsgramBanner(blockId, zone){
+  if(!blockId){toast(t("Admin has not configured this Ad Block ID"));return}
+  if(window.Adsgram && typeof window.Adsgram.init==="function"){
+    try{
+      const ad = window.Adsgram.init({blockId:String(blockId), debug:!!cfg.adsgramDebug});
+      ad.show().then(function(){
+        toast(t("Ad completed"));
+      }).catch(function(){
+        toast(t("Ad closed"));
+      });
+      return;
+    }catch(e){console.warn(e)}
+  }
+  toast(t("Adsgram loading… try again"));
+}
+function onBannerClick(zone){
+  loadSharedSettings();
+  const isAdult = zone==="adult";
+  const blocks = cfg.adBlocks||{};
+  const blockId = String(isAdult ? (blocks.bannerAdult||blocks.banner||"") : (blocks.banner||"")).trim();
+  if(blockId){showAdsgramBanner(blockId, zone);return}
+  const link = isAdult ? (cfg.adultBannerLink||"") : (cfg.movieBannerLink||"");
+  if(link){openLink(link);return}
+  toast(t("Banner ad"));
+}
 function setMode(m){
   if(state.mode===m)return;
   showPageTransition(function(){state.mode=m;render(true)});
@@ -196,7 +316,7 @@ function filterCat(c){
   showPageTransition(function(){state.category=c;render(true)});
 }
 function listForHome(){let list=movies.filter(m=>!m.adult);if(state.category&&state.category!=="All Movies"&&state.category!=="All"){list=list.filter(m=>(m.category||"").toLowerCase().includes(state.category.toLowerCase().replace(" moves","").replace(" movie hindi",""))|| (m.category||"").toLowerCase()===state.category.toLowerCase())}if(state.mode==="trending")list=list.slice().sort((a,b)=>(b.views||b.clicks||0)-(a.views||a.clicks||0));else list=list.slice().sort((a,b)=>b.id-a.id);return list}
-function moviesPage(){const list=listForHome();return primeHeader()+heroPills()+catRow()+libCard()+ticker()+list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No movies found.")}</div>`}
+function moviesPage(){const list=listForHome();return primeHeader()+heroPills()+catRow()+libCard()+ticker()+bannerSlot("movies")+list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No movies found.")}</div>`}
 function setAdultMode(m){
   if(state.adultMode===m)return;
   showPageTransition(function(){state.adultMode=m;render(true)});
@@ -234,7 +354,7 @@ function adult(){
     </div>`;
   }
   const list=listForAdult();
-  return menuOnlyHeader(t("Adult"))+heroPillsAdult()+catRowAdult()+libCardAdult()+tickerAdult()+list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No adult content yet. Add from Admin Panel.")}</div>`;
+  return menuOnlyHeader(t("Adult"))+heroPillsAdult()+catRowAdult()+libCardAdult()+tickerAdult()+bannerSlot("adult")+list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No adult content yet. Add from Admin Panel.")}</div>`;
 }
 function confirmAdult(){state.adultOK=true;render(true)}
 
@@ -245,8 +365,8 @@ function profile(){
   const photo=tg?.photo_url||"";
   const refCode=String(tg?.id||localStorage.getItem("cinehub4_uid")||"1000001");
   if(!localStorage.getItem("cinehub4_uid")) localStorage.setItem("cinehub4_uid",refCode);
-  const bot=(cfg.telegramBotLink||"https://t.me/Cinehub4bot").replace(/\/$/,"");
-  const refLink=bot+(bot.includes("?")?"&":"?")+"startapp="+refCode;
+  // Mini App deep link (opens app, not bot chat)
+  const refLink=buildMiniAppLink("ref_"+refCode);
   const refs=Number(localStorage.getItem("cinehub4_refs")||0);
   const cur=(window.CINEHUB4_LANG&&window.CINEHUB4_LANG.get&&window.CINEHUB4_LANG.get())||localStorage.getItem("cinehub4_language")||"en";
   const avatar=photo?`<img src="${photo}" alt="">`:(name[0]||"U").toUpperCase();
@@ -289,12 +409,12 @@ function profile(){
     <div class="pf-how-card"><b>More Earning</b><span>Watch ads & earn</span></div>
   </div>
   <div class="pf-actions" style="margin-bottom:12px">
-    <button type="button" class="pf-btn tutorial" onclick="openLink(cfg.howToEarnVideo||cfg.telegramBotLink)">▶ Watch Tutorial</button>
+    <button type="button" class="pf-btn tutorial" onclick="watchTutorial()">▶ Watch Tutorial</button>
     <button type="button" class="pf-btn buy" onclick="nav('buy')">🛒 Buy Points</button>
   </div>
   <div class="pf-section">⚡ MORE POINT EARNING</div>
   <div class="earn-card">
-        <h3>⚡ Watch Ads & Earn Points</h3>
+    <h3>⚡ Watch Ads & Earn Points</h3>
     <p>Complete ads to get rewards and unlock videos with points.</p>
     <div class="earn-tags"><span>✔ Instant Reward</span><span>🪙 More Points</span><span>🔓 Unlock Videos</span></div>
     <button type="button" class="pf-btn wide" onclick="nav('points')">⚡ More Point Earning</button>
@@ -309,13 +429,56 @@ function copyRefLink(){
 }
 
 
-function points(){return pageBackBar(t("My Points"))+`<div class="section-title"><b>🪙 My Points</b><span>${state.points} points</span></div><div class="panel"><div class="amount">${state.points} <span class="muted">points</span></div><div class="task"><span>📺 Watch Ad & Earn</span><b>+${cfg.adReward}</b><button class="primary cyan" onclick="watchAd('rewarded')">Watch</button></div><div class="task"><span>🛒 Buy Points</span><button class="primary pink" onclick="nav('buy')">Buy</button></div><div class="task"><span>👥 Refer & Earn</span><button class="pill" onclick="shareRef()">Share</button></div></div><div class="panel"><h3>Daily Ad Limit</h3><div class="task"><span>Only for earning points</span><b>${cfg.dailyAdLimit}/day</b></div><div class="muted">Movie unlock-এর সময় ad limit প্রযোজ্য নয়।</div></div>`}
+function points(){return pageBackBar(t("My Points"),t("BALANCE & REWARDS"))+`
+  <div class="earn-hero">
+    <div class="earn-hero-ico">🪙</div>
+    <div>
+      <b>${state.points} ${t("Points")}</b>
+      <p>${t("Your current balance — earn more by watching ads, referring friends, or buy instantly.")}</p>
+      <div class="earn-chips">
+        <span>📺 ${t("Watch & Earn")}</span>
+        <span>👥 ${t("Refer & Earn")}</span>
+        <span>🛒 ${t("Buy Points")}</span>
+      </div>
+    </div>
+  </div>
+  <div class="pf-stats">
+    <div class="pf-stat"><div><b>${state.points}</b><span>${t("Current Balance")}</span></div><div class="ico coin">🪙</div></div>
+    <div class="pf-stat"><div><b>${cfg.adReward||2}</b><span>${t("Points Per Ad")}</span></div><div class="ico gift">🎁</div></div>
+    <div class="pf-stat"><div><b>${cfg.referralReward||20}</b><span>${t("Per Referral")}</span></div><div class="ico eye">👥</div></div>
+    <div class="pf-stat"><div><b>${cfg.dailyAdLimit||20}</b><span>${t("Daily Limit")}</span></div><div class="ico shield">🛡</div></div>
+  </div>
+  <div class="pf-section">💰 ${t("EARNING OPTIONS")}</div>
+  <div class="task-row">
+    <div class="task-ico">📺</div>
+    <div class="task-meta"><b>${t("Watch Ad & Earn")}</b><span>+${cfg.adReward||2} ${t("Points")}</span></div>
+    <button type="button" class="task-start" onclick="watchAd('rewarded')">${t("Watch")}</button>
+  </div>
+  <div class="task-row">
+    <div class="task-ico">🛒</div>
+    <div class="task-meta"><b>${t("Buy Points")}</b><span>${t("Get more instantly")}</span></div>
+    <button type="button" class="task-start" onclick="nav('buy')">${t("Buy")}</button>
+  </div>
+  <div class="task-row">
+    <div class="task-ico">👥</div>
+    <div class="task-meta"><b>${t("Refer & Earn")}</b><span>+${cfg.referralReward||20} ${t("pt per referral")}</span></div>
+    <button type="button" class="task-start" onclick="shareRef()">${t("Share")}</button>
+  </div>
+  <div class="pf-section">⏱ ${t("DAILY AD LIMIT")}</div>
+  <div class="pf-panel">
+    <div class="pf-row"><span>${t("Only for earning points")}</span><b>${cfg.dailyAdLimit||20}/${t("day")}</b></div>
+  </div>
+  <div class="muted" style="font-size:11px;margin-top:8px;padding:0 2px">${t("Movie unlock is not limited by the daily ad limit.")}</div>`}
 
 function getTasks(){
+  // Always prefer live admin settings
+  try{
+    const s=JSON.parse(localStorage.getItem("cinehub4_settings")||"{}");
+    if(s.tasks&&s.tasks.length){cfg.tasks=s.tasks;return s.tasks}
+  }catch(e){}
   if(cfg.tasks&&cfg.tasks.length) return cfg.tasks;
   return [
     {name:"one click",reward:2,limit:1,type:"countdown",seconds:5},
-    {name:"one click ads",reward:1,limit:1,type:"countdown",seconds:5},
     {name:"Watch rewarded ad",reward:cfg.adReward||2,limit:cfg.dailyAdLimit||20,type:"ad"},
     {name:"Join Telegram channel",reward:5,limit:1,type:"link",link:cfg.telegramChannelLink||cfg.telegramBotLink},
     {name:"Refer a friend",reward:cfg.referralReward||20,limit:10,type:"share"},
@@ -323,33 +486,50 @@ function getTasks(){
   ];
 }
 function tasks(){
+  loadSharedSettings();
   const watched=Number(localStorage.getItem("cinehub4_ads_today")||0);
   const limit=Number(cfg.dailyAdLimit||20);
   const rem=Math.max(0,limit-watched);
   const list=getTasks();
-  return pageBackBar(t("Daily Tasks"))+`
-  <div class="pf-section">⚡ ${t("EARN & UNLOCK")}</div>
+  const day=new Date().toDateString();
+  return pageBackBar(t("More Point Earning"),t("EARN & UNLOCK"))+`
+  <div class="earn-hero">
+    <div class="earn-hero-ico">⚡</div>
+    <div>
+      <b>${t("Watch Ads & Earn Points")}</b>
+      <p>${t("Complete ads and premium earning tasks to unlock exclusive videos instantly.")}</p>
+      <div class="earn-chips">
+        <span>✓ ${t("Instant Reward")}</span>
+        <span>⏱ ${t("Daily Limit")}</span>
+        <span>🔒 ${t("Unlock Videos")}</span>
+      </div>
+    </div>
+  </div>
   <div class="pf-stats">
-    <div class="pf-stat"><div><b>${state.points}</b><span>${t("Current Balance")}</span></div><div class="ico">🪙</div></div>
-    <div class="pf-stat"><div><b>${cfg.adReward||2}</b><span>${t("Points Per Ad")}</span></div><div class="ico">🎁</div></div>
-    <div class="pf-stat"><div><b>${watched}</b><span>${t("Ads Watched")}</span></div><div class="ico">👁</div></div>
-    <div class="pf-stat"><div><b>${limit}</b><span>${t("Daily Limit")}</span></div><div class="ico">🛡</div></div>
+    <div class="pf-stat"><div><b>${state.points}</b><span>${t("Current Balance")}</span></div><div class="ico coin">🪙</div></div>
+    <div class="pf-stat"><div><b>${cfg.adReward||2}</b><span>${t("Points Per Ad")}</span></div><div class="ico gift">🎁</div></div>
+    <div class="pf-stat"><div><b>${watched}</b><span>${t("Ads Watched")}</span></div><div class="ico eye">👁</div></div>
+    <div class="pf-stat"><div><b>${limit}</b><span>${t("Daily Limit")}</span></div><div class="ico shield">🛡</div></div>
   </div>
   <div class="pf-section">⚙ ${t("EARNING SETTINGS")}</div>
-  <div class="pf-panel">
+  <div class="pf-panel earn-settings">
     <div class="pf-row"><span>${t("Reward Per Ad")}</span><b>${cfg.adReward||2} ${t("Points")}</b></div>
     <div class="pf-row"><span>${t("Maximum Daily Ads")}</span><b>${limit}</b></div>
     <div class="pf-row"><span>${t("Remaining Today")}</span><b>${rem}</b></div>
-    <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100,(watched/limit)*100)}%"></div></div>
-    <div class="muted" style="font-size:11px;margin-top:6px">${watched} / ${limit} completed today</div>
-    <button type="button" class="pf-btn wide copy" style="margin-top:12px" onclick="watchAd('rewarded')">▶ ${t("Watch Ad Now")}</button>
+    <div class="progress-bar"><i style="width:${Math.min(100,(watched/Math.max(1,limit))*100)}%"></i></div>
+    <div class="muted" style="font-size:11px;margin-top:6px;text-align:center">${watched} / ${limit} ${t("completed today")}</div>
   </div>
+  <button type="button" class="watch-ad-now" onclick="watchAd('rewarded')">▶ ${t("Watch Ad Now")}</button>
   <div class="pf-section">🎁 ${t("MORE EARNING BUTTONS")}</div>
-  ${list.map((t,i)=>`<div class="task-row">
-    <div class="task-ico">🎁</div>
-    <div class="task-meta"><b>${t.name}</b><span>Reward: ${t.reward} pt · Daily limit: ${t.limit||1}</span></div>
-    <button type="button" class="task-start" onclick="runTask(${i})">${t("Start")}</button>
-  </div>`).join("")}`;
+  ${list.map((tk,i)=>{
+    const doneKey="cinehub4_task_"+i+"_"+day;
+    const done=!!localStorage.getItem(doneKey);
+    return `<div class="task-row ${done?"done":""}">
+      <div class="task-ico">🎁</div>
+      <div class="task-meta"><b>${tk.name}</b><span>${t("Reward")}: ${tk.reward} pt · ${done?t("completed today"):t("Daily task")}</span></div>
+      ${done?`<button type="button" class="task-done" disabled>${t("Done")}</button>`:`<button type="button" class="task-start" onclick="runTask(${i})">${t("Start")}</button>`}
+    </div>`;
+  }).join("")}`;
 }
 function runTask(i){
   const t=getTasks()[i];if(!t)return;
@@ -385,7 +565,7 @@ function runTask(i){
     toast("+"+(t.reward||2)+" points");
     render(true);
   }
-}
+  }
 
 function settings(){return pageBackBar("Settings")+`<div class="section-title"><b>⚙ Settings</b></div><div class="panel"><div class="task"><span>Language</span><select class="pill" style="appearance:auto" onchange="CINEHUB4_LANG.set(this.value)"><option value="en" ${CINEHUB4_LANG.get()==="en"?"selected":""}>English</option><option value="bn" ${CINEHUB4_LANG.get()==="bn"?"selected":""}>বাংলা</option></select></div><div class="task"><span>Telegram</span><button class="pill" onclick="openLink(cfg.telegramBotLink)">Open</button></div><div class="task"><span>How To Earn</span><button class="pill" onclick="howToEarn()">Watch Video</button></div></div>`}
 
@@ -461,7 +641,7 @@ function submitPayment(){
       date:now.toLocaleString(),
       created:now.toISOString()
     });
-      localStorage.setItem("cinehub4_payments",JSON.stringify(list));
+    localStorage.setItem("cinehub4_payments",JSON.stringify(list));
     state.buyStep=null;state.buyOrder=null;state.selectedWallet=null;
     toast(t("Payment request submitted"));
     nav("profile");
@@ -571,6 +751,35 @@ function buy(){
   </div>`;
 }
 
+/* —— Unlock helpers (admin: cost / hours / ads / servers) —— */
+function unlockKey(id){return "cinehub4_unlock_"+id}
+function progressKey(id){return "cinehub4_uprog_"+id}
+function isMovieUnlocked(id){
+  try{
+    const exp=Number(localStorage.getItem(unlockKey(id))||0);
+    return exp>Date.now();
+  }catch(e){return false}
+}
+function markMovieUnlocked(id){
+  const hours=Number(cfg.unlockHours)||15;
+  const exp=Date.now()+hours*3600*1000;
+  try{localStorage.setItem(unlockKey(id),String(exp))}catch(e){}
+  try{localStorage.removeItem(progressKey(id))}catch(e){}
+  state.unlockProgress=Number(cfg.unlockCost)||5;
+  return hours;
+}
+function getUnlockProgress(id){
+  try{return Number(localStorage.getItem(progressKey(id))||0)}catch(e){return 0}
+}
+function setUnlockProgress(id,n){
+  const cost=Number(cfg.unlockCost)||5;
+  const v=Math.max(0,Math.min(cost,Number(n)||0));
+  try{localStorage.setItem(progressKey(id),String(v))}catch(e){}
+  state.unlockProgress=v;
+  return v;
+}
+function serverCount(){return Math.max(1,Math.min(10,Number(cfg.downloadServers)||3))}
+
 function detail(id){
   const m=movies.find(x=>x.id===id);if(!m)return;
   m.clicks=(m.clicks||0)+1;m.views=(m.views||m.clicks);save();
@@ -579,7 +788,8 @@ function detail(id){
     if(state.history.length>30)state.history.shift();
     try{sessionStorage.setItem("cinehub4_history",JSON.stringify(state.history))}catch(e){}
   }
-  state.detailId=id;state.unlockProgress=0;
+  state.detailId=id;
+  state.unlockProgress=isMovieUnlocked(id)?(Number(cfg.unlockCost)||5):getUnlockProgress(id);
   if(typeof showPageTransition==="function"){
     showPageTransition(function(){
       state.page="detail";
@@ -594,13 +804,58 @@ function detail(id){
 }
 
 function detailView(){
+  loadSharedSettings();
   const m=movies.find(x=>x.id===state.detailId);if(!m)return moviesPage();
   const cost=Number(cfg.unlockCost)||5;
-  const need=cost;
-  const my=state.points;
-  const rem=Math.max(0,need-state.unlockProgress);
-  const prog=state.unlockProgress;
+  const adsNeed=Number(cfg.adsForUnlock)||cost;
+  const hours=Number(cfg.unlockHours)||15;
   const title=(m.title||"").split("|")[0].trim();
+  const unlocked=isMovieUnlocked(m.id);
+
+  if(unlocked){
+    const n=serverCount();
+    let servers="";
+    for(let i=1;i<=n;i++){
+      servers+=`<button type="button" class="server-btn" onclick="openServer(${m.id},${i})">
+        <span class="srv-ico">⬇</span>
+        <span class="srv-meta"><b>${t("Server")} ${i}</b><small>${t("Download / Watch")}</small></span>
+        <span class="srv-go">›</span>
+      </button>`;
+    }
+    const exp=Number(localStorage.getItem(unlockKey(m.id))||0);
+    const leftMs=Math.max(0,exp-Date.now());
+    const leftH=Math.floor(leftMs/3600000);
+    const leftM=Math.floor((leftMs%3600000)/60000);
+    return pageBackBar(t("Movie"))+`
+    <div class="unlock-page unlocked-page">
+      <div class="unlock-notice ok">
+        <div class="bell">🔓</div>
+        <div>
+          <div class="un-title">${t("UNLOCKED")}</div>
+          <div class="un-sub">${t("Available for")} ${leftH}h ${leftM}m</div>
+          <div class="muted">${t("Watch or download from any server below.")}</div>
+        </div>
+      </div>
+      <div class="demo-player" onclick="playDemoVideo(${m.id})">
+        <div class="demo-poster">${posterHTML(m)}</div>
+        <div class="demo-play-btn">▶</div>
+        <div class="demo-label">${t("Demo / Preview")}</div>
+      </div>
+      <div class="unlock-actions-top">
+        <button type="button" class="share-only" onclick="shareMovie(${m.id})">↗ ${t("Share")}</button>
+      </div>
+      <div class="unlock-title">${title}</div>
+      <div class="unlock-sub">${m.genre||""} • ${m.year||""}</div>
+      <div class="pf-section">📡 ${t("Download Servers")}</div>
+      <div class="server-list">${servers}</div>
+      <button type="button" class="btn-more" onclick="nav('${m.adult?'adult':'movies'}')">🎬 ${t("More Watching")} ›</button>
+    </div>`;
+  }
+
+  const prog=Math.min(cost, getUnlockProgress(m.id) || state.unlockProgress || 0);
+  state.unlockProgress=prog;
+  const rem=Math.max(0,cost-prog);
+  const my=state.points;
   return pageBackBar(t("Movie"))+`
   <div class="unlock-page">
     <div class="unlock-notice">
@@ -620,36 +875,109 @@ function detailView(){
     <div class="points-box">
       <div class="pb-label">● ${t("Unlock this content using ads or points.")}</div>
       <div class="points-row">
-        <div class="pc need"><span>${t("Need")}</span><b>${need}</b></div>
+        <div class="pc need"><span>${t("Need")}</span><b>${cost}</b></div>
         <div class="pc myp"><span>${t("My Points")}</span><b>${my}</b></div>
         <div class="pc rem"><span>${t("Remaining")}</span><b>${rem}</b></div>
       </div>
       <div class="progress-wrap">
-        <div class="progress-bar"><i style="width:${Math.min(100,(prog/need)*100)}%"></i></div>
-        <div class="progress-text">Progress: ${prog}/${need}<br>Unlock with points or ads.</div>
+        <div class="progress-bar"><i style="width:${Math.min(100,(prog/Math.max(1,cost))*100)}%"></i></div>
+        <div class="progress-text">${t("Progress")}: ${prog}/${cost}<br>${t("Ads needed")}: ${adsNeed} · ${t("Unlock duration")}: ${hours}h</div>
       </div>
-            <div class="unlock-actions">
+      <div class="unlock-actions">
         <button type="button" class="btn-unlock lock" onclick="unlockWithAds()">🔒 ${t("Unlock Video")}</button>
         <button type="button" class="btn-unlock points" onclick="usePointsForUnlock()">🪙 ${t("Use My Points")}</button>
       </div>
     </div>
-    <button type="button" class="btn-more" onclick="nav(state.page==='adult'||(movies.find(x=>x.id===state.detailId)||{}).adult?'adult':'movies')">🎬 More Watching ›</button>
+    <button type="button" class="btn-more" onclick="nav(state.page==='adult'||(movies.find(x=>x.id===state.detailId)||{}).adult?'adult':'movies')">🎬 ${t("More Watching")} ›</button>
   </div>`;
 }
-function usePointsForUnlock(){const cost=Number(cfg.unlockCost)||5;if(state.points<1){toast(t("No points available"));return}if(state.unlockProgress>=cost){toast(t("Already unlocked"));return}state.points-=1;state.unlockProgress+=1;save();toast(t("1 point used"));if(state.unlockProgress>=cost){toast(`Unlocked for ${cfg.unlockHours} hours`);}render(false)}
+
+function usePointsForUnlock(){
+  loadSharedSettings();
+  const id=state.detailId;
+  if(!id)return;
+  if(isMovieUnlocked(id)){toast(t("Already unlocked"));render(false);return}
+  const cost=Number(cfg.unlockCost)||5;
+  let prog=getUnlockProgress(id);
+  const need=Math.max(0,cost-prog);
+  if(need<=0){
+    const h=markMovieUnlocked(id);
+    toast(t("Unlocked for")+" "+h+" "+t("hours"));
+    render(false);
+    return;
+  }
+  if(state.points<need){
+    toast(t("Not enough points")+" ("+need+" "+t("needed")+")");
+    return;
+  }
+  state.points-=need;
+  save();
+  setUnlockProgress(id,cost);
+  const h=markMovieUnlocked(id);
+  toast(t("Unlocked for")+" "+h+" "+t("hours")+" · -"+need+" "+t("Points"));
+  render(false);
+}
 function unlockWithAds(){watchAd("unlock")}
-function unlockPoints(){const c=Number(cfg.unlockCost)||5;if(state.points<c){toast("পয়েন্ট যথেষ্ট নেই");return}state.points-=c;save();toast(`Unlocked for ${cfg.unlockHours} hours`)}
-function showCountdownTask(name,secs,onDone){
+function unlockPoints(){usePointsForUnlock()}
+
+function openServer(movieId,serverNo){
+  if(!isMovieUnlocked(movieId)){toast(t("Unlock required"));return}
+  const m=movies.find(x=>x.id===movieId);
+  const title=m?(m.title||"").split("|")[0].trim():"Movie";
+  const demoUrl=(m&&(m.videoUrl||m.downloadUrl))||cfg.demoVideoUrl||"https://www.w3schools.com/html/mov_bbb.mp4";
+  toast(t("Server")+" "+serverNo+" · "+title);
+  try{
+    if(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.openLink){
+      window.Telegram.WebApp.openLink(demoUrl);
+      return;
+    }
+  }catch(e){}
+  window.open(demoUrl,"_blank");
+}
+function playDemoVideo(movieId){
+  if(!isMovieUnlocked(movieId)){toast(t("Unlock required"));return}
+  const m=movies.find(x=>x.id===movieId);
+  const demoUrl=(m&&m.videoUrl)||cfg.demoVideoUrl||"https://www.w3schools.com/html/mov_bbb.mp4";
   const ov=document.createElement("div");
   ov.className="modal";
+  ov.id="demoVideoModal";
+  ov.innerHTML=`<div class="modal-card" style="padding:12px;max-width:520px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <b>${t("Demo / Preview")}</b>
+      <button type="button" class="pill" onclick="document.getElementById('demoVideoModal').remove()">✕</button>
+    </div>
+    <video src="${demoUrl}" controls autoplay playsinline style="width:100%;border-radius:12px;background:#000;max-height:60vh"></video>
+    <p class="muted" style="margin:10px 0 0;font-size:12px">${t("Demo video — replace URL from Admin when ready.")}</p>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener("click",function(e){if(e.target===ov)ov.remove()});
+}
+function showCountdownTask(name,secs,onDone){
+  const ov=document.createElement("div");
+  ov.className="modal earn-modal";
   ov.id="cdModal";
   let left=secs||5;
-  ov.innerHTML=`<div class="modal-card cd-card"><div class="cd-ring"><span class="cd-play">▶</span></div><b>${name||"Task"}</b><div class="muted">Keep this page open until countdown ends.</div><div class="cd-num" id="cdNum">${left}s</div></div>`;
+  const total=left;
+  ov.innerHTML=`<div class="modal-card cd-card">
+    <div class="cd-ring-wrap">
+      <svg class="cd-svg" viewBox="0 0 100 100">
+        <circle class="cd-bg" cx="50" cy="50" r="42"/>
+        <circle class="cd-fg" id="cdFg" cx="50" cy="50" r="42" style="stroke-dasharray:264;stroke-dashoffset:0"/>
+      </svg>
+      <div class="cd-play">▶</div>
+    </div>
+    <b class="cd-title">${name||"one click"}</b>
+    <div class="muted cd-sub">${t("Keep this page open until countdown ends.")}</div>
+    <div class="cd-num" id="cdNum">${left}s</div>
+  </div>`;
   document.body.appendChild(ov);
+  const circ=2*Math.PI*42;
   const tick=setInterval(function(){
     left--;
     const el=document.getElementById("cdNum");
+    const fg=document.getElementById("cdFg");
     if(el) el.textContent=left+"s";
+    if(fg) fg.style.strokeDashoffset=String(circ*(1-Math.max(0,left)/total));
     if(left<=0){
       clearInterval(tick);
       ov.remove();
@@ -658,20 +986,75 @@ function showCountdownTask(name,secs,onDone){
   },1000);
 }
 function watchAd(mode){
-  const id=mode==="adult"?cfg.adBlocks?.adult:(mode==="task"?cfg.adBlocks?.task:cfg.adBlocks?.rewarded)||cfg.adBlocks?.rewarded;
-  if(!id && mode!=="countdown"){toast("Admin has not configured this Ad Block ID");return}
+  loadSharedSettings();
+  // All mini-app ads use Adsgram Block IDs from Admin → Ads
+  const b=cfg.adBlocks||{};
+  let id="";
+  if(mode==="adult") id=b.adult||b.rewarded||"";
+  else if(mode==="task") id=b.task||b.rewarded||"";
+  else if(mode==="unlock") id=b.interstitial||b.rewarded||""; // unlock prefers interstitial
+  else if(mode==="banner"||mode==="bannerAdult") id=(mode==="bannerAdult"?b.bannerAdult:b.banner)||b.rewarded||"";
+  else id=b.rewarded||""; // rewarded / earn points / Watch Ad Now
+  if(!id && mode!=="countdown"){toast(t("Admin has not configured this Ad Block ID"));return}
   // Daily limit only for earning modes
   if(mode!=="unlock" && mode!=="adult"){
     const watched=Number(localStorage.getItem("cinehub4_ads_today")||0);
     const limit=Number(cfg.dailyAdLimit||20);
-    if(watched>=limit){toast(t("Daily ad limit reached"));return}
+        if(watched>=limit){toast(t("Daily ad limit reached"));return}
   }
+
+  function onAdDone(){
+    if(mode==="unlock"){
+      const mid=state.detailId;
+      const needAds=Number(cfg.adsForUnlock)||Number(cfg.unlockCost)||5;
+      let prog=getUnlockProgress(mid)+1;
+      setUnlockProgress(mid,prog);
+      toast("+1 "+t("ad progress")+" ("+prog+"/"+needAds+")");
+      if(prog>=needAds){
+        const h=markMovieUnlocked(mid);
+        toast(t("Unlocked for")+" "+h+" "+t("hours"));
+      }
+      render(false);
+    }else{
+      const reward=Number(cfg.adReward||2);
+      state.points+=reward;
+      const watched=Number(localStorage.getItem("cinehub4_ads_today")||0)+1;
+      localStorage.setItem("cinehub4_ads_today",String(watched));
+      localStorage.setItem("cinehub4_ads_day",new Date().toDateString());
+      save();
+      toast("+"+reward+" "+t("points added"));
+      render(true);
+    }
+  }
+
+  // —— Real Adsgram (partner.adsgram.ai Block ID) ——
+  if(id && window.Adsgram && typeof window.Adsgram.init==="function"){
+    try{
+      const ad=window.Adsgram.init({blockId:String(id), debug:!!cfg.adsgramDebug});
+      toast(t("Opening Ad"));
+      ad.show().then(function(){ onAdDone(); }).catch(function(){
+        // user closed early / error — still allow demo progress only in debug
+        if(cfg.adsgramDebug) onAdDone();
+        else toast(t("Ad closed"));
+      });
+      return;
+    }catch(e){console.warn("Adsgram",e)}
+  }
+
+  // —— Demo fallback when SDK/ID missing ——
   const m=document.createElement("div");
   m.className="modal";
-  m.innerHTML=`<div class="modal-card"><div class="video-ad"><div><div class="play">▶</div><b>Opening Ad</b><div class="muted">Please wait while ad is loading.</div><div class="muted" style="margin-top:6px">Ad Block #${id||"—"}</div></div></div></div>`;
+  m.innerHTML=`<div class="modal-card cd-card open-ad-card">
+    <div class="cd-ring-wrap">
+      <svg class="cd-svg spin-slow" viewBox="0 0 100 100"><circle class="cd-bg" cx="50" cy="50" r="42"/><circle class="cd-fg" cx="50" cy="50" r="42" style="stroke-dasharray:80 184"/></svg>
+      <div class="cd-play">▶</div>
+    </div>
+    <b class="cd-title">${t("Opening Ad")}</b>
+    <div class="muted cd-sub">${t("Please wait while ad is loading.")}</div>
+  </div>`;
   document.body.appendChild(m);
   setTimeout(function(){
-    m.innerHTML=`<div class="modal-card"><div class="video-ad"><div><div class="play">▶</div><b>Ad · 18+</b><div class="muted">Demo rewarded advertisement</div></div></div><div class="progress-bar" style="margin:12px 0"><i id="adProg" style="width:0%;height:100%;display:block;background:linear-gradient(90deg,#3b82f6,#06b6d4);border-radius:999px"></i></div><div class="muted" id="adPct">0%</div><button class="primary cyan wide" id="completeDemoAd" style="margin-top:10px">Complete Ad</button></div>`;
+    m.innerHTML=`<div class="modal-card"><div class="video-ad"><div><div class="play">▶</div><b>Ad · Demo</b><div class="muted">Demo — set Adsgram Block ID in Admin</div></div></div><div class="progress-bar" style="margin:12px 0"><i id="adProg" style="width:0%;height:100%;display:block;background:linear-gradient(90deg,#3b82f6,#06b6d4);border-radius:999px"></i></div><div class="muted" id="adPct">0%</div><button class="primary cyan wide" id="completeDemoAd" style="margin-top:10px">Complete Ad</button></div>`;
     let pct=0;
     const iv=setInterval(function(){
       pct=Math.min(100,pct+25);
@@ -682,36 +1065,9 @@ function watchAd(mode){
       if(pct>=100) clearInterval(iv);
     },400);
     const btn=document.getElementById("completeDemoAd");
-    if(btn) btn.onclick=function(){
-      m.remove();
-      if(mode==="unlock"){
-        const cost=Number(cfg.unlockCost)||5;
-        state.unlockProgress=Math.min(cost,(state.unlockProgress||0)+1);
-        toast("1 progress from ad");
-        if(state.unlockProgress>=cost){
-          // mark unlock with expiry
-          try{
-            const key="cinehub4_unlock_"+state.detailId;
-            const hours=Number(cfg.unlockHours)||15;
-            localStorage.setItem(key,String(Date.now()+hours*3600*1000));
-          }catch(e){}
-          toast("Movie unlocked for "+cfg.unlockHours+" hours");
-        }
-        render(false);
-      }else{
-        const reward=Number(cfg.adReward||2);
-        state.points+=reward;
-        const watched=Number(localStorage.getItem("cinehub4_ads_today")||0)+1;
-        localStorage.setItem("cinehub4_ads_today",String(watched));
-        localStorage.setItem("cinehub4_ads_day",new Date().toDateString());
-        save();
-        toast("+"+reward+" points added");
-        render(true);
-      }
-    };
+    if(btn) btn.onclick=function(){ m.remove(); onAdDone(); };
   },900);
 }
-
 function startVoiceSearch(){
   try{
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -876,21 +1232,62 @@ loadSharedSettings();
 function handleStartParam(){
   try{
     const tg=window.Telegram&&window.Telegram.WebApp;
-    let sp=(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.start_param)||"";
+    let sp="";
+    try{sp=(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.start_param)||""}catch(e){}
     if(!sp){
-      const q=new URLSearchParams(location.search);
-      sp=q.get("tgWebAppStartParam")||q.get("startapp")||q.get("start")||"";
+      try{
+        const q=new URLSearchParams(location.search);
+        sp=q.get("tgWebAppStartParam")||q.get("startapp")||q.get("start")||"";
+      }catch(e){}
     }
-    if(!sp) return;
-    if(sp.indexOf("movie_")==0){
-      const id=Number(sp.replace("movie_",""));
-      if(id){state.detailId=id;state.page="detail";}
-    }else if(sp.indexOf("ref_")==0){
-      // referral handled by bot usually
+    // Hash fallback: #startapp=movie_1
+    if(!sp && location.hash){
+      const hm=location.hash.match(/(?:startapp|start)=([A-Za-z0-9_\-]+)/i);
+      if(hm) sp=hm[1];
+    }
+    if(!sp) return false;
+    sp=String(sp).trim();
+    // movie_123 → open that movie detail
+    if(/^movie_/i.test(sp)){
+      const id=Number(sp.replace(/^movie_/i,""));
+      if(id&&!isNaN(id)){
+        state.detailId=id;
+        state.page="detail";
+        state.history=[];
+        try{localStorage.setItem("cinehub4_page","detail")}catch(e){}
+        return true;
+      }
+    }
+    // plain number also treated as movie id
+    if(/^\d+$/.test(sp)){
+      const id=Number(sp);
+      if(id){
+        state.detailId=id;
+        state.page="detail";
+        state.history=[];
+        try{localStorage.setItem("cinehub4_page","detail")}catch(e){}
+        return true;
+      }
+    }
+    // ref_USERID — store referrer for bonus (bot/backend usually handles)
+    if(/^ref_/i.test(sp)){
+      try{localStorage.setItem("cinehub4_ref_from",sp.replace(/^ref_/i,""))}catch(e){}
     }
   }catch(e){}
+  return false;
 }
 handleStartParam();
+// Telegram sometimes fills start_param a moment later
+setTimeout(function(){
+  if(handleStartParam() && state.page==="detail"){
+    try{render(false)}catch(e){}
+  }
+},400);
+setTimeout(function(){
+  if(handleStartParam() && state.page==="detail"){
+    try{render(false)}catch(e){}
+  }
+},1200);
 bindLeaveGuard();
 
 try{render(false)}catch(e){console.error(e);var s=document.getElementById("screen");if(s)s.innerHTML="<div style=padding:20px;color:#f88>Boot error: "+e.message+"</div>"}
@@ -908,7 +1305,7 @@ function showLeaveDialog(){
   ov.innerHTML=`<div class="leave-card">
     <div class="leave-icon">↪</div>
     <h2>${t("Do you want to leave?")}</h2>
-    <p>Leaving Cine Hub4 will close your current page.</p>
+    <p>${t("Leaving will close the mini app.")}</p>
     <div class="leave-actions">
       <button type="button" class="leave-stay" id="leaveStay">🏠 ${t("Stay here")}</button>
       <button type="button" class="leave-go" id="leaveGo">${t("Leave")}</button>
@@ -935,22 +1332,7 @@ function bindLeaveGuard(){
       // avoid double-binding
       try{tg.BackButton.offClick&&tg.BackButton.offClick()}catch(e){}
       tg.BackButton.onClick(function(){
-        // Always prefer in-app history first
-        if(state.history&&state.history.length){
-          goBack();
-          return;
-        }
-        // On detail without history → go movies
-        if(state.page==="detail"||state.page==="points"||state.page==="tasks"||state.page==="settings"||state.page==="buy"||state.page==="search"){
-          showPageTransition(function(){
-            state.page="movies";
-            localStorage.setItem("cinehub4_page","movies");
-            render(true);
-          });
-          return;
-        }
-        // Already on main tabs with empty history → leave confirm
-        showLeaveDialog();
+        goBack();
       });
     }
   }catch(e){}
@@ -961,13 +1343,8 @@ function bindLeaveGuard(){
       history.pushState({cinehub:1},"");
       window.addEventListener("popstate",function(ev){
         history.pushState({cinehub:1},"");
-        if(state.history&&state.history.length){goBack();return}
-        if(state.page&&state.page!=="movies"&&state.page!=="home"){
-          showPageTransition(function(){state.page="movies";localStorage.setItem("cinehub4_page","movies");render(true)});
-          return;
-        }
-        showLeaveDialog();
+        goBack();
       });
     }
   }catch(e){}
-                         }
+  }
