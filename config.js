@@ -2,8 +2,8 @@
 window.APP_CONFIG={
   appName:"Cine Hub4",
   botUsername:"@Cinehub4bot",
-  adminDemoId:"8895442085",
-  adminIds:["8895442085"],
+  adminDemoId"5605543865",
+  adminIds:["5605543865"],
   unlockHours:15,
   unlockCost:5,
   adReward:2,
