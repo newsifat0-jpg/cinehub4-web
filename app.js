@@ -276,7 +276,7 @@ function getTasks(){
   return [
     {name:"Watch rewarded ad",reward:cfg.adReward||2,limit:cfg.dailyAdLimit||20,type:"ad"},
     {name:"Join Telegram channel",reward:5,limit:1,type:"link",link:cfg.telegramChannelLink||cfg.telegramBotLink},
-{name:"Refer a friend",reward:cfg.referralReward||20,limit:10,type:"share"},
+    {name:"Refer a friend",reward:cfg.referralReward||20,limit:10,type:"share"},
     {name:"Daily login",reward:2,limit:1,type:"login"}
   ];
 }
@@ -662,11 +662,95 @@ function bindDrawer(){
   });
   setupAdminButton();
 }
-function isAdminUser(){    
+function isAdminUser(){
+  try{
+    const ids=(window.APP_CONFIG&&window.APP_CONFIG.adminIds)||[];
+    const demo=(window.APP_CONFIG&&window.APP_CONFIG.adminDemoId)||"";
+    const tg=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initDataUnsafe&&window.Telegram.WebApp.initDataUnsafe.user;
+    const uid=tg&&tg.id!=null?String(tg.id):"";
+    if(demo&&uid&&String(demo)===uid) return true;
+    return ids.map(String).includes(uid);
+  }catch(e){return false}
+}
+function setupAdminButton(){
+  try{
+    const btn=document.getElementById("adminPanelBtn");
+    if(!btn) return;
+    if(isAdminUser()){
+      btn.classList.remove("hidden");
+      btn.onclick=function(){location.href="admin.html"};
+    }else{
+      btn.classList.add("hidden");
+    }
+  }catch(e){}
+}
+function render(animate=false){try{const views={movies:moviesPage,search:searchPage,series,adult,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===state.page||(state.page==="detail"&&b.dataset.page==="movies")));bindPageBack();bindDrawer();setupAdminButton();window.CINEHUB4_LANG?.translateDOM();
+const mic=$("#micBtn");if(mic)mic.onclick=startVoiceSearch;
+const qel=$("#q");if(qel){qel.addEventListener("input",()=>{/* live optional */});}
+}catch(err){console.error("render",err);const screen=$("#screen");if(screen)screen.innerHTML="<div style=\"padding:20px;color:#f88\">Render failed: "+String(err.message||err)+"</div>"}
+}
+try{window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand()}catch(e){}
+if($("#backBtn"))$("#backBtn").onclick=()=>goBack();
+$$(".nav-item").forEach(b=>b.onclick=()=>nav(b.dataset.page));
+setupAdminButton();setTimeout(setupAdminButton,250);setTimeout(setupAdminButton,1000);
+bindDrawer();
 
+function loadSharedSettings(){
+  try{
+    const s=JSON.parse(localStorage.getItem("cinehub4_settings")||"{}");
+    if(s&&typeof s==="object"){
+      Object.keys(s).forEach(k=>{if(s[k]!==undefined&&s[k]!==null)cfg[k]=s[k]});
+    }
+  }catch(e){}
+}
+loadSharedSettings();
+try{render(false)}catch(e){console.error(e);var s=document.getElementById("screen");if(s)s.innerHTML="<div style=padding:20px;color:#f88>Boot error: "+e.message+"</div>"}
+function killSplash(){const s=document.getElementById("appSplash");if(!s)return;s.classList.add("gone");s.style.display="none";try{s.remove()}catch(e){}}
+killSplash();
+setTimeout(killSplash,400);
+setTimeout(killSplash,1200);
+setTimeout(killSplash,2000);
 
-
-
-
-
-     
+function showLeaveDialog(){
+  if(document.getElementById("leaveOverlay")) return;
+  const ov=document.createElement("div");
+  ov.id="leaveOverlay";
+  ov.className="leave-overlay";
+  ov.innerHTML=`<div class="leave-card">
+    <div class="leave-icon">↪</div>
+    <h2>Do you want to leave?</h2>
+    <p>Leaving Cine Hub4 will close your current page.</p>
+    <div class="leave-actions">
+      <button type="button" class="leave-stay" id="leaveStay">Stay here</button>
+      <button type="button" class="leave-go" id="leaveGo">Leave</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  document.getElementById("leaveStay").onclick=function(){ov.remove()};
+  document.getElementById("leaveGo").onclick=function(){
+    ov.remove();
+    try{
+      if(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.close){
+        window.Telegram.WebApp.close();
+        return;
+      }
+    }catch(e){}
+    try{history.back()}catch(e){}
+  };
+}
+function bindLeaveGuard(){
+  try{
+    const tg=window.Telegram&&window.Telegram.WebApp;
+    if(tg&&tg.BackButton){
+      tg.BackButton.show();
+      tg.BackButton.onClick(function(){
+        if(state.page&&state.page!=="movies"&&state.page!=="home"){
+          nav("movies");
+        }else{
+          showLeaveDialog();
+        }
+      });
+    }
+  }catch(e){}
+  // header X / Telegram close is system; intercept only in-app back
+                                  }
