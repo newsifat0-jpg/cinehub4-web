@@ -7,6 +7,7 @@ const DEFAULT={
   miniAppLink:"https://t.me/Cinehub4bot/Hub4",
   telegramChannelLink:"",
   howToEarnVideo:"",
+  tutorialVideo:"",
   howToWatchText:"Unlock this content using ads or points. Share with friends to earn more.",
   howToBuyVideo:"",
   unlockCost:5,
@@ -381,7 +382,7 @@ function payAction(i,st){
     }catch(e){}
   }
   render();toast(st==="approved"?"Accepted · points credited":"Rejected");
-    }
+}
 function payDelete(i){
   const list=JSON.parse(localStorage.getItem("cinehub4_payments")||"[]");
   list.splice(i,1);
@@ -400,9 +401,10 @@ function deleteCategoryAdult(i){if(A.settings.adultCategories[i]==='All'){toast(
 function saveAdultTexts(){A.settings.adultLibraryBadge=$('#aLibBadge').value.trim();A.settings.adultLibraryTitle=$('#aLibTitle').value.trim();A.settings.adultLibraryDesc=$('#aLibDesc').value.trim();A.settings.adultTickerText=$('#aTicker').value.trim();A.settings.adultNewLabel=$('#aNewLabel').value.trim();A.settings.adultNewSub=$('#aNewSub').value.trim();A.settings.adultTrendingLabel=$('#aTrendLabel').value.trim();A.settings.adultTrendingSub=$('#aTrendSub').value.trim();save();toast('Adult page text saved')}
 function adultMovieRows(ms){return ms.length?ms.map(m=>`<tr><td><div class="movie-row"><div class="thumb">${(m.title||'?').slice(0,1)}</div><div><b>${m.title}</b><div class="muted">${m.year}</div></div></div></td><td>${m.category||'Adult'}</td><td>⭐ ${m.rating}</td><td>${money(m.clicks||0)}</td><td>${money(m.downloads||0)}</td><td><span class="badge ${m.status==='Published'?'green':''}">${m.status}</span></td><td class="action-cell"><button type="button" class="btn dots-btn" data-mid="${m.id}" aria-label="Actions">⋮</button><div class="dots-menu hidden" id="dm-${m.id}"><button type="button" onclick="editAdultMovie(${m.id});closeAllDots()">Edit</button><button type="button" class="danger" onclick="deleteMovie(${m.id});closeAllDots()">Delete</button></div></td></tr>`).join(''):`<tr><td colspan="7" class="muted">No adult movies yet. Use “＋ Add Adult Movie” above.</td></tr>`}
 function requests(){return `<div class="card table-wrap"><table class="table"><thead><tr><th>User</th><th>Requested Title</th><th>Date</th><th>Priority</th><th>Status</th><th>Action</th></tr></thead><tbody>${[['@demo_user_1','Avengers: Secret Wars','Today','High','Pending'],['@moviefan','Interstellar','Yesterday','Normal','Pending'],['@sifat_demo','Dune: Part Three','Yesterday','Normal','Searching']].map(r=>`<tr><td>${r[0]}</td><td><b>${r[1]}</b></td><td>${r[2]}</td><td>${r[3]}</td><td><span class="badge">${r[4]}</span></td><td><button class="btn" onclick="toast('Request manager opened')">Manage</button></td></tr>`).join('')}</tbody></table></div>`}
-function contentPage(){return `<div class="grid section-grid"><div class="card"><h3>Telegram & Support Links</h3><div class="field"><label>Bot / Telegram Link</label><input id="botLink" value="${A.settings.telegramBotLink||''}" placeholder="https://t.me/Cinehub4bot"></div><div class="field" style="margin-top:12px"><label>Movie Channel Link</label><input id="channelLink" value="${A.settings.telegramChannelLink||''}" placeholder="https://t.me/yourchannel"></div><button class="btn primary" style="margin-top:14px" onclick="saveLinks()">Save Links</button></div><div class="card"><h3>How To Earn Video</h3><div class="field"><label>Video URL (YouTube/Telegram/MP4)</label><input id="howVideo" value="${A.settings.howToEarnVideo||''}" placeholder="https://...video..."></div><button class="btn primary" style="margin-top:14px" onclick="saveVideo()">Save Video</button><div class="muted smalltext" style="margin-top:10px">User Settings → How To Earn will open this URL.</div></div></div><div class="card" style="margin-top:14px"><h3>App Content Shortcuts</h3><div class="quick"><button onclick="setSection('categories')"><b>▦ Categories</b>Manage all movie categories</button><button onclick="setSection('ads')"><b>◉ Ad IDs</b>Change or add every ad block</button><button onclick="setSection('adult')"><b>18+ Adult</b>Separate library and ad</button><button onclick="setSection('settings')"><b>⚙ Settings</b>Brand, language and controls</button></div></div>`}
+function contentPage(){return `<div class="grid section-grid"><div class="card"><h3>Telegram & Support Links</h3><div class="field"><label>Bot / Telegram Link</label><input id="botLink" value="${A.settings.telegramBotLink||''}" placeholder="https://t.me/Cinehub4bot"></div><div class="field" style="margin-top:12px"><label>Movie Channel Link</label><input id="channelLink" value="${A.settings.telegramChannelLink||''}" placeholder="https://t.me/yourchannel"></div><button class="btn primary" style="margin-top:14px" onclick="saveLinks()">Save Links</button></div><div class="card"><h3>How To Watch Video</h3><div class="muted smalltext">Used by the "▶ How to Watch" button on the Movies / Adult pages.</div><div class="field" style="margin-top:10px"><label>Video URL (YouTube/Telegram/MP4)</label><input id="howVideo" value="${A.settings.howToEarnVideo||''}" placeholder="https://...video..."></div><button class="btn primary" style="margin-top:14px" onclick="saveVideo()">Save How To Watch Video</button></div><div class="card"><h3>Watch Tutorial Video</h3><div class="muted smalltext">Used by the "▶ Watch Tutorial" button on the Profile page — separate from How To Watch above.</div><div class="field" style="margin-top:10px"><label>Video URL (YouTube/Telegram/MP4)</label><input id="tutorialVideo" value="${A.settings.tutorialVideo||''}" placeholder="https://...video..."></div><button class="btn primary" style="margin-top:14px" onclick="saveTutorialVideo()">Save Watch Tutorial Video</button></div></div><div class="card" style="margin-top:14px"><h3>App Content Shortcuts</h3><div class="quick"><button onclick="setSection('categories')"><b>▦ Categories</b>Manage all movie categories</button><button onclick="setSection('ads')"><b>◉ Ad IDs</b>Change or add every ad block</button><button onclick="setSection('adult')"><b>18+ Adult</b>Separate library and ad</button><button onclick="setSection('settings')"><b>⚙ Settings</b>Brand, language and controls</button></div></div>`}
 function saveLinks(){A.settings.telegramBotLink=$('#botLink').value.trim();A.settings.telegramChannelLink=$('#channelLink').value.trim();save();toast('Telegram links saved')}
-function saveVideo(){A.settings.howToEarnVideo=$('#howVideo').value.trim();save();toast('How To Earn video saved')}
+function saveVideo(){A.settings.howToEarnVideo=$('#howVideo').value.trim();save();toast('How To Watch video saved')}
+function saveTutorialVideo(){A.settings.tutorialVideo=$('#tutorialVideo').value.trim();save();toast('Watch Tutorial video saved')}
 function broadcast(){return `<div class="card"><h3>Broadcast Center</h3><div class="form-grid"><div class="field"><label>Audience</label><select><option>All users</option><option>Active users</option><option>Users with points</option></select></div><div class="field"><label>Type</label><select><option>Text</option><option>Movie announcement</option></select></div></div><div class="field" style="margin-top:12px"><label>Message</label><textarea placeholder="Write your broadcast..."></textarea></div><button class="btn primary" style="margin-top:12px" onclick="toast('Broadcast queued in demo')">Send Broadcast</button></div>`}
 function settings(){
   const s=A.settings;
@@ -550,7 +552,7 @@ function saveAllSettings(){
     localStorage.setItem("cinehub4_settings",JSON.stringify(shared));
   }catch(e){}
   toast("All settings saved");
-  }
+}
 
 function saveBrand(){A.settings.appName=$('#appName').value.trim()||'Cine Hub4';A.settings.botUsername=$('#botUser').value.trim();save();toast('Brand saved. Refresh user app to see it')}
 function openMovie(id=null){const m=id?A.movies.find(x=>x.id===id):null;showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="mTitle" value="${m?.title||''}"></div><div class="field"><label>Year</label><input id="mYear" type="number" value="${m?.year||2026}"></div><div class="field"><label>Category</label><select id="mCat">${A.settings.categories.filter(x=>x!=='All').map(c=>`<option ${m?.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Rating</label><input id="mRating" type="number" step=".1" value="${m?.rating||8}"></div><div class="field"><label>Poster URL</label><input id="mPoster" value="${m?.poster||''}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="s1" value="${m?.server1||''}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="s2" value="${m?.server2||''}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="s3" value="${m?.server3||''}" placeholder="https://..."></div><div class="field"><label>Adult?</label><select id="mAdult"><option value="0">No</option><option value="1" ${m?.adult?'selected':''}>Yes</option></select></div></div><button class="btn primary" style="margin-top:15px" onclick="saveMovie(${id||0})">Save Movie</button>`)}
@@ -592,7 +594,7 @@ function editAdultMovie(id){openAdultMovie(id)}
 function showModal(body){$('#modal').innerHTML=`<div class="modal-box">${body}</div>`;$('#modal').classList.remove('hidden')}function closeModal(){$('#modal').classList.add('hidden')}
 function render(){
   try{
-    const box=contentEl();
+ const box=contentEl();
     if(!box){console.error('content missing');return}
     const views={dashboard,movies,categories,users,points,ads,tasks,payments,adult,requests,content:contentPage,broadcast,settings};
     const fn=views[A.section];
@@ -676,4 +678,4 @@ function collectUiTexts(){
     if(bv&&bv.trim()) bn[key]=bv.trim();
   });
   A.settings.uiTexts={en,bn};
-}
+                                                                                                                                      }   
