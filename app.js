@@ -1,3 +1,14 @@
+function shareMovie(id){
+  const m=movies.find(x=>x.id===id);
+  const t=m?(m.title||"").split("|")[0].trim():"Movie";
+  const link=(cfg.telegramBotLink||"https://t.me/Cinehub4bot");
+  const text=t+" — watch on Cine Hub4\n"+link;
+  try{
+    if(navigator.clipboard) navigator.clipboard.writeText(text);
+    if(window.Telegram?.WebApp?.openTelegramLink){/* keep */}
+  }catch(e){}
+  toast("Share link copied!");
+}
 function openLink(u){if(!u)return;try{window.Telegram?.WebApp?.openTelegramLink?.(u)||window.Telegram?.WebApp?.openLink?.(u)||window.open(u,"_blank")}catch(e){window.open(u,"_blank")}}
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
 const defaults={appName:"Cine Hub4",botUsername:"@Cinehub4bot",telegramBotLink:"https://t.me/Cinehub4bot",telegramChannelLink:"",howToEarnVideo:"",unlockCost:5,unlockHours:15,adReward:2,dailyAdLimit:20,categories:["All Movies","Bangla Moves","Hollywood Movie Hindi"],adBlocks:{rewarded:"43222",interstitial:"",banner:"",task:"",adult:""}};
@@ -53,10 +64,34 @@ function nav(p,opts={}){
   if(opts.skipTransition){go();return}
   showPageTransition(go);
 }
-function goBack(){const prev=state.history.pop();sessionStorage.setItem("cinehub4_history",JSON.stringify(state.history));nav(prev||"movies",{fromBack:true})}
+function goBack(){
+  let prev=null;
+  try{prev=state.history.pop()}catch(e){}
+  try{sessionStorage.setItem("cinehub4_history",JSON.stringify(state.history||[]))}catch(e){}
+  if(!prev || prev==="detail") prev="movies";
+  state.page=prev;
+  localStorage.setItem("cinehub4_page",prev);
+  render(true);
+}
 function posterHTML(m){if(m.poster)return`<img class="poster-img" src="${m.poster}" alt="">`;return`<div class="poster-fallback"><div class="pt">${(m.title||"").split("|")[0].trim().slice(0,18)}</div></div>`}
-function card(m,idx){const top=idx===0&&state.mode==="trending"?`<span class="movie-top">TOP 1</span>`:"";return`<article class="movie-card" onclick="detail(${m.id})"><div class="poster-wrap"><span class="movie-badge">MOVIE</span>${top}${posterHTML(m)}${m.duration?`<span class="movie-dur">4K ${m.duration}</span>`:""}</div><div class="movie-body"><div class="mtitle">${m.title}</div><div class="mmeta"><span class="views">👁 ${m.views||m.clicks||0}</span><span class="likes">👍 ${m.likes||0}</span><button class="share-btn" onclick="event.stopPropagation();toast('Share link copied')">↗</button></div></div></article>`}
-function pageBackBar(title){return`<div class="page-back-bar"><button type="button" class="page-back-btn" id="pageBackBtn">‹</button><span class="page-back-title">${title||""}</span></div>`}
+function card(m,idx){
+  const top=idx===0&&state.mode==="trending"?`<span class="movie-top">TOP 1</span>`:"";
+  const title=(m.title||"").split("|")[0].trim();
+  return `<article class="movie-card" onclick="detail(${m.id})">
+    <div class="poster-wrap">
+      <span class="movie-badge">MOVIE</span>${top}
+      ${posterHTML(m)}
+      ${m.duration?`<span class="movie-dur">4K ${m.duration}</span>`:""}
+    </div>
+    <div class="movie-body">
+      <div class="mtitle">${title}</div>
+      <div class="mmeta">
+        <button type="button" class="share-btn" onclick="event.stopPropagation();shareMovie(${m.id})">↗ Share</button>
+      </div>
+    </div>
+  </article>`;
+}
+function pageBackBar(title){return`<div class="page-back-bar"><button type="button" class="page-back-btn" id="pageBackBtn" onclick="goBack()">‹</button><span class="page-back-title">${title||""}</span></div>`}
 function bindPageBack(){const b=$("#pageBackBtn");if(b)b.onclick=()=>goBack()}
 function primeHeader(){return`<div class="prime-row"><button type="button" class="menu-ham" id="hamBtn">☰</button><div class="prime-title">Cine <span class="scene-pill">Hub4</span></div></div>`}
 function heroPills(){return`<div class="hero-pills-sticky"><div class="hero-pills"><button type="button" class="hero-pill blue ${state.mode==="new"?"active":""}" onclick="setMode('new')"><span class="hp-label">New Movies</span><span class="hp-sub">LATEST UPLOADS</span></button><button type="button" class="hero-pill orange ${state.mode==="trending"?"active":""}" onclick="setMode('trending')"><span class="hp-label">Trending</span><span class="hp-sub">MOST WATCHED</span></button></div></div>`}
@@ -193,20 +228,68 @@ function requestCustomBuy(){
 function detail(id){
   const m=movies.find(x=>x.id===id);if(!m)return;
   m.clicks=(m.clicks||0)+1;m.views=(m.views||m.clicks);save();
+  if(state.page!=="detail"){
+    state.history.push(state.page);
+    if(state.history.length>30)state.history.shift();
+    try{sessionStorage.setItem("cinehub4_history",JSON.stringify(state.history))}catch(e){}
+  }
   state.detailId=id;state.unlockProgress=0;
   if(typeof showPageTransition==="function"){
     showPageTransition(function(){
       state.page="detail";
       localStorage.setItem("cinehub4_page","detail");
-      render(true);
-      try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){}
-      const sc=document.getElementById("screen");if(sc)sc.scrollTop=0;
+      render(false);
     });
   }else{
-    state.page="detail";localStorage.setItem("cinehub4_page","detail");render(true);
+    state.page="detail";
+    localStorage.setItem("cinehub4_page","detail");
+    render(false);
   }
 }
-function detailView(){const m=movies.find(x=>x.id===state.detailId);if(!m)return moviesPage();const cost=Number(cfg.unlockCost)||5;const need=cost;const my=state.points;const rem=Math.max(0,need-state.unlockProgress);const prog=state.unlockProgress;return pageBackBar("Movie")+`<div class="unlock-page"><div class="unlock-notice"><div class="bell">🔔</div><div><b>UNLOCK NOTICE</b><span>MOVIE CONTENT</span><div class="muted" style="margin-top:4px">Unlock this content using ads or points.</div></div></div><div class="unlock-poster">${posterHTML(m)}${m.duration?`<span class="movie-dur">4K ${m.duration}</span>`:""}</div><div class="unlock-stats"><div class="us"><b>👍 ${m.likes||0}</b>Likes</div><div class="us"><b>👁 ${m.views||m.clicks||0}</b>Views</div><div class="us"><b>✈</b>Telegram</div></div><div class="unlock-title">${m.title}</div><div class="unlock-sub">${m.genre||""} • ${m.year||""}</div><div class="points-box"><div class="pb-label">● Unlock this content using ads or points.</div><div class="points-row"><div class="pc need"><span>Need</span><b>${need}</b></div><div class="pc myp"><span>My Points</span><b>${my}</b></div><div class="pc rem"><span>Remaining</span><b>${rem}</b></div></div><div class="progress-wrap"><div class="progress-bar"><i style="width:${Math.min(100,(prog/need)*100)}%"></i></div><div class="progress-text">Progress: ${prog}/${need}<br>Unlock with points or ads.</div></div><div class="unlock-actions"><button type="button" class="btn-unlock lock" onclick="unlockWithAds()">🔒 Unlock Video</button><button type="button" class="btn-unlock points" onclick="usePointsForUnlock()">🪙 Use My Points</button></div></div><button type="button" class="btn-more" onclick="nav('movies')">🎬 More Watching <span>›</span></button></div>`}
+
+function detailView(){
+  const m=movies.find(x=>x.id===state.detailId);if(!m)return moviesPage();
+  const cost=Number(cfg.unlockCost)||5;
+  const need=cost;
+  const my=state.points;
+  const rem=Math.max(0,need-state.unlockProgress);
+  const prog=state.unlockProgress;
+  const title=(m.title||"").split("|")[0].trim();
+  return pageBackBar("Movie")+`
+  <div class="unlock-page">
+    <div class="unlock-notice">
+      <div class="bell">🔔</div>
+      <div>
+        <div class="un-title">UNLOCK NOTICE</div>
+        <div class="un-sub">MOVIE CONTENT</div>
+        <div class="muted">Unlock this content using ads or points.</div>
+      </div>
+    </div>
+    <div class="unlock-poster">${posterHTML(m)}</div>
+    <div class="unlock-actions-top">
+      <button type="button" class="share-only" onclick="shareMovie(${m.id})">↗ Share</button>
+    </div>
+    <div class="unlock-title">${title}</div>
+    <div class="unlock-sub">${m.genre||""} • ${m.year||""}</div>
+    <div class="points-box">
+      <div class="pb-label">● Unlock this content using ads or points.</div>
+      <div class="points-row">
+        <div class="pc need"><span>Need</span><b>${need}</b></div>
+        <div class="pc myp"><span>My Points</span><b>${my}</b></div>
+        <div class="pc rem"><span>Remaining</span><b>${rem}</b></div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar"><i style="width:${Math.min(100,(prog/need)*100)}%"></i></div>
+        <div class="progress-text">Progress: ${prog}/${need}<br>Unlock with points or ads.</div>
+      </div>
+      <div class="unlock-actions">
+        <button type="button" class="btn-unlock lock" onclick="unlockWithAds()">🔒 Unlock Video</button>
+              <button type="button" class="btn-unlock points" onclick="usePointsForUnlock()">🪙 Use My Points</button>
+      </div>
+    </div>
+    <button type="button" class="btn-more" onclick="nav('movies')">🎬 More Watching ›</button>
+  </div>`;
+}
 function usePointsForUnlock(){const cost=Number(cfg.unlockCost)||5;if(state.points<1){toast("No points available");return}if(state.unlockProgress>=cost){toast("Already unlocked");return}state.points-=1;state.unlockProgress+=1;save();toast("1 point used");if(state.unlockProgress>=cost){toast(`Unlocked for ${cfg.unlockHours} hours`);}render(false)}
 function unlockWithAds(){watchAd("unlock")}
 function unlockPoints(){const c=Number(cfg.unlockCost)||5;if(state.points<c){toast("পয়েন্ট যথেষ্ট নেই");return}state.points-=c;save();toast(`Unlocked for ${cfg.unlockHours} hours`)}
@@ -221,7 +304,7 @@ function startVoiceSearch(){
     r.interimResults=false;
     r.maxAlternatives=1;
     const mic=document.getElementById("micBtn");
-    if(mic) mic.classList.add("listening");
+    if(mic){mic.classList.add("listening");mic.style.background="#ef4444";mic.style.color="#fff";}
     r.onresult=function(ev){
       const t=(ev.results[0]&&ev.results[0][0]&&ev.results[0][0].transcript)||"";
       state.query=t;
@@ -229,8 +312,8 @@ function startVoiceSearch(){
       if(q) q.value=t;
       doSearch();
     };
-    r.onerror=function(){toast("Voice failed");if(mic)mic.classList.remove("listening")};
-    r.onend=function(){if(mic)mic.classList.remove("listening")};
+    r.onerror=function(){toast("Voice failed");if(mic){mic.classList.remove("listening");mic.style.background="";mic.style.color=""}};
+    r.onend=function(){if(mic){mic.classList.remove("listening");mic.style.background="";mic.style.color=""}};
     r.start();
     toast("Listening...");
   }catch(e){toast("Voice error")}
@@ -335,7 +418,7 @@ function setupAdminButton(){
     }
   }catch(e){}
 }
-function render(animate=false){try{const views={movies:moviesPage,search:searchPage,series,adult,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===state.page||(state.page==="detail"&&b.dataset.page==="movies")));bindDrawer();setupAdminButton();window.CINEHUB4_LANG?.translateDOM();
+function render(animate=false){try{const views={movies:moviesPage,search:searchPage,series,adult,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===state.page||(state.page==="detail"&&b.dataset.page==="movies")));bindPageBack();bindDrawer();setupAdminButton();window.CINEHUB4_LANG?.translateDOM();
 const mic=$("#micBtn");if(mic)mic.onclick=startVoiceSearch;
 const qel=$("#q");if(qel){qel.addEventListener("input",()=>{/* live optional */});}
 }catch(err){console.error("render",err);const screen=$("#screen");if(screen)screen.innerHTML="<div style=\"padding:20px;color:#f88\">Render failed: "+String(err.message||err)+"</div>"}
@@ -360,4 +443,4 @@ function killSplash(){const s=document.getElementById("appSplash");if(!s)return;
 killSplash();
 setTimeout(killSplash,400);
 setTimeout(killSplash,1200);
-setTimeout(killSplash,2000);                       
+setTimeout(killSplash,2000);  
