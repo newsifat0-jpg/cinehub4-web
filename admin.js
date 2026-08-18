@@ -46,7 +46,13 @@ const DEFAULT={
     {name:"Premium Package",price:9.99,points:1200,tag:"BEST VALUE"},
     {name:"Ultimate Package",price:14.99,points:2000,tag:"POPULAR"}
   ],
-  adBlocks:{rewarded:"43222",interstitial:"",banner:"",task:"",adult:"",extra:{}}
+  adBlocks:{rewarded:"43222",interstitial:"",banner:"",task:"",adult:"",extra:{}},
+  uiTexts:{en:{},bn:{}},
+  themeAccent:"#7c5cff",
+  themeAccent2:"#5b8cff",
+  themeOrange:"#f59e0b",
+  themePink:"#ec4899",
+  themeBg:"#0a0c14"
 };
 const A={section:"dashboard",settings:{...DEFAULT,...JSON.parse(localStorage.getItem("cinehub4_settings")||"{}")},movies:JSON.parse(localStorage.getItem("cinehub4_movies")||"null")||[{id:1,title:"PRINCE",type:"Movie",year:2026,rating:8.7,clicks:1842,downloads:921,status:"Published",category:"Bangla Moves"},{id:2,title:"ROCKSTAR",type:"Movie",year:2026,rating:8.1,clicks:1421,downloads:702,status:"Published",category:"Bangla Moves"},{id:3,title:"SPIDER-MAN: Brand New Day",type:"Movie",year:2026,rating:8.5,clicks:1207,downloads:641,status:"Draft",category:"Hollywood Movie Hindi"},{id:4,title:"Demo Adult Title | 18+ Sample",type:"Adult",year:2026,rating:7.5,clicks:410,downloads:90,status:"Published",category:"Adult Movie",adult:true},{id:5,title:"Demo Anime Title | 18+ Sample",type:"Adult",year:2026,rating:7.8,clicks:260,downloads:55,status:"Published",category:"Anime",adult:true}],users:12480,points:156240,adultEnabled:true};
 A.settings.adBlocks={...DEFAULT.adBlocks,...(A.settings.adBlocks||{})};A.settings.categories=A.settings.categories||DEFAULT.categories;A.settings.adultCategories=A.settings.adultCategories&&A.settings.adultCategories.length?A.settings.adultCategories:DEFAULT.adultCategories;
@@ -160,8 +166,8 @@ function adjUserPts(idx,delta){
   render();toast((delta>0?"+":"")+delta+" points");
 }
 
-function points(){return `<div class="grid section-grid"><div class="card"><h3>Points & Unlock Economy</h3><div class="form-grid"><div class="field"><label>Movie unlock cost (points)</label><input id="unlockCost" type="number" value="${A.settings.unlockCost}"></div><div class="field"><label>Unlock duration (hours)</label><input id="unlockHours" type="number" value="${A.settings.unlockHours}"></div><div class="field"><label>Reward per ad</label><input id="adRewardP" type="number" value="${A.settings.adReward}"></div><div class="field"><label>Daily ad earning limit</label><input id="dailyLimitP" type="number" value="${A.settings.dailyAdLimit}"></div><div class="field"><label>New-user bonus</label><input id="bonus" type="number" value="${A.settings.newUserBonus||10}"></div><div class="field"><label>Referral reward</label><input id="ref" type="number" value="${A.settings.referralReward||5}"></div></div><button class="btn primary" style="margin-top:14px" onclick="savePoints()">Save Economy</button></div><div class="card"><h3>Rules</h3><div class="switch"><span>Unlimited movie unlocks while access is active</span><span class="badge green">ON</span></div><div class="switch"><span>Daily ad limit only applies to earning points</span><span class="badge green">ON</span></div><div class="switch"><span>Unlock period</span><span class="badge green">${A.settings.unlockHours} HOURS</span></div></div></div>`}
-function savePoints(){A.settings.unlockCost=+$('#unlockCost').value||5;A.settings.unlockHours=+$('#unlockHours').value||15;A.settings.adReward=+$('#adRewardP').value||2;A.settings.dailyAdLimit=+$('#dailyLimitP').value||20;A.settings.newUserBonus=+$('#bonus').value||10;A.settings.referralReward=+$('#ref').value||5;save();render();toast('Points settings saved')}
+function points(){return `<div class="grid section-grid"><div class="card"><h3>Points & Unlock Economy</h3><div class="form-grid"><div class="field"><label>Movie unlock cost (points / ads needed)</label><input id="unlockCost" type="number" value="${A.settings.unlockCost}"></div><div class="field"><label>Unlock duration (hours)</label><input id="unlockHours" type="number" value="${A.settings.unlockHours}"></div><div class="field"><label>Reward per ad</label><input id="adRewardP" type="number" value="${A.settings.adReward}"></div><div class="field"><label>Daily ad earning limit</label><input id="dailyLimitP" type="number" value="${A.settings.dailyAdLimit}"></div><div class="field"><label>Daily movie unlock limit (0 = unlimited)</label><input id="dailyUnlockLimit" type="number" value="${A.settings.dailyUnlockLimit||0}"></div><div class="field"><label>New-user bonus</label><input id="bonus" type="number" value="${A.settings.newUserBonus||10}"></div><div class="field"><label>Referral reward</label><input id="ref" type="number" value="${A.settings.referralReward||5}"></div></div><button class="btn primary" style="margin-top:14px" onclick="savePoints()">Save Economy</button></div><div class="card"><h3>Rules</h3><div class="switch"><span>After unlock expires, user must watch ads / use points again</span><span class="badge green">ON</span></div><div class="switch"><span>Daily ad limit only applies to earning points</span><span class="badge green">ON</span></div><div class="switch"><span>Unlock period</span><span class="badge green">${A.settings.unlockHours} HOURS</span></div><div class="switch"><span>Adult library fully separate from Movies</span><span class="badge green">ON</span></div></div></div>`}
+function savePoints(){A.settings.unlockCost=+$('#unlockCost').value||5;A.settings.unlockHours=+$('#unlockHours').value||15;A.settings.adReward=+$('#adRewardP').value||2;A.settings.dailyAdLimit=+$('#dailyLimitP').value||20;A.settings.dailyUnlockLimit=+$('#dailyUnlockLimit').value||0;A.settings.newUserBonus=+$('#bonus').value||10;A.settings.referralReward=+$('#ref').value||5;save();render();toast('Points settings saved')}
 function ads(){const b=A.settings.adBlocks;return `<div class="grid section-grid"><div class="card"><h3>Ad Block IDs — Full Control</h3><div class="muted smalltext">Every ad ID can be changed here. Add another block with the button below.</div><div class="form-grid" style="margin-top:12px"><div class="field"><label>Rewarded / Unlock Ad Block ID</label><input id="rewardedId" value="${b.rewarded||''}"></div><div class="field"><label>Interstitial Ad Block ID</label><input id="interstitialId" value="${b.interstitial||''}"></div><div class="field"><label>Home Banner Ad Block ID</label><input id="bannerId" value="${b.banner||''}"></div><div class="field"><label>Daily Task Ad Block ID</label><input id="taskId" value="${b.task||''}"></div><div class="field"><label>Adult Ad Block ID — SEPARATE</label><input id="adultId" value="${b.adult||''}"></div></div><button class="btn primary" style="margin-top:14px" onclick="saveAds()">Save All Ad IDs</button></div><div class="card"><h3>Ad Placement</h3><div class="switch"><span>Home banner</span><span class="toggle on" onclick="this.classList.toggle('on')"><i></i></span></div><div class="switch"><span>Rewarded movie unlock</span><span class="toggle on" onclick="this.classList.toggle('on')"><i></i></span></div><div class="switch"><span>Point earning ads</span><span class="toggle on" onclick="this.classList.toggle('on')"><i></i></span></div><div class="switch"><span>Adult ads</span><span class="toggle on" onclick="this.classList.toggle('on')"><i></i></span></div></div></div><div class="card" style="margin-top:14px"><div class="toolbar"><h3 style="margin:0">Extra Ad Blocks</h3><button class="btn primary" onclick="openAdBlock()">＋ Add Ad Block</button></div><div id="extraAds" class="tag-list"></div></div>`}
 function saveAds(){const b=A.settings.adBlocks;b.rewarded=$('#rewardedId').value.trim();b.interstitial=$('#interstitialId').value.trim();b.banner=$('#bannerId').value.trim();b.task=$('#taskId').value.trim();b.adult=$('#adultId').value.trim();save();toast('All Ad IDs saved')}
 function tasks(){
@@ -179,13 +185,16 @@ function tasks(){
     <td><input type="number" value="${t.limit||1}" onchange="A.settings.tasks[${i}].limit=Number(this.value)||1;save()" style="width:70px"></td>
     <td>
       <select onchange="A.settings.tasks[${i}].type=this.value;save()">
+        <option value="countdown" ${t.type==="countdown"||t.type==="oneclick"?"selected":""}>countdown</option>
         <option value="ad" ${t.type==="ad"?"selected":""}>ad</option>
         <option value="link" ${t.type==="link"?"selected":""}>link</option>
         <option value="share" ${t.type==="share"?"selected":""}>share</option>
         <option value="login" ${t.type==="login"?"selected":""}>login</option>
       </select>
     </td>
-    <td><button class="btn danger" onclick="A.settings.tasks.splice(${i},1);save();render()">Del</button></td>
+    <td><input type="number" value="${t.seconds||5}" title="Countdown secs" onchange="A.settings.tasks[${i}].seconds=Number(this.value)||5;save()" style="width:60px">
+      <button class="btn" onclick="openTask('',${i})">Edit</button>
+      <button class="btn danger" onclick="A.settings.tasks.splice(${i},1);save();render()">Del</button></td>
   </tr>`).join("");
   return `<div class="toolbar"><button class="btn primary" onclick="A.settings.tasks.push({name:'New Task',reward:2,limit:1,type:'ad'});save();render()">＋ Add Task</button></div>
   <div class="card table-wrap"><table class="table"><thead><tr><th>Task</th><th>Reward</th><th>Daily Limit</th><th>Type</th><th>Action</th></tr></thead>
@@ -195,6 +204,14 @@ function tasks(){
 
 function payments(){
   let list=JSON.parse(localStorage.getItem("cinehub4_payments")||"[]");
+  // Sort: pending first (oldest first), then approved/rejected (oldest first) — new ones at bottom of each group
+  list = list.map((p,i)=>({...p,_i:i})).sort((a,b)=>{
+    const rank=s=>(s==="pending"||!s)?0:1;
+    const ra=rank(a.status), rb=rank(b.status);
+    if(ra!==rb) return ra-rb;
+    const ta=a.ts||a.time||a.date||0, tb=b.ts||b.time||b.date||0;
+    return ta-tb; // older first
+  });
   const s=A.settings||{};
   if(!s.wallets) s.wallets = s.usdtWallet ? [{name:s.usdtNetwork||"USDT TRC20",address:s.usdtWallet,network:s.usdtNetwork||"TRC20"}] : [{name:"USDT TRC20",address:"",network:"TRC20"}];
   const wRows=(s.wallets||[]).map((w,i)=>`<div class="field" style="grid-column:1/-1;display:grid;grid-template-columns:1.2fr 2fr 1fr auto;gap:8px;align-items:end">
@@ -207,34 +224,61 @@ function payments(){
     <div class="form-grid">${wRows||'<div class="muted">No wallets</div>'}
       <button class="btn" onclick="A.settings.wallets=A.settings.wallets||[];A.settings.wallets.push({name:'USDT TRC20',address:'',network:'TRC20'});save();render()">+ Add Wallet</button>
     </div>
-    <p class="muted" style="margin-top:8px">Also sync first wallet to legacy fields on save.</p>
   </div>
-  <div class="card table-wrap"><h3>Payment Requests</h3><table class="table"><thead><tr>
-    <th>User</th><th>Package</th><th>USDT</th><th>Points</th><th>TX / Proof</th><th>Status</th><th>Action</th>
+  <div class="card table-wrap"><h3>Payment Requests</h3>
+  <p class="muted smalltext">Pending first · older first · Accept credits points · View shows screenshot & details</p>
+  <table class="table"><thead><tr>
+    <th>User</th><th>Package</th><th>USDT</th><th>Points</th><th>Date</th><th>Status</th><th>Action</th>
   </tr></thead><tbody>
-  ${list.length?list.map((p,i)=>`<tr>
+  ${list.length?list.map((p)=>`<tr>
     <td>${p.user||"-"}<br><small>${p.uid||""}</small></td><td>${p.pkg||"-"}</td><td>${p.usdt||0}</td><td>${p.points||0}</td>
-    <td>${p.txid||"-"}<br><small>${p.proof||""}</small></td>
-    <td><span class="badge ${p.status==="approved"?"green":p.status==="rejected"?"red":"yellow"}">${p.status}</span></td>
-    <td>
-      <button class="btn primary" onclick="payAction(${i},'approved')">Accept</button>
-      <button class="btn danger" onclick="payAction(${i},'rejected')">Reject</button>
-      <button class="btn" onclick="payDelete(${i})">Del</button>
+    <td><small>${p.date||p.time||"-"}</small></td>
+    <td><span class="badge ${p.status==="approved"?"green":p.status==="rejected"?"red":"yellow"}">${p.status||"pending"}</span></td>
+    <td style="white-space:nowrap">
+      <button class="btn" onclick="payView(${p._i})">View</button>
+      ${(!p.status||p.status==="pending")?`<button class="btn primary" onclick="payAction(${p._i},'approved')">Accept</button>
+      <button class="btn danger" onclick="payAction(${p._i},'rejected')">Reject</button>`:""}
+      <button class="btn" onclick="payDelete(${p._i})">Del</button>
     </td>
   </tr>`).join(""):'<tr><td colspan="7" class="muted">No payment requests yet</td></tr>'}
   </tbody></table></div>`;
 }
+function payView(i){
+  const list=JSON.parse(localStorage.getItem("cinehub4_payments")||"[]");
+  const p=list[i]; if(!p)return;
+  const img=p.proofData||p.proofUrl||"";
+  const isUrl=typeof img==="string"&&(img.startsWith("http")||img.startsWith("data:"));
+  showModal(`<div class="modal-head"><h2>Payment Detail</h2><button class="btn" onclick="closeModal()">×</button></div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="field"><label>User</label><div>${p.user||"-"} (${p.uid||"-"})</div></div>
+      <div class="field"><label>Package</label><div>${p.pkg||"-"}</div></div>
+      <div class="field"><label>USDT</label><div>${p.usdt||0}</div></div>
+      <div class="field"><label>Points</label><div>${p.points||0}</div></div>
+      <div class="field"><label>TxID</label><div style="word-break:break-all">${p.txid||"-"}</div></div>
+      <div class="field"><label>Status</label><div>${p.status||"pending"}</div></div>
+      <div class="field"><label>Date / Time</label><div>${p.date||p.time||"-"}</div></div>
+      <div class="field"><label>Wallet</label><div>${p.wallet||p.network||"-"}</div></div>
+      <div class="field" style="grid-column:1/-1"><label>Screenshot / Proof</label>
+        ${isUrl?`<img src="${img}" style="max-width:100%;border-radius:12px;margin-top:8px;border:1px solid #2a334d" alt="proof">`:`<div class="muted">${p.proof||"No image attached"}</div>`}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      ${(!p.status||p.status==="pending")?`<button class="btn primary" onclick="closeModal();payAction(${i},'approved')">Accept & Credit Points</button>
+      <button class="btn danger" onclick="closeModal();payAction(${i},'rejected')">Reject</button>`:""}
+      <button class="btn" onclick="closeModal()">Close</button>
+    </div>`);
+}
 function payAction(i,st){
   const list=JSON.parse(localStorage.getItem("cinehub4_payments")||"[]");
   if(!list[i])return;
+  if(list[i].status==="approved"&&st==="approved"){toast("Already accepted");return}
   list[i].status=st;
+  list[i].processedAt=new Date().toISOString();
   localStorage.setItem("cinehub4_payments",JSON.stringify(list));
   if(st==="approved"){
     const pts=Number(list[i].points||0);
-    // credit current demo/local user points store (same browser)
     const cur=Number(localStorage.getItem("cinehub4_points")||0);
     localStorage.setItem("cinehub4_points",String(cur+pts));
-    // per-user ledger
     try{
       const uid=list[i].uid||"local";
       const key="cinehub4_userpts_"+uid;
@@ -326,6 +370,27 @@ function settings(){
       <button class="btn" onclick="A.settings.packages=A.settings.packages||[];A.settings.packages.push({name:'New',price:1,points:100,tag:''});save();render()">+ Add Package</button>
     </div>
   </div>
+
+
+  <div class="card"><h3>🎨 Theme Colors (User App)</h3>
+    <div class="form-grid">
+      <div class="field"><label>Accent (purple)</label><input id="s_cAccent" type="color" value="${s.themeAccent||"#7c5cff"}"></div>
+      <div class="field"><label>Accent 2 (blue)</label><input id="s_cAccent2" type="color" value="${s.themeAccent2||"#5b8cff"}"></div>
+      <div class="field"><label>Orange</label><input id="s_cOrange" type="color" value="${s.themeOrange||"#f59e0b"}"></div>
+      <div class="field"><label>Pink</label><input id="s_cPink" type="color" value="${s.themePink||"#ec4899"}"></div>
+      <div class="field"><label>Background</label><input id="s_cBg" type="color" value="${s.themeBg||"#0a0c14"}"></div>
+    </div>
+  </div>
+  <div class="card" style="grid-column:1/-1"><h3>🌐 UI Texts — প্রতিটি অক্ষর (English / বাংলা)</h3>
+    <p class="muted" style="margin-bottom:12px">ইউজার মিনি অ্যাপে বাংলা সিলেক্ট করলে বাংলা টেক্সট দেখাবে, ইংরেজি সিলেক্ট করলে ইংরেজি। <b>মুভি টাইটেল/নাম অনুবাদ হয় না</b> — অ্যাডমিন যে নামে এড করে সেটাই থাকে। খালি রাখলে ডিফল্ট ব্যবহার হবে।</p>
+    <div style="max-height:420px;overflow:auto;border:1px solid #1e2438;border-radius:12px;padding:8px">
+      <table class="table" style="font-size:12px">
+        <thead><tr><th style="width:28%">Key (English default)</th><th>English (override)</th><th>বাংলা (override)</th></tr></thead>
+        <tbody id="uiTextBody"></tbody>
+      </table>
+    </div>
+    <button type="button" class="btn" style="margin-top:10px" onclick="addUiTextRow()">＋ Add custom key</button>
+  </div>
   <div class="card"><h3>Security</h3>
     <div class="switch"><span>Admin-only panel gate</span><span class="badge green">ENABLED</span></div>
     <div class="switch"><span>Adult library</span><span class="toggle ${A.adultEnabled?'on':''}" onclick="A.adultEnabled=!A.adultEnabled;this.classList.toggle('on');save()"><i></i></span></div>
@@ -336,6 +401,7 @@ function settings(){
 </div>`;
 }
 function saveAllSettings(){
+  try{collectUiTexts()}catch(e){}
   const g=id=>document.getElementById(id);
   const s=A.settings;
   if(g("s_appName")) s.appName=g("s_appName").value;
@@ -367,6 +433,11 @@ function saveAllSettings(){
   if(g("s_refReward")) s.referralReward=Number(g("s_refReward").value)||20;
   if(g("s_usdt")) s.usdtWallet=g("s_usdt").value;
   if(g("s_usdtNet")) s.usdtNetwork=g("s_usdtNet").value;
+  if(g("s_cAccent")) s.themeAccent=g("s_cAccent").value;
+  if(g("s_cAccent2")) s.themeAccent2=g("s_cAccent2").value;
+  if(g("s_cOrange")) s.themeOrange=g("s_cOrange").value;
+  if(g("s_cPink")) s.themePink=g("s_cPink").value;
+  if(g("s_cBg")) s.themeBg=g("s_cBg").value;
   document.querySelectorAll("[data-pkg]").forEach(inp=>{
     const i=Number(inp.getAttribute("data-pkg"));
     const k=inp.getAttribute("data-k");
@@ -384,12 +455,36 @@ function saveAllSettings(){
 
 function saveBrand(){A.settings.appName=$('#appName').value.trim()||'Cine Hub4';A.settings.botUsername=$('#botUser').value.trim();save();toast('Brand saved. Refresh user app to see it')}
 function openMovie(id=null){const m=id?A.movies.find(x=>x.id===id):null;showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="mTitle" value="${m?.title||''}"></div><div class="field"><label>Year</label><input id="mYear" type="number" value="${m?.year||2026}"></div><div class="field"><label>Category</label><select id="mCat">${A.settings.categories.filter(x=>x!=='All').map(c=>`<option ${m?.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Rating</label><input id="mRating" type="number" step=".1" value="${m?.rating||8}"></div><div class="field"><label>Poster URL</label><input id="mPoster" value="${m?.poster||''}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="s1" value="${m?.server1||''}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="s2" value="${m?.server2||''}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="s3" value="${m?.server3||''}" placeholder="https://..."></div><div class="field"><label>Adult?</label><select id="mAdult"><option value="0">No</option><option value="1" ${m?.adult?'selected':''}>Yes</option></select></div></div><button class="btn primary" style="margin-top:15px" onclick="saveMovie(${id||0})">Save Movie</button>`)}
-function saveMovie(id){const old=id?A.movies.find(m=>m.id===id):null;const x={id:id||Date.now(),title:$('#mTitle').value||'Untitled Movie',type:'Movie',year:+$('#mYear').value||2026,rating:+$('#mRating').value||8,category:$('#mCat').value,poster:$('#mPoster').value.trim(),server1:$('#s1').value.trim(),server2:$('#s2').value.trim(),server3:$('#s3').value.trim(),adult:$('#mAdult').value==='1',clicks:old?.clicks||0,downloads:old?.downloads||0,status:'Published'};if(id)A.movies=A.movies.map(m=>m.id===id?x:m);else A.movies.unshift(x);save();closeModal();render();toast('Movie saved')}
+function saveMovie(id){const old=id?A.movies.find(m=>m.id===id):null;const isAdult=$('#mAdult').value==='1';let cat=$('#mCat').value;if(isAdult){const ac=(A.settings.adultCategories||[]).filter(x=>x!=='All');if(ac.length&&!ac.includes(cat))cat=ac[0];}const x={id:id||Date.now(),title:$('#mTitle').value||'Untitled Movie',type:isAdult?'Adult':'Movie',year:+$('#mYear').value||2026,rating:+$('#mRating').value||8,category:cat,poster:$('#mPoster').value.trim(),server1:$('#s1').value.trim(),server2:$('#s2').value.trim(),server3:$('#s3').value.trim(),adult:isAdult,clicks:old?.clicks||0,downloads:old?.downloads||0,status:'Published'};if(id)A.movies=A.movies.map(m=>m.id===id?x:m);else A.movies.unshift(x);save();closeModal();render();toast(isAdult?'Saved as Adult (only in Adult tab)':'Movie saved')}
 function editMovie(id){openMovie(id)}function deleteMovie(id){if(confirm('Delete this movie?')){A.movies=A.movies.filter(m=>m.id!==id);save();render();toast('Movie deleted')}}
 function openCategory(index=null){const old=index===null?'':A.settings.categories[index];showModal(`<div class="modal-head"><h2>${index===null?'Add':'Edit'} Category</h2><button class="btn" onclick="closeModal()">×</button></div><div class="field"><label>Category name</label><input id="catName" value="${old}"></div><button class="btn primary" style="margin-top:15px" onclick="saveCategory(${index===null?-1:index})">Save Category</button>`)}
 function editCategory(i){openCategory(i)}function saveCategory(i){const n=$('#catName').value.trim();if(!n)return;if(i<0)A.settings.categories.push(n);else A.settings.categories[i]=n;save();closeModal();render();toast('Category saved')}
 function deleteCategory(i){if(A.settings.categories[i]==='All'){toast('All category cannot be deleted');return}if(confirm('Delete this category?')){A.settings.categories.splice(i,1);save();render();toast('Category deleted')}}
-function openTask(name=''){showModal(`<div class="modal-head"><h2>${name?'Edit':'Add'} Daily Task</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Task name</label><input id="taskName" value="${name}"></div><div class="field"><label>Reward points</label><input id="taskReward" type="number" value="5"></div><div class="field"><label>Daily limit</label><input id="taskLimit" type="number" value="1"></div></div><button class="btn primary" style="margin-top:15px" onclick="closeModal();toast('Task saved')">Save Task</button>`)}
+function openTask(name='',idx=null){
+  const tasks=A.settings.tasks||[];
+  const t=(idx!=null&&tasks[idx])?tasks[idx]:{name:name||'',reward:2,limit:1,type:'countdown',seconds:5,link:''};
+  showModal(`<div class="modal-head"><h2>${idx!=null?'Edit':'Add'} Daily Task</h2><button class="btn" onclick="closeModal()">×</button></div>
+  <div class="form-grid">
+    <div class="field"><label>Task name</label><input id="taskName" value="${t.name||''}"></div>
+    <div class="field"><label>Type</label><select id="taskType">
+      <option value="countdown" ${t.type==='countdown'||t.type==='oneclick'?'selected':''}>Countdown (one click)</option>
+      <option value="ad" ${t.type==='ad'?'selected':''}>Watch Ad</option>
+      <option value="link" ${t.type==='link'?'selected':''}>Open Link</option>
+      <option value="share" ${t.type==='share'?'selected':''}>Share Referral</option>
+      <option value="login" ${t.type==='login'?'selected':''}>Daily Login</option>
+    </select></div>
+    <div class="field"><label>Reward points</label><input id="taskReward" type="number" value="${t.reward||2}"></div>
+    <div class="field"><label>Daily limit</label><input id="taskLimit" type="number" value="${t.limit||1}"></div>
+    <div class="field"><label>Countdown seconds</label><input id="taskSecs" type="number" value="${t.seconds||5}"></div>
+    <div class="field"><label>Link (for Open Link type)</label><input id="taskLink" value="${t.link||''}" placeholder="https://t.me/..."></div>
+  </div>
+  <button class="btn primary" style="margin-top:15px" onclick="saveTask(${idx!=null?idx:'null'})">Save Task</button>`)}
+function saveTask(idx){
+  A.settings.tasks=A.settings.tasks||[];
+  const x={name:$('#taskName').value.trim()||'Task',type:$('#taskType').value,reward:+$('#taskReward').value||1,limit:+$('#taskLimit').value||1,seconds:+$('#taskSecs').value||5,link:$('#taskLink').value.trim()};
+  if(idx!=null&&idx>=0) A.settings.tasks[idx]=x; else A.settings.tasks.push(x);
+  save();closeModal();render();toast('Task saved');
+}
 function openAdBlock(){showModal(`<div class="modal-head"><h2>Add Ad Block</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Ad Block Name</label><input id="extraAdName" placeholder="e.g. Home Reward"></div><div class="field"><label>Ad Block ID</label><input id="extraAdId" placeholder="43222"></div></div><button class="btn primary" style="margin-top:15px" onclick="saveExtraAd()">Add Ad Block</button>`)}
 function saveExtraAd(){const n=$('#extraAdName').value.trim(),id=$('#extraAdId').value.trim();if(!n||!id)return;A.settings.adBlocks.extra=A.settings.adBlocks.extra||{};A.settings.adBlocks.extra[n]=id;save();closeModal();render();toast('Ad block added')}
 function openAdultMovie(id=null){const m=id?A.movies.find(x=>x.id===id):null;const cats=A.settings.adultCategories.filter(x=>x!=='All');showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Adult Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="adultTitle" value="${m?.title||''}" placeholder="Adult title"></div><div class="field"><label>Year</label><input id="adultYear" type="number" value="${m?.year||new Date().getFullYear()}"></div><div class="field"><label>Category</label><select id="adultCat">${cats.map(c=>`<option ${m?.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Rating</label><input id="adultRating" type="number" step=".1" value="${m?.rating||0}"></div><div class="field"><label>Poster URL</label><input id="adultPoster" value="${m?.poster||''}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="adultS1" value="${m?.server1||''}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="adultS2" value="${m?.server2||''}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="adultS3" value="${m?.server3||''}" placeholder="https://..."></div></div><button class="btn primary" style="margin-top:15px" onclick="saveAdultMovie(${id||0})">Save Adult Movie</button>`)}
@@ -404,6 +499,7 @@ function render(){
     const fn=views[A.section];
     if(typeof fn!=='function'){box.innerHTML='<div class="card"><p>Unknown section: '+A.section+'</p></div>';return}
     box.innerHTML=fn();
+    if(A.section==='settings'){ try{fillUiTextBody()}catch(e){} }
     if(A.section==='ads'){
       const extra=(A.settings.adBlocks&&A.settings.adBlocks.extra)||{};
       const ea=el('extraAds');
@@ -420,3 +516,61 @@ function render(){
 }
 function deleteExtraAd(n){delete A.settings.adBlocks.extra[n];save();render();toast('Ad block removed')}
 boot();
+
+
+const UI_TEXT_KEYS=[
+  "Movies","Series","Search","Adult","18+","Profile","Language","Telegram",
+  "New Movies","LATEST UPLOADS","Trending","MOST WATCHED","MOVIE ZONE","Cinema Library",
+  "▶ How to Watch","Trending Movies","No movies found.","Results","Search movies...",
+  "Complete series","Series not added yet.",
+  "ADULT ZONE","Adult Library","Adult Access Confirmation",
+  "This section is reserved for mature viewers. Please confirm that you are 18 or older before entering the Adult Zone.",
+  "Yes, Enter","No, Watch Movie","✓ I confirm that I am 18 or older",
+  "Verified User","OVERVIEW","My Points","Total Referrals","REFERRAL SYSTEM",
+  "Per Referral Reward","Join Bonus","Referral Code","Your Referral Link","Copy Link","Share Link",
+  "Daily Tasks","Buy Points","Watch Ad & Earn","Watch Ad Now","Start",
+  "EARN & UNLOCK","Current Balance","Points Per Ad","Ads Watched","Daily Limit",
+  "EARNING SETTINGS","Reward Per Ad","Maximum Daily Ads","Remaining Today","MORE EARNING BUTTONS",
+  "UNLOCK NOTICE","MOVIE CONTENT","Unlock this content using ads or points.",
+  "Need","Remaining","Unlock Video","Use My Points","Share","More Movies",
+  "Do you want to leave?","Stay here","Leave","Points","Back"
+];
+function uiTextRowsHtml(){
+  const s=A.settings;
+  s.uiTexts=s.uiTexts||{en:{},bn:{}};
+  const en=s.uiTexts.en||{}, bn=s.uiTexts.bn||{};
+  // merge known keys + any custom
+  const keys=Array.from(new Set([...UI_TEXT_KEYS, ...Object.keys(en), ...Object.keys(bn)]));
+  return keys.map((k,i)=>{
+    const esc=v=>String(v||"").replace(/"/g,"&quot;");
+    return `<tr data-uitext="${i}">
+      <td><code style="font-size:11px">${k.replace(/</g,"&lt;")}</code><input type="hidden" data-ukey value="${esc(k)}"></td>
+      <td><input data-uen value="${esc(en[k]||"")}" placeholder="${esc(k)}" style="width:100%"></td>
+      <td><input data-ubn value="${esc(bn[k]||"")}" placeholder="বাংলা..." style="width:100%"></td>
+    </tr>`;
+  }).join("");
+}
+function fillUiTextBody(){
+  const tb=document.getElementById("uiTextBody");
+  if(tb) tb.innerHTML=uiTextRowsHtml();
+}
+function addUiTextRow(){
+  const k=prompt("New UI key (English base text):");
+  if(!k)return;
+  A.settings.uiTexts=A.settings.uiTexts||{en:{},bn:{}};
+  A.settings.uiTexts.en[k]=A.settings.uiTexts.en[k]||"";
+  A.settings.uiTexts.bn[k]=A.settings.uiTexts.bn[k]||"";
+  fillUiTextBody();
+}
+function collectUiTexts(){
+  const en={}, bn={};
+  document.querySelectorAll("#uiTextBody tr").forEach(tr=>{
+    const key=(tr.querySelector("[data-ukey]")||{}).value;
+    if(!key)return;
+    const ev=(tr.querySelector("[data-uen]")||{}).value;
+    const bv=(tr.querySelector("[data-ubn]")||{}).value;
+    if(ev&&ev.trim()) en[key]=ev.trim();
+    if(bv&&bv.trim()) bn[key]=bv.trim();
+  });
+  A.settings.uiTexts={en,bn};
+    }
