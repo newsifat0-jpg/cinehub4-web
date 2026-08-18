@@ -1,10 +1,18 @@
 :root{
   --accent:#7c5cff;
-  --accent2:#5b8cff;
+  --accent2:#3b82f6;
   --orange:#f59e0b;
   --pink:#ec4899;
-  --bg:#0a0c14;
+  --cyan:#06b6d4;
+  --bg:#070a12;
+  --card:#0f1422;
+  --card2:#141a2c;
+  --border:#1e2740;
+  --text:#eef2ff;
+  --muted:#8b93a7;
+  --glow:rgba(124,92,255,.35);
 }
+
 
 /* Cine Hub4 logo palette — cyan blue + orange gold */
 :root{
@@ -312,6 +320,8 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
 .page-back-btn{width:40px;height:40px;border:0;border-radius:12px;background:#161b2c;color:#eef1ff;font-size:26px;line-height:1;cursor:pointer;display:grid;place-items:center;flex-shrink:0}
 .page-back-btn:active{transform:scale(.94);background:#1e2538}
 .page-back-title{font-size:16px;font-weight:800}
+.page-back-textwrap{display:flex;flex-direction:column;gap:2px}
+.page-back-sub{font-size:11px;font-weight:700;letter-spacing:.5px;color:#8b93a7}
 
 .pkg-row{display:flex;align-items:center;gap:12px;padding:14px;margin-bottom:10px;border-radius:16px;background:#121826;border:1px solid #243049}
 .pkg-ico{width:44px;height:44px;border-radius:12px;background:#1a2238;display:grid;place-items:center;font-size:20px;flex-shrink:0}
@@ -383,3 +393,178 @@ body{background:radial-gradient(1200px 600px at 50% -10%,#152038 0%,#070b14 55%,
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .modal-card{animation:popIn .28s cubic-bezier(.22,.8,.28,1)}
 @keyframes popIn{from{opacity:0;transform:scale(.92) translateY(8px)}to{opacity:1;transform:none}}
+
+/* ——— Earn / Tasks page (Prime Scene style) ——— */
+.earn-hero{
+  display:flex;gap:14px;align-items:flex-start;
+  background:linear-gradient(145deg,#1a1440,#12182a 60%);
+  border:1px solid #2a2550;border-radius:18px;padding:16px;margin:8px 0 14px
+}
+.earn-hero-ico{
+  width:48px;height:48px;border-radius:14px;flex-shrink:0;
+  background:linear-gradient(135deg,#a78bfa,#6366f1);
+  display:grid;place-items:center;font-size:22px;
+  box-shadow:0 8px 24px rgba(99,102,241,.4)
+}
+.earn-hero b{display:block;font-size:15px;color:#fff;margin-bottom:4px}
+.earn-hero p{margin:0 0 10px;font-size:12px;color:#9aa3b8;line-height:1.45}
+.earn-chips{display:flex;flex-wrap:wrap;gap:8px}
+.earn-chips span{
+  font-size:10px;font-weight:700;color:#c4b5fd;
+  background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.25);
+  border-radius:99px;padding:4px 10px
+}
+.pf-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+.pf-stat{
+  background:linear-gradient(160deg,#141a2c,#0f1422);
+  border:1px solid #243049;border-radius:16px;padding:14px;
+  display:flex;justify-content:space-between;align-items:center
+}
+.pf-stat b{display:block;font-size:22px;color:#fff;font-weight:800}
+.pf-stat span{font-size:11px;color:#8b93a7;font-weight:600}
+.pf-stat .ico{
+  width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:18px
+}
+.pf-stat .ico.coin{background:linear-gradient(135deg,#f59e0b,#f97316)}
+.pf-stat .ico.gift{background:linear-gradient(135deg,#ec4899,#a855f7)}
+.pf-stat .ico.eye{background:linear-gradient(135deg,#3b82f6,#06b6d4)}
+.pf-stat .ico.shield{background:linear-gradient(135deg,#22c55e,#14b8a6)}
+.earn-settings .pf-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 0;border-bottom:1px solid #1e2740;font-size:13px;color:#c8d0e0
+}
+.earn-settings .pf-row:last-of-type{border-bottom:0}
+.earn-settings .pf-row b{color:#fff;font-weight:700}
+.watch-ad-now{
+  width:100%;margin:14px 0 8px;padding:15px;
+  border:0;border-radius:16px;font-size:15px;font-weight:800;color:#fff;
+  background:linear-gradient(90deg,#7c5cff,#3b82f6,#06b6d4);
+  box-shadow:0 8px 28px rgba(59,130,246,.35);cursor:pointer
+}
+.watch-ad-now:active{transform:scale(.98)}
+.task-row{
+  display:flex;align-items:center;gap:12px;
+  background:linear-gradient(160deg,#141a2c,#0f1422);
+  border:1px solid #243049;border-radius:16px;padding:12px 14px;margin-bottom:10px
+}
+.task-row.done{opacity:.75}
+.task-ico{
+  width:42px;height:42px;border-radius:12px;flex-shrink:0;
+  background:linear-gradient(135deg,#6366f1,#3b82f6);
+  display:grid;place-items:center;font-size:18px
+}
+.task-meta{flex:1;min-width:0}
+.task-meta b{display:block;font-size:14px;color:#fff}
+.task-meta span{font-size:11px;color:#8b93a7}
+.task-start{
+  background:linear-gradient(135deg,#a78bfa,#6366f1);color:#fff;border:0;
+  border-radius:12px;padding:10px 16px;font-weight:800;font-size:13px;
+  box-shadow:0 4px 14px rgba(99,102,241,.35)
+}
+.task-done{
+  background:#1e2740;color:#8b93a7;border:0;border-radius:12px;
+  padding:10px 16px;font-weight:700;font-size:13px
+}
+
+/* Countdown + Opening Ad modal */
+.earn-modal,.modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);
+  display:grid;place-items:center;z-index:200;padding:20px
+}
+.cd-card{
+  width:min(300px,92vw);text-align:center;padding:32px 24px!important;
+  background:linear-gradient(165deg,#161c30,#0e1320)!important;
+  border:1px solid #2a3550!important;border-radius:22px!important;
+  box-shadow:0 24px 60px rgba(0,0,0,.5)
+}
+.cd-ring-wrap{position:relative;width:88px;height:88px;margin:0 auto 16px}
+.cd-svg{width:88px;height:88px;transform:rotate(-90deg)}
+.cd-bg{fill:none;stroke:#1e2740;stroke-width:6}
+.cd-fg{fill:none;stroke:url(#none);stroke:#6366f1;stroke-width:6;stroke-linecap:round;
+  transition:stroke-dashoffset .9s linear}
+.spin-slow{animation:spinSlow 1.2s linear infinite}
+@keyframes spinSlow{to{transform:rotate(270deg)}}
+.cd-play{
+  position:absolute;inset:0;margin:auto;width:48px;height:48px;border-radius:14px;
+  background:linear-gradient(135deg,#6366f1,#3b82f6);color:#fff;
+  display:grid;place-items:center;font-size:18px;
+  box-shadow:0 8px 20px rgba(99,102,241,.4)
+}
+.cd-title{display:block;font-size:16px;color:#fff;margin-bottom:6px}
+.cd-sub{font-size:12px;margin-bottom:12px}
+.cd-num{font-size:28px;font-weight:800;color:#22d3ee;letter-spacing:1px}
+
+.progress-bar{height:8px;border-radius:99px;background:#1a2238;overflow:hidden;margin-top:10px}
+.progress-bar>i,.progress-fill{display:block;height:100%;border-radius:99px;
+  background:linear-gradient(90deg,#7c5cff,#3b82f6,#06b6d4)}
+.pf-panel{background:linear-gradient(160deg,#141a2c,#0f1422);border:1px solid #243049;border-radius:16px;padding:14px 16px;margin-bottom:8px}
+.pf-section{font-size:11px;letter-spacing:1.2px;color:#8b93a7;font-weight:800;margin:16px 4px 10px}
+
+/* Unlocked movie — servers & demo player */
+.unlock-notice.ok{border-color:#16a34a55;background:linear-gradient(135deg,#0f1f18,#0c1520)}
+.unlock-notice.ok .un-title{color:#4ade80}
+.demo-player{
+  position:relative;border-radius:18px;overflow:hidden;margin:12px 0;
+  background:#0a0e18;border:1px solid #243049;min-height:180px;
+  cursor:pointer
+}
+.demo-poster{width:100%;min-height:180px}
+.demo-poster .poster-img,.demo-poster .poster-fallback{width:100%;min-height:180px;object-fit:cover;border-radius:0}
+.demo-play-btn{
+  position:absolute;inset:0;margin:auto;width:64px;height:64px;border-radius:50%;
+  background:linear-gradient(135deg,#7c5cff,#3b82f6);color:#fff;font-size:26px;
+  display:grid;place-items:center;box-shadow:0 12px 32px rgba(124,92,255,.45);
+  pointer-events:none
+}
+.demo-label{
+  position:absolute;left:12px;bottom:12px;background:rgba(0,0,0,.65);
+  color:#fff;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px
+}
+.server-list{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.server-btn{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  background:linear-gradient(135deg,#141a2e,#0f1424);border:1px solid #2a3550;
+  border-radius:14px;padding:14px 16px;color:#e8edf8;cursor:pointer;
+  transition:border-color .2s,transform .15s
+}
+.server-btn:active{transform:scale(.98)}
+.server-btn:hover{border-color:#3b82f6}
+.srv-ico{
+  width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#7c5cff);
+  display:grid;place-items:center;font-size:18px;flex-shrink:0
+}
+.srv-meta{flex:1;min-width:0}
+.srv-meta b{display:block;font-size:14px}
+.srv-meta small{color:#8b93a7;font-size:11px}
+.srv-go{font-size:22px;color:#8b93a7}
+
+/* Home / Adult banner under ticker */
+.home-banner{
+  position:relative;margin:0 0 14px;border-radius:14px;overflow:hidden;
+  border:1px solid #243049;background:#0c101c;min-height:70px
+}
+.home-banner img{display:block;width:100%;height:auto;max-height:120px;object-fit:cover}
+.home-banner-link{display:block;position:relative}
+.home-banner-tag{
+  position:absolute;top:8px;right:8px;font-size:10px;font-weight:800;
+  letter-spacing:.5px;text-transform:uppercase;background:rgba(0,0,0,.55);
+  color:#c8d0e8;padding:3px 8px;border-radius:6px
+}
+.home-banner-placeholder{cursor:pointer}
+.hb-ph{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;padding:22px 16px;color:#8b93a7;text-align:center
+}
+.hb-ph-ico{font-size:22px;opacity:.7}
+.hb-ph b{color:#c8d0e8;font-size:13px}
+.hb-ph small{font-size:11px}
+
+/* Adsgram banner slot */
+.home-banner-adsgram{padding:0}
+.adsgram-banner-btn{
+  width:100%;border:0;background:linear-gradient(135deg,#141a2e,#0f1424);
+  color:#e8edf8;padding:20px 16px;cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;gap:4px;font:inherit
+}
+.adsgram-banner-btn:active{opacity:.9}
+.adsgram-task-banner{display:block;width:100%;min-height:72px}
