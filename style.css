@@ -334,3 +334,4 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
 /* logo accent on primary buttons / pills */
 .primary,.pkg-buy,.pf-btn.copy,.task-start{background:linear-gradient(135deg,#00c6ff,#0088ff)!important}
 .hpill.on,.nav-item.active{box-shadow:0 0 16px rgba(0,198,255,.35)}
+
