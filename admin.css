@@ -199,6 +199,7 @@ a{color:#5eb8ff}
 .pay-meta-row span{color:#8b93a7;flex-shrink:0}
 .pay-meta-row b{color:#e8edf8;text-align:right;font-weight:600;word-break:break-word}
 .pay-view-proof{min-width:0;order:-1}
+
 .pay-proof-label{font-size:11px;color:#8b93a7;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
 .pay-proof-frame{
   background:#05070e;border:1px solid #243049;border-radius:14px;
