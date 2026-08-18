@@ -689,4 +689,4 @@ function collectUiTexts(){
     if(bv&&bv.trim()) bn[key]=bv.trim();
   });
   A.settings.uiTexts={en,bn};
-                           }                                 
+}
