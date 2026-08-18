@@ -6,8 +6,8 @@ const DEFAULT={
   miniAppName:"Hub4",
   miniAppLink:"https://t.me/Cinehub4bot/Hub4",
   telegramChannelLink:"",
-  howToEarnVideo:"",
-  tutorialVideo:"",
+  howToWatchVideo:"",
+  watchTutorialVideo:"",
   howToWatchText:"Unlock this content using ads or points. Share with friends to earn more.",
   howToBuyVideo:"",
   unlockCost:5,
@@ -252,10 +252,10 @@ function saveAds(){const b=A.settings.adBlocks=A.settings.adBlocks||{};b.rewarde
 function tasks(){
   if(!A.settings.tasks||!A.settings.tasks.length){
     A.settings.tasks=[
-      {name:"one click",reward:2,limit:1,type:"countdown",seconds:5,link:""},
-      {name:"Watch rewarded ad",reward:A.settings.adReward||2,limit:A.settings.dailyAdLimit||20,type:"ad",link:""},
-      {name:"Join Telegram channel",reward:5,limit:1,type:"link",link:A.settings.telegramChannelLink||""},
-      {name:"Refer a friend",reward:A.settings.referralReward||20,limit:10,type:"share",link:""}
+      {name:"one click",reward:2,limit:1,type:"countdown",seconds:5,link:"",resetHours:24,permanent:false},
+      {name:"Watch rewarded ad",reward:A.settings.adReward||2,limit:A.settings.dailyAdLimit||20,type:"ad",link:"",resetHours:24,permanent:false},
+      {name:"Join Telegram channel",reward:5,limit:1,type:"link",link:A.settings.telegramChannelLink||"",resetHours:24,permanent:false},
+      {name:"Refer a friend",reward:A.settings.referralReward||20,limit:10,type:"share",link:"",resetHours:24,permanent:false}
     ];
   }
   const cards=A.settings.tasks.map((t,i)=>`
@@ -281,14 +281,19 @@ function tasks(){
       <div class="field" style="grid-column:1/-1"><label>Link URL (for link type / join channel)</label>
         <input value="${(t.link||"").replace(/"/g,"&quot;")}" placeholder="https://t.me/..." onchange="A.settings.tasks[${i}].link=this.value;save()">
       </div>
+      <div class="field"><label>Reset Every (Hours)</label><input type="number" min="1" value="${t.resetHours||24}" ${t.permanent?"disabled":""} onchange="A.settings.tasks[${i}].resetHours=Number(this.value)||24;save()" placeholder="e.g. 24"></div>
+      <div class="field" style="display:flex;align-items:center;gap:8px;margin-top:22px">
+        <input type="checkbox" id="perm-${i}" style="width:16px;height:16px" ${t.permanent?"checked":""} onchange="A.settings.tasks[${i}].permanent=this.checked;save();render()">
+        <label for="perm-${i}" style="margin:0">Permanent (one-time, never resets)</label>
+      </div>
     </div>
   </div>`).join("");
   return `<div class="toolbar">
-    <div><h2 style="margin:0;font-size:18px">Daily Tasks</h2><p class="muted smalltext" style="margin:4px 0 0">Add · Edit · Delete · Link · Points · Limit — all here</p></div>
-    <button class="btn primary" onclick="A.settings.tasks.push({name:'New Task',reward:2,limit:1,type:'countdown',seconds:5,link:''});save();render()">＋ Add Task</button>
+    <div><h2 style="margin:0;font-size:18px">Daily Tasks</h2><p class="muted smalltext" style="margin:4px 0 0">Add · Edit · Delete · Link · Points · Limit · Reset Hours · Permanent — all here</p></div>
+    <button class="btn primary" onclick="A.settings.tasks.push({name:'New Task',reward:2,limit:1,type:'countdown',seconds:5,link:'',resetHours:24,permanent:false});save();render()">＋ Add Task</button>
   </div>
   ${cards||'<div class="card muted">No tasks yet. Click Add Task.</div>'}
-  <div class="card" style="margin-top:8px"><p class="muted smalltext">User app → Drawer → Daily Tasks shows these. Countdown tasks show timer like the reference video. Link tasks open the URL you set.</p></div>`;
+  <div class="card" style="margin-top:8px"><p class="muted smalltext">User app → Drawer → Daily Tasks shows these. Countdown tasks show timer like the reference video. Link tasks open the URL you set. "Reset Every (Hours)" controls how often a task becomes available again after being completed. Turn on "Permanent" for a one-time task that stays marked Done forever until you delete it here.</p></div>`;
 }
 
 function payments(){
@@ -401,10 +406,9 @@ function deleteCategoryAdult(i){if(A.settings.adultCategories[i]==='All'){toast(
 function saveAdultTexts(){A.settings.adultLibraryBadge=$('#aLibBadge').value.trim();A.settings.adultLibraryTitle=$('#aLibTitle').value.trim();A.settings.adultLibraryDesc=$('#aLibDesc').value.trim();A.settings.adultTickerText=$('#aTicker').value.trim();A.settings.adultNewLabel=$('#aNewLabel').value.trim();A.settings.adultNewSub=$('#aNewSub').value.trim();A.settings.adultTrendingLabel=$('#aTrendLabel').value.trim();A.settings.adultTrendingSub=$('#aTrendSub').value.trim();save();toast('Adult page text saved')}
 function adultMovieRows(ms){return ms.length?ms.map(m=>`<tr><td><div class="movie-row"><div class="thumb">${(m.title||'?').slice(0,1)}</div><div><b>${m.title}</b><div class="muted">${m.year}</div></div></div></td><td>${m.category||'Adult'}</td><td>⭐ ${m.rating}</td><td>${money(m.clicks||0)}</td><td>${money(m.downloads||0)}</td><td><span class="badge ${m.status==='Published'?'green':''}">${m.status}</span></td><td class="action-cell"><button type="button" class="btn dots-btn" data-mid="${m.id}" aria-label="Actions">⋮</button><div class="dots-menu hidden" id="dm-${m.id}"><button type="button" onclick="editAdultMovie(${m.id});closeAllDots()">Edit</button><button type="button" class="danger" onclick="deleteMovie(${m.id});closeAllDots()">Delete</button></div></td></tr>`).join(''):`<tr><td colspan="7" class="muted">No adult movies yet. Use “＋ Add Adult Movie” above.</td></tr>`}
 function requests(){return `<div class="card table-wrap"><table class="table"><thead><tr><th>User</th><th>Requested Title</th><th>Date</th><th>Priority</th><th>Status</th><th>Action</th></tr></thead><tbody>${[['@demo_user_1','Avengers: Secret Wars','Today','High','Pending'],['@moviefan','Interstellar','Yesterday','Normal','Pending'],['@sifat_demo','Dune: Part Three','Yesterday','Normal','Searching']].map(r=>`<tr><td>${r[0]}</td><td><b>${r[1]}</b></td><td>${r[2]}</td><td>${r[3]}</td><td><span class="badge">${r[4]}</span></td><td><button class="btn" onclick="toast('Request manager opened')">Manage</button></td></tr>`).join('')}</tbody></table></div>`}
-function contentPage(){return `<div class="grid section-grid"><div class="card"><h3>Telegram & Support Links</h3><div class="field"><label>Bot / Telegram Link</label><input id="botLink" value="${A.settings.telegramBotLink||''}" placeholder="https://t.me/Cinehub4bot"></div><div class="field" style="margin-top:12px"><label>Movie Channel Link</label><input id="channelLink" value="${A.settings.telegramChannelLink||''}" placeholder="https://t.me/yourchannel"></div><button class="btn primary" style="margin-top:14px" onclick="saveLinks()">Save Links</button></div><div class="card"><h3>How To Watch Video</h3><div class="muted smalltext">Used by the "▶ How to Watch" button on the Movies / Adult pages.</div><div class="field" style="margin-top:10px"><label>Video URL (YouTube/Telegram/MP4)</label><input id="howVideo" value="${A.settings.howToEarnVideo||''}" placeholder="https://...video..."></div><button class="btn primary" style="margin-top:14px" onclick="saveVideo()">Save How To Watch Video</button></div><div class="card"><h3>Watch Tutorial Video</h3><div class="muted smalltext">Used by the "▶ Watch Tutorial" button on the Profile page — separate from How To Watch above.</div><div class="field" style="margin-top:10px"><label>Video URL (YouTube/Telegram/MP4)</label><input id="tutorialVideo" value="${A.settings.tutorialVideo||''}" placeholder="https://...video..."></div><button class="btn primary" style="margin-top:14px" onclick="saveTutorialVideo()">Save Watch Tutorial Video</button></div></div><div class="card" style="margin-top:14px"><h3>App Content Shortcuts</h3><div class="quick"><button onclick="setSection('categories')"><b>▦ Categories</b>Manage all movie categories</button><button onclick="setSection('ads')"><b>◉ Ad IDs</b>Change or add every ad block</button><button onclick="setSection('adult')"><b>18+ Adult</b>Separate library and ad</button><button onclick="setSection('settings')"><b>⚙ Settings</b>Brand, language and controls</button></div></div>`}
+function contentPage(){return `<div class="grid section-grid"><div class="card"><h3>Telegram & Support Links</h3><div class="field"><label>Bot / Telegram Link</label><input id="botLink" value="${A.settings.telegramBotLink||''}" placeholder="https://t.me/Cinehub4bot"></div><div class="field" style="margin-top:12px"><label>Movie Channel Link</label><input id="channelLink" value="${A.settings.telegramChannelLink||''}" placeholder="https://t.me/yourchannel"></div><button class="btn primary" style="margin-top:14px" onclick="saveLinks()">Save Links</button></div><div class="card"><h3>How To Earn Video</h3><div class="field"><label>Video URL (YouTube/Telegram/MP4)</label><input id="howVideo" value="${A.settings.howToWatchVideo||''}" placeholder="https://...video..."></div><button class="btn primary" style="margin-top:14px" onclick="saveVideo()">Save Video</button><div class="muted smalltext" style="margin-top:10px">User Settings → How To Earn will open this URL.</div></div></div><div class="card" style="margin-top:14px"><h3>App Content Shortcuts</h3><div class="quick"><button onclick="setSection('categories')"><b>▦ Categories</b>Manage all movie categories</button><button onclick="setSection('ads')"><b>◉ Ad IDs</b>Change or add every ad block</button><button onclick="setSection('adult')"><b>18+ Adult</b>Separate library and ad</button><button onclick="setSection('settings')"><b>⚙ Settings</b>Brand, language and controls</button></div></div>`}
 function saveLinks(){A.settings.telegramBotLink=$('#botLink').value.trim();A.settings.telegramChannelLink=$('#channelLink').value.trim();save();toast('Telegram links saved')}
-function saveVideo(){A.settings.howToEarnVideo=$('#howVideo').value.trim();save();toast('How To Watch video saved')}
-function saveTutorialVideo(){A.settings.tutorialVideo=$('#tutorialVideo').value.trim();save();toast('Watch Tutorial video saved')}
+function saveVideo(){A.settings.howToWatchVideo=$('#howVideo').value.trim();save();toast('How To Earn video saved')}
 function broadcast(){return `<div class="card"><h3>Broadcast Center</h3><div class="form-grid"><div class="field"><label>Audience</label><select><option>All users</option><option>Active users</option><option>Users with points</option></select></div><div class="field"><label>Type</label><select><option>Text</option><option>Movie announcement</option></select></div></div><div class="field" style="margin-top:12px"><label>Message</label><textarea placeholder="Write your broadcast..."></textarea></div><button class="btn primary" style="margin-top:12px" onclick="toast('Broadcast queued in demo')">Send Broadcast</button></div>`}
 function settings(){
   const s=A.settings;
@@ -426,7 +430,8 @@ function settings(){
       <div class="field"><label>Mini App full link</label><input id="s_miniLink" value="${s.miniAppLink||"https://t.me/Cinehub4bot/Hub4"}" placeholder="https://t.me/Cinehub4bot/Hub4"></div>
       <div class="field" style="grid-column:1/-1"><label class="muted smalltext">⚠️ BotFather short name = <b>Hub4</b> → share link will be <code>t.me/Cinehub4bot/Hub4?startapp=movie_ID</code></label></div>
       <div class="field" style="grid-column:1/-1"><label>How to Watch / Unlock message</label><textarea id="s_howWatch" rows="2">${s.howToWatchText||""}</textarea></div>
-      <div class="field"><label>How to Earn Video URL</label><input id="s_howEarn" value="${s.howToEarnVideo||""}"></div>
+      <div class="field"><label>How to Earn Video URL</label><input id="s_howEarn" value="${s.howToWatchVideo||""}"></div>
+      <div class="field"><label>Watch Tutorial Video URL (Profile page)</label><input id="s_watchTutorial" value="${s.watchTutorialVideo||""}" placeholder="https://..."></div>
       <div class="field"><label>How to Buy Video URL</label><input id="s_howBuy" value="${s.howToBuyVideo||""}"></div>
     </div>
   </div>
@@ -441,7 +446,7 @@ function settings(){
       <div class="field"><label>Library title</label><input id="s_libTitle" value="${s.libraryTitle||"Cinema Library"}"></div>
       <div class="field" style="grid-column:1/-1"><label>Library description</label><textarea id="s_libDesc" rows="2">${s.libraryDesc||""}</textarea></div>
       <div class="field"><label>How to Watch button text</label><input id="s_howLabel" value="${s.howToWatchLabel||"▶ How to Watch"}"></div>
-      <div class="field"><label>How to Watch link (video/url)</label><input id="s_howEarn2" value="${s.howToEarnVideo||""}" placeholder="https://..."></div>
+      <div class="field"><label>How to Watch link (video/url)</label><input id="s_howEarn2" value="${s.howToWatchVideo||""}" placeholder="https://..."></div>
       <div class="field" style="grid-column:1/-1"><label>Scrolling ticker text</label><textarea id="s_ticker" rows="2">${s.tickerText||""}</textarea></div>
       <div class="field" style="grid-column:1/-1"><label>Categories (comma separated)</label><input id="s_cats" value="${(s.categories||[]).join(", ")}"></div>
     </div>
@@ -510,7 +515,8 @@ function saveAllSettings(){
   if(g("s_miniName")) s.miniAppName=(g("s_miniName").value||"Hub4").trim().replace(/^\/+|\/+$/g,"");
   if(g("s_miniLink")) s.miniAppLink=g("s_miniLink").value.trim();
   if(g("s_howWatch")) s.howToWatchText=g("s_howWatch").value;
-  if(g("s_howEarn")) s.howToEarnVideo=g("s_howEarn").value;
+  if(g("s_howEarn")) s.howToWatchVideo=g("s_howEarn").value;
+  if(g("s_watchTutorial")) s.watchTutorialVideo=g("s_watchTutorial").value;
   if(g("s_howBuy")) s.howToBuyVideo=g("s_howBuy").value;
   if(g("s_newLabel")) s.newMoviesLabel=g("s_newLabel").value;
   if(g("s_newSub")) s.newMoviesSub=g("s_newSub").value;
@@ -520,7 +526,7 @@ function saveAllSettings(){
   if(g("s_libTitle")) s.libraryTitle=g("s_libTitle").value;
   if(g("s_libDesc")) s.libraryDesc=g("s_libDesc").value;
   if(g("s_howLabel")) s.howToWatchLabel=g("s_howLabel").value;
-  if(g("s_howEarn2") && g("s_howEarn2").value) s.howToEarnVideo=g("s_howEarn2").value;
+  if(g("s_howEarn2") && g("s_howEarn2").value) s.howToWatchVideo=g("s_howEarn2").value;
   if(g("s_ticker")) s.tickerText=g("s_ticker").value;
   if(g("s_cats")) s.categories=g("s_cats").value.split(",").map(x=>x.trim()).filter(Boolean);
 
@@ -563,7 +569,7 @@ function editCategory(i){openCategory(i)}function saveCategory(i){const n=$('#ca
 function deleteCategory(i){if(A.settings.categories[i]==='All'){toast('All category cannot be deleted');return}if(confirm('Delete this category?')){A.settings.categories.splice(i,1);save();render();toast('Category deleted')}}
 function openTask(name='',idx=null){
   const tasks=A.settings.tasks||[];
-  const t=(idx!=null&&tasks[idx])?tasks[idx]:{name:name||'',reward:2,limit:1,type:'countdown',seconds:5,link:''};
+  const t=(idx!=null&&tasks[idx])?tasks[idx]:{name:name||'',reward:2,limit:1,type:'countdown',seconds:5,link:'',resetHours:24,permanent:false};
   showModal(`<div class="modal-head"><h2>${idx!=null?'Edit':'Add'} Daily Task</h2><button class="btn" onclick="closeModal()">×</button></div>
   <div class="form-grid">
     <div class="field"><label>Task name</label><input id="taskName" value="${t.name||''}"></div>
@@ -578,11 +584,16 @@ function openTask(name='',idx=null){
     <div class="field"><label>Daily limit</label><input id="taskLimit" type="number" value="${t.limit||1}"></div>
     <div class="field"><label>Countdown seconds</label><input id="taskSecs" type="number" value="${t.seconds||5}"></div>
     <div class="field"><label>Link (for Open Link type)</label><input id="taskLink" value="${t.link||''}" placeholder="https://t.me/..."></div>
+    <div class="field"><label>Reset Every (Hours)</label><input id="taskResetHours" type="number" min="1" value="${t.resetHours||24}"></div>
+    <div class="field" style="display:flex;align-items:center;gap:8px;margin-top:22px">
+      <input type="checkbox" id="taskPermanent" style="width:16px;height:16px" ${t.permanent?'checked':''}>
+      <label for="taskPermanent" style="margin:0">Permanent (one-time, never resets)</label>
+    </div>
   </div>
   <button class="btn primary" style="margin-top:15px" onclick="saveTask(${idx!=null?idx:'null'})">Save Task</button>`)}
 function saveTask(idx){
   A.settings.tasks=A.settings.tasks||[];
-  const x={name:$('#taskName').value.trim()||'Task',type:$('#taskType').value,reward:+$('#taskReward').value||1,limit:+$('#taskLimit').value||1,seconds:+$('#taskSecs').value||5,link:$('#taskLink').value.trim()};
+  const x={name:$('#taskName').value.trim()||'Task',type:$('#taskType').value,reward:+$('#taskReward').value||1,limit:+$('#taskLimit').value||1,seconds:+$('#taskSecs').value||5,link:$('#taskLink').value.trim(),resetHours:+$('#taskResetHours').value||24,permanent:!!$('#taskPermanent').checked};
   if(idx!=null&&idx>=0) A.settings.tasks[idx]=x; else A.settings.tasks.push(x);
   save();closeModal();render();toast('Task saved');
 }
@@ -594,7 +605,7 @@ function editAdultMovie(id){openAdultMovie(id)}
 function showModal(body){$('#modal').innerHTML=`<div class="modal-box">${body}</div>`;$('#modal').classList.remove('hidden')}function closeModal(){$('#modal').classList.add('hidden')}
 function render(){
   try{
- const box=contentEl();
+    const box=contentEl();
     if(!box){console.error('content missing');return}
     const views={dashboard,movies,categories,users,points,ads,tasks,payments,adult,requests,content:contentPage,broadcast,settings};
     const fn=views[A.section];
@@ -678,4 +689,4 @@ function collectUiTexts(){
     if(bv&&bv.trim()) bn[key]=bv.trim();
   });
   A.settings.uiTexts={en,bn};
-                                                                                                                                      }   
+                           }                                 
