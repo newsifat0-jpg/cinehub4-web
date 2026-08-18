@@ -13,8 +13,7 @@ function applyTheme(){
 function t(k){try{return (window.CINEHUB4_LANG&&window.CINEHUB4_LANG.t)?window.CINEHUB4_LANG.t(k):k}catch(e){return k}}
 window.__cinehub_rerender=function(){try{render(false)}catch(e){}};
 
-function howToEarn(){const u=cfg.howToEarnVideo||cfg.telegramBotLink;if(u)openLink(u);else toast(t("How to Watch link not set"));}
-function watchTutorial(){const u=cfg.tutorialVideo||cfg.telegramBotLink;if(u)openLink(u);else toast(t("Tutorial video not set"));}
+function howToEarn(){const u=cfg.howToWatchVideo||cfg.telegramBotLink;if(u)openLink(u);else toast(t("How to Watch link not set"));}
 
 /* Build Mini App deep link that OPENS the Mini App (not bot chat).
    Correct format: https://t.me/BotUsername/app?startapp=PARAM
@@ -102,7 +101,7 @@ function shareRefLink(){
 }
 function openLink(u){if(!u)return;try{window.Telegram?.WebApp?.openTelegramLink?.(u)||window.Telegram?.WebApp?.openLink?.(u)||window.open(u,"_blank")}catch(e){window.open(u,"_blank")}}
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
-const defaults={appName:"Cine Hub4",botUsername:"@Cinehub4bot",telegramBotLink:"https://t.me/Cinehub4bot",miniAppName:"Hub4",miniAppLink:"https://t.me/Cinehub4bot/Hub4",telegramChannelLink:"",howToEarnVideo:"",tutorialVideo:"",howToWatchText:"Unlock this content using ads or points.",unlockCost:5,unlockHours:15,adsForUnlock:5,downloadServers:3,adReward:2,dailyAdLimit:20,joinBonus:10,referralReward:20,categories:["All Movies","Bangla Moves","Hollywood Movie Hindi"],adultCategories:["All","Adult Movie","Anime"],tickerText:"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ",adultTickerText:"18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ",libraryBadge:"MOVIE ZONE",libraryTitle:"Cinema Library",libraryDesc:"Curated movies, web series and premium entertainment updates.",adultLibraryBadge:"ADULT ZONE",adultLibraryTitle:"Adult Library",adultLibraryDesc:"Curated 18+ content and premium entertainment updates.",howToWatchLabel:"▶ How to Watch",adultHowToWatchLabel:"▶ How to Watch",newMoviesLabel:"New Movies",newMoviesSub:"LATEST UPLOADS",trendingLabel:"Trending",trendingSub:"MOST WATCHED",adultNewLabel:"New Movies",adultNewSub:"LATEST UPLOADS",adultTrendingLabel:"Trending",adultTrendingSub:"MOST WATCHED",packages:[
+const defaults={appName:"Cine Hub4",botUsername:"@Cinehub4bot",telegramBotLink:"https://t.me/Cinehub4bot",miniAppName:"Hub4",miniAppLink:"https://t.me/Cinehub4bot/Hub4",telegramChannelLink:"",howToWatchVideo:"",watchTutorialVideo:"",howToWatchText:"Unlock this content using ads or points.",unlockCost:5,unlockHours:15,adsForUnlock:5,downloadServers:3,adReward:2,dailyAdLimit:20,joinBonus:10,referralReward:20,categories:["All Movies","Bangla Moves","Hollywood Movie Hindi"],adultCategories:["All","Adult Movie","Anime"],tickerText:"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ",adultTickerText:"18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ",libraryBadge:"MOVIE ZONE",libraryTitle:"Cinema Library",libraryDesc:"Curated movies, web series and premium entertainment updates.",adultLibraryBadge:"ADULT ZONE",adultLibraryTitle:"Adult Library",adultLibraryDesc:"Curated 18+ content and premium entertainment updates.",howToWatchLabel:"▶ How to Watch",adultHowToWatchLabel:"▶ How to Watch",newMoviesLabel:"New Movies",newMoviesSub:"LATEST UPLOADS",trendingLabel:"Trending",trendingSub:"MOST WATCHED",adultNewLabel:"New Movies",adultNewSub:"LATEST UPLOADS",adultTrendingLabel:"Trending",adultTrendingSub:"MOST WATCHED",packages:[
     {name:"Basic Package",price:0.99,points:110,tag:"SMART CHOICE"},
     {name:"Standard Package",price:4.99,points:550,tag:"STARTER"},
     {name:"Premium Package",price:9.99,points:1200,tag:"BEST VALUE"},
@@ -212,7 +211,7 @@ function card(m,idx){
     </div>
   </article>`;
 }
-function pageBackBar(title,subtitle){return`<div class="page-back-bar"><button type="button" class="page-back-btn" id="pageBackBtn" onclick="goBack()">‹</button><div class="page-back-textwrap"><span class="page-back-title">${title||""}</span>${subtitle?`<span class="page-back-sub">🪙 ${subtitle}</span>`:""}</div></div>`}
+function pageBackBar(title){return`<div class="page-back-bar"><button type="button" class="page-back-btn" id="pageBackBtn" onclick="goBack()">‹</button><span class="page-back-title">${title||""}</span></div>`}
 function menuOnlyHeader(title){return`<div class="page-back-bar"><button type="button" class="menu-ham" id="hamBtn">☰</button><span class="page-back-title">${title||""}</span></div>`}
 function bindPageBack(){const b=$("#pageBackBtn");if(b)b.onclick=()=>goBack()}
 function primeHeader(){return`<div class="prime-row"><button type="button" class="menu-ham" id="hamBtn">☰</button><div class="prime-title">Cine <span class="scene-pill">Hub4</span></div></div>`}
@@ -409,7 +408,7 @@ function profile(){
     <div class="pf-how-card"><b>More Earning</b><span>Watch ads & earn</span></div>
   </div>
   <div class="pf-actions" style="margin-bottom:12px">
-    <button type="button" class="pf-btn tutorial" onclick="watchTutorial()">▶ Watch Tutorial</button>
+    <button type="button" class="pf-btn tutorial" onclick="openLink(cfg.watchTutorialVideo||cfg.telegramBotLink)">▶ Watch Tutorial</button>
     <button type="button" class="pf-btn buy" onclick="nav('buy')">🛒 Buy Points</button>
   </div>
   <div class="pf-section">⚡ MORE POINT EARNING</div>
@@ -417,7 +416,7 @@ function profile(){
     <h3>⚡ Watch Ads & Earn Points</h3>
     <p>Complete ads to get rewards and unlock videos with points.</p>
     <div class="earn-tags"><span>✔ Instant Reward</span><span>🪙 More Points</span><span>🔓 Unlock Videos</span></div>
-    <button type="button" class="pf-btn wide" onclick="nav('points')">⚡ More Point Earning</button>
+    <button type="button" class="pf-btn wide" onclick="nav('tasks')">⚡ More Point Earning</button>
   </div>`;
 }
 
@@ -429,46 +428,7 @@ function copyRefLink(){
 }
 
 
-function points(){return pageBackBar(t("My Points"),t("BALANCE & REWARDS"))+`
-  <div class="earn-hero">
-    <div class="earn-hero-ico">🪙</div>
-    <div>
-      <b>${state.points} ${t("Points")}</b>
-      <p>${t("Your current balance — earn more by watching ads, referring friends, or buy instantly.")}</p>
-      <div class="earn-chips">
-        <span>📺 ${t("Watch & Earn")}</span>
-        <span>👥 ${t("Refer & Earn")}</span>
-        <span>🛒 ${t("Buy Points")}</span>
-      </div>
-    </div>
-  </div>
-  <div class="pf-stats">
-    <div class="pf-stat"><div><b>${state.points}</b><span>${t("Current Balance")}</span></div><div class="ico coin">🪙</div></div>
-    <div class="pf-stat"><div><b>${cfg.adReward||2}</b><span>${t("Points Per Ad")}</span></div><div class="ico gift">🎁</div></div>
-    <div class="pf-stat"><div><b>${cfg.referralReward||20}</b><span>${t("Per Referral")}</span></div><div class="ico eye">👥</div></div>
-    <div class="pf-stat"><div><b>${cfg.dailyAdLimit||20}</b><span>${t("Daily Limit")}</span></div><div class="ico shield">🛡</div></div>
-  </div>
-  <div class="pf-section">💰 ${t("EARNING OPTIONS")}</div>
-  <div class="task-row">
-    <div class="task-ico">📺</div>
-    <div class="task-meta"><b>${t("Watch Ad & Earn")}</b><span>+${cfg.adReward||2} ${t("Points")}</span></div>
-    <button type="button" class="task-start" onclick="watchAd('rewarded')">${t("Watch")}</button>
-  </div>
-  <div class="task-row">
-    <div class="task-ico">🛒</div>
-    <div class="task-meta"><b>${t("Buy Points")}</b><span>${t("Get more instantly")}</span></div>
-    <button type="button" class="task-start" onclick="nav('buy')">${t("Buy")}</button>
-  </div>
-  <div class="task-row">
-    <div class="task-ico">👥</div>
-    <div class="task-meta"><b>${t("Refer & Earn")}</b><span>+${cfg.referralReward||20} ${t("pt per referral")}</span></div>
-    <button type="button" class="task-start" onclick="shareRef()">${t("Share")}</button>
-  </div>
-  <div class="pf-section">⏱ ${t("DAILY AD LIMIT")}</div>
-  <div class="pf-panel">
-    <div class="pf-row"><span>${t("Only for earning points")}</span><b>${cfg.dailyAdLimit||20}/${t("day")}</b></div>
-  </div>
-  <div class="muted" style="font-size:11px;margin-top:8px;padding:0 2px">${t("Movie unlock is not limited by the daily ad limit.")}</div>`}
+function points(){return pageBackBar(t("My Points"))+`<div class="section-title"><b>🪙 My Points</b><span>${state.points} points</span></div><div class="panel"><div class="amount">${state.points} <span class="muted">points</span></div><div class="task"><span>📺 Watch Ad & Earn</span><b>+${cfg.adReward}</b><button class="primary cyan" onclick="watchAd('rewarded')">Watch</button></div><div class="task"><span>🛒 Buy Points</span><button class="primary pink" onclick="nav('buy')">Buy</button></div><div class="task"><span>👥 Refer & Earn</span><button class="pill" onclick="shareRef()">Share</button></div></div><div class="panel"><h3>Daily Ad Limit</h3><div class="task"><span>Only for earning points</span><b>${cfg.dailyAdLimit}/day</b></div><div class="muted">${t("Movie unlock is not limited by the daily ad limit.")}</div></div>`}
 
 function getTasks(){
   // Always prefer live admin settings
@@ -478,12 +438,24 @@ function getTasks(){
   }catch(e){}
   if(cfg.tasks&&cfg.tasks.length) return cfg.tasks;
   return [
-    {name:"one click",reward:2,limit:1,type:"countdown",seconds:5},
-    {name:"Watch rewarded ad",reward:cfg.adReward||2,limit:cfg.dailyAdLimit||20,type:"ad"},
-    {name:"Join Telegram channel",reward:5,limit:1,type:"link",link:cfg.telegramChannelLink||cfg.telegramBotLink},
-    {name:"Refer a friend",reward:cfg.referralReward||20,limit:10,type:"share"},
-    {name:"Daily login",reward:2,limit:1,type:"login"}
+    {name:"one click",reward:2,limit:1,type:"countdown",seconds:5,resetHours:24,permanent:false},
+    {name:"Watch rewarded ad",reward:cfg.adReward||2,limit:cfg.dailyAdLimit||20,type:"ad",resetHours:24,permanent:false},
+    {name:"Join Telegram channel",reward:5,limit:1,type:"link",link:cfg.telegramChannelLink||cfg.telegramBotLink,resetHours:24,permanent:false},
+    {name:"Refer a friend",reward:cfg.referralReward||20,limit:10,type:"share",resetHours:24,permanent:false},
+    {name:"Daily login",reward:2,limit:1,type:"login",resetHours:24,permanent:false}
   ];
+}
+/** Whether a task (by index) is currently completed/locked, and the storage key that tracks it.
+ *  Permanent tasks stay done forever. Others reset automatically after tk.resetHours (default 24). */
+function taskResetInfo(i,tk){
+  const key="cinehub4_task_"+i+"_done_at";
+  const raw=localStorage.getItem(key);
+  if(!raw) return {done:false,key};
+  if(tk&&tk.permanent) return {done:true,key};
+  const hours=Number(tk&&tk.resetHours);
+  const h=(isFinite(hours)&&hours>0)?hours:24;
+  const elapsedHours=(Date.now()-Number(raw))/3600000;
+  return {done:elapsedHours<h,key};
 }
 function tasks(){
   loadSharedSettings();
@@ -491,8 +463,7 @@ function tasks(){
   const limit=Number(cfg.dailyAdLimit||20);
   const rem=Math.max(0,limit-watched);
   const list=getTasks();
-  const day=new Date().toDateString();
-  return pageBackBar(t("More Point Earning"),t("EARN & UNLOCK"))+`
+  return pageBackBar(t("More Point Earning"))+`
   <div class="earn-hero">
     <div class="earn-hero-ico">⚡</div>
     <div>
@@ -522,25 +493,25 @@ function tasks(){
   <button type="button" class="watch-ad-now" onclick="watchAd('rewarded')">▶ ${t("Watch Ad Now")}</button>
   <div class="pf-section">🎁 ${t("MORE EARNING BUTTONS")}</div>
   ${list.map((tk,i)=>{
-    const doneKey="cinehub4_task_"+i+"_"+day;
-    const done=!!localStorage.getItem(doneKey);
-    return `<div class="task-row ${done?"done":""}">
+    const st=taskResetInfo(i,tk);
+    const statusLabel=st.done?(tk.permanent?t("Completed"):t("completed today")):(tk.permanent?t("One-time task"):t("Daily task"));
+    return `<div class="task-row ${st.done?"done":""}">
       <div class="task-ico">🎁</div>
-      <div class="task-meta"><b>${tk.name}</b><span>${t("Reward")}: ${tk.reward} pt · ${done?t("completed today"):t("Daily task")}</span></div>
-      ${done?`<button type="button" class="task-done" disabled>${t("Done")}</button>`:`<button type="button" class="task-start" onclick="runTask(${i})">${t("Start")}</button>`}
+      <div class="task-meta"><b>${tk.name}</b><span>${t("Reward")}: ${tk.reward} pt · ${statusLabel}</span></div>
+      ${st.done?`<button type="button" class="task-done" disabled>${t("Done")}</button>`:`<button type="button" class="task-start" onclick="runTask(${i})">${t("Start")}</button>`}
     </div>`;
   }).join("")}`;
 }
 function runTask(i){
   const t=getTasks()[i];if(!t)return;
-  const doneKey="cinehub4_task_"+i+"_"+new Date().toDateString();
-  if(t.limit===1 && localStorage.getItem(doneKey)){toast("Already completed today");return}
+  const st=taskResetInfo(i,t);
+  if(t.limit===1 && st.done){toast(t.permanent?"Already completed":"Already completed today");return}
   if(t.type==="ad"){watchAd('task');return}
   if(t.type==="link"){
     openLink(t.link||cfg.telegramChannelLink||cfg.telegramBotLink);
     // credit after opening (demo)
     state.points+=Number(t.reward||0);save();
-    localStorage.setItem(doneKey,"1");
+    localStorage.setItem(st.key,String(Date.now()));
     toast("+"+(t.reward||0)+" points");
     render(true);
     return;
@@ -550,7 +521,7 @@ function runTask(i){
     const secs=Number(t.seconds||t.secs||5);
     showCountdownTask(t.name||"one click",secs,function(){
       state.points+=Number(t.reward||1);save();
-      localStorage.setItem(doneKey,"1");
+      localStorage.setItem(st.key,String(Date.now()));
       toast("+"+(t.reward||1)+" points added");
       render(true);
     });
@@ -565,7 +536,7 @@ function runTask(i){
     toast("+"+(t.reward||2)+" points");
     render(true);
   }
-  }
+}
 
 function settings(){return pageBackBar("Settings")+`<div class="section-title"><b>⚙ Settings</b></div><div class="panel"><div class="task"><span>Language</span><select class="pill" style="appearance:auto" onchange="CINEHUB4_LANG.set(this.value)"><option value="en" ${CINEHUB4_LANG.get()==="en"?"selected":""}>English</option><option value="bn" ${CINEHUB4_LANG.get()==="bn"?"selected":""}>বাংলা</option></select></div><div class="task"><span>Telegram</span><button class="pill" onclick="openLink(cfg.telegramBotLink)">Open</button></div><div class="task"><span>How To Earn</span><button class="pill" onclick="howToEarn()">Watch Video</button></div></div>`}
 
@@ -1000,7 +971,7 @@ function watchAd(mode){
   if(mode!=="unlock" && mode!=="adult"){
     const watched=Number(localStorage.getItem("cinehub4_ads_today")||0);
     const limit=Number(cfg.dailyAdLimit||20);
-        if(watched>=limit){toast(t("Daily ad limit reached"));return}
+    if(watched>=limit){toast(t("Daily ad limit reached"));return}
   }
 
   function onAdDone(){
@@ -1347,4 +1318,4 @@ function bindLeaveGuard(){
       });
     }
   }catch(e){}
-  }
+}
