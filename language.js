@@ -1,65 +1,347 @@
-/* Cine Hub4 complete bilingual UI layer: English default, Bangla optional. */
-window.CINEHUB4_LANG=(()=>{
- const KEY="cinehub4_language", SUPPORTED=["en","bn"], DEFAULT="en";
- const D={
- en:{Home:"Home",Movies:"Movies",Search:"Search",Favourites:"Favourites",Profile:"Profile",Settings:"Settings",
- Dashboard:"Dashboard",Users:"Users","Points & Unlocks":"Points & Unlocks","Ads & Rewards":"Ads & Rewards",
- "Daily Tasks":"Daily Tasks","Payments":"Payments","Adult Library":"Adult Library","Movie Requests":"Movie Requests",
- Broadcast:"Broadcast","Categories":"Categories","Admin Panel":"Admin Panel","Open User App":"Open User App",
- "Sign out":"Sign out","Recently Added":"Recently Added",Trending:"Trending","Recently Viewed":"Recently Viewed",
- "Movie Request":"Movie Request","My Points":"My Points",Referral:"Referral","How To Earn":"How To Earn",
- Unlock:"Unlock","Use My Points":"Use My Points","Watch Ad":"Watch Ad",Download:"Download",Server:"Server",
- Overview:"Overview",Rating:"Rating",Genre:"Genre",Year:"Year","Please Wait...":"Please Wait...","Save":"Save",
- Cancel:"Cancel","Back":"Back","Add Movie":"Add Movie","Edit":"Edit","Delete":"Delete","Import from TMDB":"Import from TMDB",
- "Search title...":"Search title...","Total Users":"Total Users","Points Issued":"Points Issued",
- "Pending Payments":"Pending Payments","Platform activity":"Platform activity","Quick controls":"Quick controls",
- "System status":"System status","Movie service":"Movie service","ONLINE":"ONLINE","ACTIVE":"ACTIVE",
- "Add movie":"Add movie","Publish new title":"Publish new title","Payments":"Payments","Review purchases":"Review purchases",
- "Ad settings":"Ad settings","Rewards & limits":"Rewards & limits","Points":"Points","Unlock pricing":"Unlock pricing",
- "Movie":"Movie","Published":"Published","Draft":"Draft","Manage":"Manage","Export CSV":"Export CSV",
- "Bulk action":"Bulk action","Active":"Active","Blocked":"Blocked","Pending":"Pending","Approve":"Approve",
- "Join Telegram channel":"Join Telegram channel","Refer a friend":"Refer a friend","Daily login":"Daily login",
- "Rewarded ad":"Rewarded ad","Adult ads":"Adult ads","Home banner":"Home banner","Rewarded unlock":"Rewarded unlock",
- "Enable adult section":"Enable adult section","18+ confirmation":"18+ confirmation","REQUIRED":"REQUIRED",
- "Broadcast center":"Broadcast center","App settings":"App settings","Security":"Security",
- "Maintenance mode":"Maintenance mode","New registrations":"New registrations","Default language":"Default language"},
- bn:{Home:"হোম",Movies:"মুভি",Search:"সার্চ",Favourites:"ফেভারিট",Profile:"প্রোফাইল",Settings:"সেটিংস",
- Dashboard:"ড্যাশবোর্ড",Users:"ইউজার","Points & Unlocks":"পয়েন্ট ও আনলক","Ads & Rewards":"এড ও রিওয়ার্ড",
- "Daily Tasks":"ডেইলি টাস্ক",Payments:"পেমেন্ট","Adult Library":"অ্যাডাল্ট লাইব্রেরি","Movie Requests":"মুভি রিকোয়েস্ট",
- Broadcast:"ব্রডকাস্ট",Categories:"ক্যাটাগরি","Admin Panel":"এডমিন প্যানেল","Open User App":"ইউজার অ্যাপ খুলুন",
- "Sign out":"সাইন আউট","Recently Added":"সাম্প্রতিক যোগ","Trending":"ট্রেন্ডিং","Recently Viewed":"সম্প্রতি দেখা",
- "Movie Request":"মুভি রিকোয়েস্ট","My Points":"আমার পয়েন্ট",Referral:"রেফার","How To Earn":"কীভাবে আয় করবেন",
- Unlock:"আনলক","Use My Points":"পয়েন্ট দিয়ে আনলক","Watch Ad":"এড দেখুন",Download:"ডাউনলোড",Server:"সার্ভার",
- Overview:"ওভারভিউ",Rating:"রেটিং",Genre:"জেনার",Year:"বছর","Please Wait...":"অপেক্ষা করুন...","Save":"সেভ",
- Cancel:"বাতিল","Back":"পিছনে","Add Movie":"মুভি যোগ করুন","Edit":"এডিট","Delete":"ডিলিট","Import from TMDB":"TMDB থেকে নিন",
- "Search title...":"মুভির নাম খুঁজুন...","Total Users":"মোট ইউজার","Points Issued":"দেওয়া পয়েন্ট",
- "Pending Payments":"অপেক্ষমাণ পেমেন্ট","Platform activity":"প্ল্যাটফর্ম অ্যাক্টিভিটি","Quick controls":"দ্রুত কন্ট্রোল",
- "System status":"সিস্টেম স্ট্যাটাস","Movie service":"মুভি সার্ভিস","ONLINE":"অনলাইন","ACTIVE":"সক্রিয়",
- "Add movie":"মুভি যোগ করুন","Publish new title":"নতুন মুভি প্রকাশ","Payments":"পেমেন্ট","Review purchases":"পেমেন্ট দেখুন",
- "Ad settings":"এড সেটিংস","Rewards & limits":"রিওয়ার্ড ও লিমিট","Points":"পয়েন্ট","Unlock pricing":"আনলক মূল্য",
- "Movie":"মুভি","Published":"প্রকাশিত","Draft":"ড্রাফট","Manage":"ম্যানেজ","Export CSV":"CSV এক্সপোর্ট",
- "Bulk action":"বাল্ক অ্যাকশন","Active":"সক্রিয়","Blocked":"ব্লকড","Pending":"অপেক্ষমাণ","Approve":"অনুমোদন",
- "Join Telegram channel":"টেলিগ্রাম চ্যানেলে যোগ দিন","Refer a friend":"বন্ধুকে রেফার করুন","Daily login":"ডেইলি লগইন",
- "Rewarded ad":"রিওয়ার্ডেড এড","Adult ads":"অ্যাডাল্ট এড","Home banner":"হোম ব্যানার","Rewarded unlock":"রিওয়ার্ডেড আনলক",
- "Enable adult section":"অ্যাডাল্ট সেকশন চালু করুন","18+ confirmation":"১৮+ নিশ্চিতকরণ","REQUIRED":"প্রয়োজনীয়",
- "Broadcast center":"ব্রডকাস্ট সেন্টার","App settings":"অ্যাপ সেটিংস","Security":"সিকিউরিটি",
- "Maintenance mode":"মেইনটেন্যান্স মোড","New registrations":"নতুন রেজিস্ট্রেশন","Default language":"ডিফল্ট ভাষা"}
- };
- function get(){const v=localStorage.getItem(KEY);return SUPPORTED.includes(v)?v:DEFAULT}
- function set(v){if(!SUPPORTED.includes(v))return;localStorage.setItem(KEY,v);document.documentElement.lang=v;window.dispatchEvent(new Event("cinehub4:language"))}
- function t(k){return D[get()][k]||D.en[k]||k}
- function translateDOM(){
-   const root=document.body;if(!root)return;
-   const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
-   const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
-   nodes.forEach(n=>{if(n.parentElement&&["SCRIPT","STYLE"].includes(n.parentElement.tagName))return;
-     const raw=n.nodeValue, trimmed=raw.trim(); if(!trimmed)return;
-     if(D.en[trimmed]&&get()==="bn") n.nodeValue=raw.replace(trimmed,D.bn[trimmed]);
-     else if(get()==="en"){for(const k in D.en){if(D.bn[k]&&trimmed===D.bn[k])n.nodeValue=raw.replace(trimmed,k)}}
-   });
-   document.querySelectorAll("input[placeholder]").forEach(e=>{const p=e.getAttribute("placeholder");if(D.en[p])e.placeholder=t(p)});
- }
- window.addEventListener("cinehub4:language",()=>setTimeout(translateDOM,0));
- document.addEventListener("DOMContentLoaded",()=>{document.documentElement.lang=get();setTimeout(translateDOM,0)});
- return {get,set,t,translateDOM,SUPPORTED,DEFAULT};
+/* Cine Hub4 bilingual UI — English / বাংলা
+   Movie titles & admin-entered content are NEVER translated.
+   Admin can override any string via settings.uiTexts { en:{}, bn:{} }.
+*/
+window.CINEHUB4_LANG = (() => {
+  const KEY = "cinehub4_language";
+  const SUPPORTED = ["en", "bn"];
+  const DEFAULT = "en";
+
+  // Complete default dictionary (English key → Bengali)
+  const DICT = {
+    // Nav & common
+    "Movies": "মুভি",
+    "Series": "সিরিজ",
+    "Search": "সার্চ",
+    "Adult": "অ্যাডাল্ট",
+    "18+": "১৮+",
+    "Profile": "প্রোফাইল",
+    "User": "ইউজার",
+    "Home": "হোম",
+    "Telegram": "টেলিগ্রাম",
+    "Language": "ভাষা",
+    "Settings": "সেটিংস",
+    "Back": "পিছনে",
+    "Cancel": "বাতিল",
+    "Save": "সেভ",
+    "Open": "খুলুন",
+    "Close": "বন্ধ",
+    "Share": "শেয়ার",
+    "Copy": "কপি",
+    "Delete": "ডিলিট",
+    "Edit": "এডিট",
+    "Start": "স্টার্ট",
+    "Watch": "দেখুন",
+    "Buy": "কিনুন",
+    "Earn": "আয় করুন",
+    "Join": "যোগ দিন",
+    "Submit": "জমা দিন",
+    "Yes": "হ্যাঁ",
+    "No": "না",
+    "Stay here": "এখানে থাকুন",
+    "Leave": "বের হোন",
+    "Do you want to leave?": "আপনি কি বের হতে চান?",
+
+    // Home / library
+    "New Movies": "নতুন মুভি",
+    "LATEST UPLOADS": "লেটেস্ট আপলোড",
+    "Trending": "ট্রেন্ডিং",
+    "MOST WATCHED": "সবচেয়ে বেশি দেখা",
+    "MOVIE ZONE": "মুভি জোন",
+    "Cinema Library": "সিনেমা লাইব্রেরি",
+    "Curated movies, web series and premium entertainment updates.": "নির্বাচিত মুভি, ওয়েব সিরিজ ও প্রিমিয়াম আপডেট।",
+    "▶ How to Watch": "▶ কীভাবে দেখবেন",
+    "How to Watch": "কীভাবে দেখবেন",
+    "Trending Movies": "ট্রেন্ডিং মুভি",
+    "No movies found.": "কোনো মুভি পাওয়া যায়নি।",
+    "No movies found": "কোনো মুভি পাওয়া যায়নি",
+    "Results": "রেজাল্ট",
+    "Search movies...": "মুভি সার্চ করুন...",
+    "Voice search": "ভয়েস সার্চ",
+    "Listening...": "শুনছি...",
+    "Voice search not supported": "ভয়েস সার্চ সাপোর্ট করে না",
+    "Voice failed": "ভয়েস ব্যর্থ",
+    "Voice error": "ভয়েস এরর",
+
+    // Series
+    "Complete series": "সম্পূর্ণ সিরিজ",
+    "Series not added yet.": "এখনও কোনো সিরিজ যোগ করা হয়নি।",
+    "Series যোগ করা হয়নি।": "Series যোগ করা হয়নি।",
+
+    // Adult
+    "ADULT ZONE": "অ্যাডাল্ট জোন",
+    "Adult Library": "অ্যাডাল্ট লাইব্রেরি",
+    "Adult Access": "অ্যাডাল্ট অ্যাক্সেস",
+    "Adult Access Confirmation": "অ্যাডাল্ট অ্যাক্সেস নিশ্চিতকরণ",
+    "This section is reserved for mature viewers. Please confirm that you are 18 or older before entering the Adult Zone.": "এই বিভাগ প্রাপ্তবয়স্কদের জন্য। অ্যাডাল্ট জোনে প্রবেশের আগে নিশ্চিত করুন আপনার বয়স ১৮ বা তার বেশি।",
+    "This section contains adult content. Please confirm your age before entering.": "এই বিভাগে প্রাপ্তবয়স্ক কনটেন্ট রয়েছে। প্রবেশের আগে বয়স নিশ্চিত করুন।",
+    "✓ I confirm that I am 18 or older": "✓ আমি নিশ্চিত করছি আমার বয়স ১৮ বা তার বেশি",
+    "🔒 Your choice is remembered for this session only": "🔒 আপনার পছন্দ শুধু এই সেশনের জন্য মনে রাখা হবে",
+    "Yes, Enter": "হ্যাঁ, প্রবেশ করুন",
+    "No, Watch Movie": "না, মুভি দেখুন",
+    "I am 18+": "আমি ১৮+",
+    "Go Back": "ফিরে যান",
+    "No adult content yet. Add from Admin Panel.": "এখনও অ্যাডাল্ট কনটেন্ট নেই। অ্যাডমিন প্যানেল থেকে যোগ করুন।",
+    "Curated 18+ content and premium entertainment updates.": "নির্বাচিত ১৮+ কনটেন্ট ও প্রিমিয়াম আপডেট।",
+
+    // Profile
+    "Verified User": "ভেরিফায়েড ইউজার",
+    "Verified": "ভেরিফায়েড",
+    "OVERVIEW": "ওভারভিউ",
+    "My Points": "আমার পয়েন্ট",
+    "Total Referrals": "মোট রেফারেল",
+    "REFERRAL SYSTEM": "রেফারেল সিস্টেম",
+    "Per Referral Reward": "প্রতি রেফারেল রিওয়ার্ড",
+    "Join Bonus": "জয়েন বোনাস",
+    "Referral Code": "রেফারেল কোড",
+    "Your Referral Link": "আপনার রেফারেল লিংক",
+    "Copy Link": "লিংক কপি",
+    "Share Link": "লিংক শেয়ার",
+    "Watch Tutorial": "টিউটোরিয়াল দেখুন",
+    "Point Center": "পয়েন্ট সেন্টার",
+    "Daily Tasks": "ডেইলি টাস্ক",
+    "More Point Earning": "আরও পয়েন্ট আয়",
+    "Watch Ad Now": "এখন এড দেখুন",
+    "MORE EARNING BUTTONS": "আরও আয় বাটন",
+    "EARNING SETTINGS": "আয় সেটিংস",
+    "Current Balance": "বর্তমান ব্যালেন্স",
+    "Points Per Ad": "প্রতি এডে পয়েন্ট",
+    "Ads Watched": "এড দেখা",
+    "Daily Limit": "ডেইলি লিমিট",
+    "Done": "সম্পন্ন",
+    "Buy Points": "পয়েন্ট কিনুন",
+    "Admin Panel": "এডমিন প্যানেল",
+    "A文 Language": "A文 ভাষা",
+    "বাংলা": "বাংলা",
+    "English": "English",
+
+    // Points & tasks
+    "points": "পয়েন্ট",
+    "Points": "পয়েন্ট",
+    "Watch Ad & Earn": "এড দেখে আয় করুন",
+    "Daily Ad Limit": "ডেইলি এড লিমিট",
+    "Only for earning points": "শুধু পয়েন্ট আয়ের জন্য",
+    "Movie unlock is not limited by the daily ad limit.": "মুভি আনলক করার সময় ডেইলি এড লিমিট প্রযোজ্য নয়।",
+    "EARN & UNLOCK": "আয় ও আনলক",
+    "Current Balance": "বর্তমান ব্যালেন্স",
+    "Points Per Ad": "প্রতি এডে পয়েন্ট",
+    "Ads Watched": "এড দেখা হয়েছে",
+    "Daily Limit": "ডেইলি লিমিট",
+    "EARNING SETTINGS": "আয় সেটিংস",
+    "Reward Per Ad": "প্রতি এডে রিওয়ার্ড",
+    "Maximum Daily Ads": "সর্বোচ্চ ডেইলি এড",
+    "Remaining Today": "আজ বাকি",
+    "completed today": "আজ সম্পন্ন",
+    "Completed": "সম্পন্ন",
+    "One-time task": "ওয়ান-টাইম টাস্ক",
+    "Watch Ad Now": "এখন এড দেখুন",
+    "MORE EARNING BUTTONS": "আরও আয় বাটন",
+    "Reward": "রিওয়ার্ড",
+    "Daily limit": "ডেইলি লিমিট",
+    "How to earn points": "কীভাবে পয়েন্ট আয় করবেন",
+    "Watch rewarded ad": "রিওয়ার্ডেড এড দেখুন",
+    "Join Telegram channel": "টেলিগ্রাম চ্যানেলে যোগ দিন",
+    "Refer a friend": "বন্ধুকে রেফার করুন",
+    "Daily login": "ডেইলি লগইন",
+    "one click": "ওয়ান ক্লিক",
+    "one click ads": "ওয়ান ক্লিক এডস",
+    "Watch Video": "ভিডিও দেখুন",
+    "Watch Ads & Earn Points": "এড দেখে পয়েন্ট আয়",
+    "Complete ads and premium earning tasks to unlock exclusive videos instantly.": "এড ও প্রিমিয়াম টাস্ক সম্পন্ন করে এক্সক্লুসিভ ভিডিও আনলক করুন।",
+    "Instant Reward": "তাত্ক্ষণিক রিওয়ার্ড",
+    "Unlock Videos": "ভিডিও আনলক",
+    "Daily task": "ডেইলি টাস্ক",
+    "Leaving will close the mini app.": "বের হলে মিনি অ্যাপ বন্ধ হয়ে যাবে।",
+    "Keep this page open until countdown ends.": "কাউন্টডাউন শেষ না হওয়া পর্যন্ত পেজ খোলা রাখুন।",
+    "Opening Ad": "এড খুলছে",
+    "Please wait while ad is loading.": "এড লোড হওয়ার জন্য অপেক্ষা করুন।",
+    "Already completed today": "আজ ইতিমধ্যে সম্পন্ন",
+    "Already claimed today": "আজ ইতিমধ্যে নেওয়া হয়েছে",
+    "More Watching": "আরও দেখুন",
+
+
+    "UNLOCKED": "আনলকড",
+    "Available for": "সময় বাকি",
+    "Watch or download from any server below.": "নিচের যেকোনো সার্ভার থেকে দেখুন বা ডাউনলোড করুন।",
+    "Demo / Preview": "ডেমো / প্রিভিউ",
+    "Download Servers": "ডাউনলোড সার্ভার",
+    "Server": "সার্ভার",
+    "Download / Watch": "ডাউনলোড / দেখুন",
+    "Ads needed": "এড প্রয়োজন",
+    "Unlock duration": "আনলক সময়কাল",
+    "Not enough points": "পর্যাপ্ত পয়েন্ট নেই",
+    "needed": "প্রয়োজন",
+    "Unlock required": "আগে আনলক করুন",
+    "Demo video — replace URL from Admin when ready.": "ডেমো ভিডিও — অ্যাডমিন থেকে URL বসান।",
+    "ad progress": "এড প্রোগ্রেস",
+    "Set banner in Admin → Ads": "অ্যাডমিন → Ads থেকে ব্যানার সেট করুন",
+    "Banner ad": "ব্যানার এড",
+    "points added": "পয়েন্ট যোগ হয়েছে",
+    "Ad closed": "এড বন্ধ",
+    "Ad completed": "এড সম্পন্ন",
+    "Adsgram loading… try again": "Adsgram লোড হচ্ছে… আবার চেষ্টা করুন",
+    "Set Adsgram Block ID in Admin → Ads": "অ্যাডমিন → Ads এ Adsgram Block ID দিন",
+
+    // Buy points
+    "Buy Points with USDT": "USDT দিয়ে পয়েন্ট কিনুন",
+    "Select Package": "প্যাকেজ বেছে নিন",
+    "Custom Amount": "কাস্টম অ্যামাউন্ট",
+    "Enter points amount": "পয়েন্টের পরিমাণ লিখুন",
+    "Example: 1000": "উদাহরণ: ১০০০",
+    "Wallet Address": "ওয়ালেট অ্যাড্রেস",
+    "Network": "নেটওয়ার্ক",
+    "Address copied": "অ্যাড্রেস কপি হয়েছে",
+    "Transaction ID / TxID": "ট্রানজেকশন আইডি / TxID",
+    "Upload Payment Proof": "পেমেন্ট প্রুফ আপলোড",
+    "Submit Payment Request": "পেমেন্ট রিকোয়েস্ট জমা দিন",
+    "Payment request submitted": "পেমেন্ট রিকোয়েস্ট জমা হয়েছে",
+    "SMART CHOICE": "স্মার্ট চয়েস",
+    "STARTER": "স্টার্টার",
+    "BEST VALUE": "বেস্ট ভ্যালু",
+    "POPULAR": "পপুলার",
+    "Basic Package": "বেসিক প্যাকেজ",
+    "Standard Package": "স্ট্যান্ডার্ড প্যাকেজ",
+    "Premium Package": "প্রিমিয়াম প্যাকেজ",
+    "Ultimate Package": "আলটিমেট প্যাকেজ",
+
+    // Movie detail / unlock
+    "Movie": "মুভি",
+    "UNLOCK NOTICE": "আনলক নোটিশ",
+    "MOVIE CONTENT": "মুভি কনটেন্ট",
+    "Unlock this content using ads or points.": "এড বা পয়েন্ট দিয়ে এই কনটেন্ট আনলক করুন।",
+    "Unlock this content using ads or points. Share with friends to earn more.": "এড বা পয়েন্ট দিয়ে আনলক করুন। বন্ধুদের সাথে শেয়ার করে আরও আয় করুন।",
+    "Need": "প্রয়োজন",
+    "Remaining": "বাকি",
+    "Progress": "প্রোগ্রেস",
+    "Unlock with points or ads.": "পয়েন্ট বা এড দিয়ে আনলক করুন।",
+    "Unlock Video": "ভিডিও আনলক",
+    "Use My Points": "আমার পয়েন্ট ব্যবহার করুন",
+    "More Movies": "আরও মুভি",
+    "No points available": "পয়েন্ট নেই",
+    "Already unlocked": "ইতিমধ্যে আনলক",
+    "1 point used": "১ পয়েন্ট ব্যবহার হয়েছে",
+    "Unlocked for": "আনলক হয়েছে",
+    "hours": "ঘণ্টা",
+    "পয়েন্ট যথেষ্ট নেই": "পয়েন্ট যথেষ্ট নেই",
+    "Daily ad limit reached": "ডেইলি এড লিমিট শেষ",
+    "Admin has not configured this Ad Block ID": "অ্যাডমিন এড ব্লক আইডি সেট করেনি",
+    "Demo rewarded advertisement": "ডেমো রিওয়ার্ডেড বিজ্ঞাপন",
+    "Complete Ad": "এড সম্পন্ন করুন",
+    "Complete Demo Ad": "ডেমো এড সম্পন্ন করুন",
+    "Ad · 18+": "এড · ১৮+",
+    "How to Watch link not set": "হাউ টু ওয়াচ লিংক সেট নেই",
+    "Share link ready": "শেয়ার লিংক রেডি",
+    "Link copied": "লিংক কপি হয়েছে",
+
+    // Drawer
+    "Movie Mini App": "মুভি মিনি অ্যাপ",
+    "Premium movie library • fast access • smart unlock": "প্রিমিয়াম মুভি লাইব্রেরি • দ্রুত অ্যাক্সেস • স্মার্ট আনলক",
+    "ভাষা পরিবর্তন": "ভাষা পরিবর্তন",
+
+    // Misc toasts
+    "Task completed": "টাস্ক সম্পন্ন",
+    "Points added": "পয়েন্ট যোগ হয়েছে",
+    "Already claimed today": "আজ ইতিমধ্যে নেওয়া হয়েছে",
+    "Loading...": "লোড হচ্ছে...",
+  };
+
+  const BN_TO_EN = Object.fromEntries(Object.entries(DICT).map(([e, b]) => [b, e]));
+
+  function getOverrides() {
+    try {
+      const s = JSON.parse(localStorage.getItem("cinehub4_settings") || "{}");
+      return s.uiTexts || { en: {}, bn: {} };
+    } catch (e) {
+      return { en: {}, bn: {} };
+    }
+  }
+
+  function get() {
+    const v = localStorage.getItem(KEY);
+    return SUPPORTED.includes(v) ? v : DEFAULT;
+  }
+
+  function set(v) {
+    if (!SUPPORTED.includes(v)) return;
+    localStorage.setItem(KEY, v);
+    document.documentElement.lang = v;
+    window.dispatchEvent(new Event("cinehub4:language"));
+  }
+
+  /** Translate a UI string. Movie titles must NOT be passed here. */
+  function t(key) {
+    if (key == null || key === "") return key;
+    const lang = get();
+    const ov = getOverrides();
+    if (lang === "bn") {
+      if (ov.bn && ov.bn[key]) return ov.bn[key];
+      if (DICT[key]) return DICT[key];
+      return key;
+    }
+    // English
+    if (ov.en && ov.en[key]) return ov.en[key];
+    // if key was Bengali, map back
+    if (BN_TO_EN[key]) return (ov.en && ov.en[BN_TO_EN[key]]) || BN_TO_EN[key];
+    return key;
+  }
+
+  function translateDOM() {
+    const bn = get() === "bn";
+    const ov = getOverrides();
+    const map = bn
+      ? { ...DICT, ...(ov.bn || {}) }
+      : Object.fromEntries(
+          Object.keys(DICT).map((k) => [DICT[k], (ov.en && ov.en[k]) || k])
+        );
+
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach((n) => {
+      const el = n.parentElement;
+      if (!el || ["SCRIPT", "STYLE", "TEXTAREA", "INPUT"].includes(el.tagName)) return;
+      // never touch movie titles / poster fallbacks
+      if (el.closest && (el.closest(".unlock-title") || el.closest(".pt") || el.closest("[data-no-i18n]"))) return;
+      const raw = n.nodeValue;
+      const trim = raw.trim();
+      if (!trim) return;
+      const out = map[trim];
+      if (out && out !== trim) n.nodeValue = raw.replace(trim, out);
+    });
+
+    document.querySelectorAll("[placeholder]").forEach((e) => {
+      const p = e.getAttribute("placeholder");
+      const out = bn ? (ov.bn && ov.bn[p]) || DICT[p] : (ov.en && ov.en[p]) || BN_TO_EN[p] || p;
+      if (out) e.placeholder = out;
+    });
+
+    document.querySelectorAll("[data-i18n]").forEach((e) => {
+      const k = e.getAttribute("data-i18n");
+      e.textContent = t(k);
+    });
+
+    // bottom nav labels
+    document.querySelectorAll(".nav-item .nav-lbl").forEach((el) => {
+      const page = el.closest(".nav-item")?.dataset?.page;
+      const mapNav = { movies: "Movies", series: "Series", search: "Search", adult: "18+", profile: "Profile" };
+      if (page && mapNav[page]) el.textContent = t(mapNav[page]);
+    });
+  }
+
+  window.addEventListener("cinehub4:language", () => {
+    setTimeout(() => {
+      translateDOM();
+      // full re-render so template strings pick up t()
+      if (typeof window.__cinehub_rerender === "function") {
+        try { window.__cinehub_rerender(); } catch (e) {}
+      }
+    }, 0);
+  });
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.documentElement.lang = get();
+    setTimeout(translateDOM, 0);
+  });
+
+  return { get, set, t, translateDOM, SUPPORTED, DEFAULT, DICT };
 })();
