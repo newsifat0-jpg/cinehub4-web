@@ -1,3 +1,10 @@
+:root{
+  --accent:#7c5cff;
+  --accent2:#5b8cff;
+  --orange:#f59e0b;
+  --pink:#ec4899;
+  --bg:#0a0c14;
+}
 
 /* Cine Hub4 logo palette — cyan blue + orange gold */
 :root{
@@ -345,3 +352,34 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
 /* logo accent on primary buttons / pills */
 .primary,.pkg-buy,.pf-btn.copy,.task-start{background:linear-gradient(135deg,#00c6ff,#0088ff)!important}
 .hpill.on,.nav-item.active{box-shadow:0 0 16px rgba(0,198,255,.35)}
+
+/* Aesthetic refinements */
+:root{
+  --accent:#00d4ff;
+  --accent2:#7c5cff;
+  --orange:#ff8a3d;
+  --card:#0e1424;
+  --border:#1c2740;
+}
+body{background:radial-gradient(1200px 600px at 50% -10%,#152038 0%,#070b14 55%,#05080f 100%)!important}
+.lib-card-sm{padding:14px 16px!important;margin-bottom:12px}
+.lib-card-sm h2{font-size:18px!important;margin:6px 0 4px!important}
+.lib-card-sm .lib-desc{font-size:12px!important;margin-bottom:10px!important}
+.lib-card-sm .how-btn{padding:10px 14px!important;font-size:13px!important}
+.lib-count{display:none!important}
+.cd-card{text-align:center;padding:28px 20px!important}
+.cd-ring{width:72px;height:72px;margin:0 auto 14px;border-radius:50%;border:3px dashed #00d4ff;display:grid;place-items:center;background:linear-gradient(135deg,#1a2744,#0e1424);box-shadow:0 0 24px rgba(0,212,255,.25)}
+.cd-play{font-size:22px}
+.cd-num{font-size:28px;font-weight:800;color:#00d4ff;margin-top:10px}
+.hero-pill{box-shadow:0 4px 20px rgba(0,0,0,.25);transition:transform .2s,box-shadow .25s}
+.hero-pill.active,.hero-pill:active{transform:scale(.98);box-shadow:0 0 28px rgba(0,212,255,.4)}
+.page-enter{animation:pageIn .38s cubic-bezier(.22,.8,.28,1)}
+@keyframes pageIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+.nav-item{transition:color .2s,transform .15s}
+.nav-item.active{color:#00d4ff}
+.menu-ham{transition:background .2s,transform .15s}
+.menu-ham:active{transform:scale(.92)}
+.modal{animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-card{animation:popIn .28s cubic-bezier(.22,.8,.28,1)}
+@keyframes popIn{from{opacity:0;transform:scale(.92) translateY(8px)}to{opacity:1;transform:none}}
