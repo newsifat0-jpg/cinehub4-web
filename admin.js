@@ -3,6 +3,8 @@ const DEFAULT={
   appName:"Cine Hub4",
   botUsername:"@Cinehub4bot",
   telegramBotLink:"https://t.me/Cinehub4bot",
+  miniAppName:"Hub4",
+  miniAppLink:"https://t.me/Cinehub4bot/Hub4",
   telegramChannelLink:"",
   howToEarnVideo:"",
   howToWatchText:"Unlock this content using ads or points. Share with friends to earn more.",
@@ -166,40 +168,126 @@ function adjUserPts(idx,delta){
   render();toast((delta>0?"+":"")+delta+" points");
 }
 
-function points(){return `<div class="grid section-grid"><div class="card"><h3>Points & Unlock Economy</h3><div class="form-grid"><div class="field"><label>Movie unlock cost (points / ads needed)</label><input id="unlockCost" type="number" value="${A.settings.unlockCost}"></div><div class="field"><label>Unlock duration (hours)</label><input id="unlockHours" type="number" value="${A.settings.unlockHours}"></div><div class="field"><label>Reward per ad</label><input id="adRewardP" type="number" value="${A.settings.adReward}"></div><div class="field"><label>Daily ad earning limit</label><input id="dailyLimitP" type="number" value="${A.settings.dailyAdLimit}"></div><div class="field"><label>Daily movie unlock limit (0 = unlimited)</label><input id="dailyUnlockLimit" type="number" value="${A.settings.dailyUnlockLimit||0}"></div><div class="field"><label>New-user bonus</label><input id="bonus" type="number" value="${A.settings.newUserBonus||10}"></div><div class="field"><label>Referral reward</label><input id="ref" type="number" value="${A.settings.referralReward||5}"></div></div><button class="btn primary" style="margin-top:14px" onclick="savePoints()">Save Economy</button></div><div class="card"><h3>Rules</h3><div class="switch"><span>After unlock expires, user must watch ads / use points again</span><span class="badge green">ON</span></div><div class="switch"><span>Daily ad limit only applies to earning points</span><span class="badge green">ON</span></div><div class="switch"><span>Unlock period</span><span class="badge green">${A.settings.unlockHours} HOURS</span></div><div class="switch"><span>Adult library fully separate from Movies</span><span class="badge green">ON</span></div></div></div>`}
-function savePoints(){A.settings.unlockCost=+$('#unlockCost').value||5;A.settings.unlockHours=+$('#unlockHours').value||15;A.settings.adReward=+$('#adRewardP').value||2;A.settings.dailyAdLimit=+$('#dailyLimitP').value||20;A.settings.dailyUnlockLimit=+$('#dailyUnlockLimit').value||0;A.settings.newUserBonus=+$('#bonus').value||10;A.settings.referralReward=+$('#ref').value||5;save();render();toast('Points settings saved')}
-function ads(){const b=A.settings.adBlocks;return `<div class="grid section-grid"><div class="card"><h3>Ad Block IDs — Full Control</h3><div class="muted smalltext">Every ad ID can be changed here. Add another block with the button below.</div><div class="form-grid" style="margin-top:12px"><div class="field"><label>Rewarded / Unlock Ad Block ID</label><input id="rewardedId" value="${b.rewarded||''}"></div><div class="field"><label>Interstitial Ad Block ID</label><input id="interstitialId" value="${b.interstitial||''}"></div><div class="field"><label>Home Banner Ad Block ID</label><input id="bannerId" value="${b.banner||''}"></div><div class="field"><label>Daily Task Ad Block ID</label><input id="taskId" value="${b.task||''}"></div><div class="field"><label>Adult Ad Block ID — SEPARATE</label><input id="adultId" value="${b.adult||''}"></div></div><button class="btn primary" style="margin-top:14px" onclick="saveAds()">Save All Ad IDs</button></div><div class="card"><h3>Ad Placement</h3><div class="switch"><span>Home banner</span><span class="toggle on" onclick="this.classList.toggle('on')"><i></i></span></div><div class="switch"><span>Rewarded movie unlock</span><span class="toggle on" onclick="this.classList.toggle('on')"><i></i></span></div><div class="switch"><span>Point earning ads</span><span class="toggle on" onclick="this.classList.toggle('on')"><i></i></span></div><div class="switch"><span>Adult ads</span><span class="toggle on" onclick="this.classList.toggle('on')"><i></i></span></div></div></div><div class="card" style="margin-top:14px"><div class="toolbar"><h3 style="margin:0">Extra Ad Blocks</h3><button class="btn primary" onclick="openAdBlock()">＋ Add Ad Block</button></div><div id="extraAds" class="tag-list"></div></div>`}
-function saveAds(){const b=A.settings.adBlocks;b.rewarded=$('#rewardedId').value.trim();b.interstitial=$('#interstitialId').value.trim();b.banner=$('#bannerId').value.trim();b.task=$('#taskId').value.trim();b.adult=$('#adultId').value.trim();save();toast('All Ad IDs saved')}
+function points(){return `<div class="toolbar"><div><h2 style="margin:0;font-size:18px">Points & Unlock Control</h2><p class="muted smalltext" style="margin:4px 0 0">Download lock · ads · points · daily limits — one place</p></div></div>
+<div class="grid section-grid">
+  <div class="card"><h3>🔓 Movie Unlock Rules</h3>
+    <div class="form-grid">
+      <div class="field"><label>Points needed to unlock 1 movie</label><input id="unlockCost" type="number" value="${A.settings.unlockCost}"></div>
+      <div class="field"><label>Ads needed to unlock 1 movie</label><input id="adsForUnlockP" type="number" value="${A.settings.adsForUnlock||5}"></div>
+      <div class="field"><label>Unlock stays open (hours)</label><input id="unlockHours" type="number" value="${A.settings.unlockHours}"></div>
+      <div class="field"><label>Max movies user can unlock per day (0=unlimited)</label><input id="dailyUnlockLimit" type="number" value="${A.settings.dailyUnlockLimit||0}"></div>
+      <div class="field"><label>Download servers count (1–10)</label><input id="downloadServersP" type="number" min="1" max="10" value="${A.settings.downloadServers||3}"></div>
+    </div>
+  </div>
+  <div class="card"><h3>🎁 Earn Points</h3>
+    <div class="form-grid">
+      <div class="field"><label>Points per ad watched</label><input id="adRewardP" type="number" value="${A.settings.adReward}"></div>
+      <div class="field"><label>Daily ad earning limit</label><input id="dailyLimitP" type="number" value="${A.settings.dailyAdLimit}"></div>
+      <div class="field"><label>Join bonus (new user)</label><input id="bonus" type="number" value="${A.settings.joinBonus||A.settings.newUserBonus||10}"></div>
+      <div class="field"><label>Referral reward</label><input id="ref" type="number" value="${A.settings.referralReward||20}"></div>
+    </div>
+  </div>
+  <div class="card"><h3>Rules (live)</h3>
+    <div class="switch"><span>After unlock expires → must unlock again</span><span class="badge green">ON</span></div>
+    <div class="switch"><span>Daily ad limit only for earning (not unlock ads)</span><span class="badge green">ON</span></div>
+    <div class="switch"><span>Adult fully separate from Movies</span><span class="badge green">ON</span></div>
+    <div class="switch"><span>Unlock period</span><span class="badge green">${A.settings.unlockHours||15} HOURS</span></div>
+  </div>
+</div>
+<button class="btn primary" style="margin-top:14px;width:100%;padding:14px" onclick="savePoints()">💾 Save Unlock & Points Settings</button>`}
+function savePoints(){A.settings.unlockCost=+$('#unlockCost').value||5;A.settings.unlockHours=+$('#unlockHours').value||15;A.settings.adReward=+$('#adRewardP').value||2;A.settings.dailyAdLimit=+$('#dailyLimitP').value||20;A.settings.dailyUnlockLimit=+$('#dailyUnlockLimit').value||0;A.settings.adsForUnlock=+$('#adsForUnlockP').value||5;A.settings.downloadServers=Math.max(1,Math.min(10,+$('#downloadServersP').value||3));A.settings.joinBonus=+$('#bonus').value||10;A.settings.newUserBonus=A.settings.joinBonus;A.settings.referralReward=+$('#ref').value||20;save();render();toast('Points & Unlock settings saved')}
+function ads(){
+  const b=A.settings.adBlocks||{};
+  const s=A.settings;
+  return `<div class="toolbar"><div><h2 style="margin:0;font-size:18px">Ads & Banners</h2>
+    <p class="muted smalltext" style="margin:4px 0 0">All ads use Adsgram (partner.adsgram.ai) · paste Block IDs below</p></div></div>
+  <div class="grid section-grid">
+    <div class="card"><h3>Ad Block IDs</h3>
+      <div class="form-grid">
+        <div class="field"><label>Rewarded / Unlock · Adsgram ID</label><input id="rewardedId" value="${b.rewarded||''}"></div>
+        <div class="field"><label>Interstitial</label><input id="interstitialId" value="${b.interstitial||''}"></div>
+        <div class="field"><label>Movie banner · Adsgram Block ID</label><input id="bannerId" value="${b.banner||''}" placeholder="e.g. 123456 or task-123"></div>
+        <div class="field"><label>Adult banner · Adsgram Block ID</label><input id="bannerAdultId" value="${b.bannerAdult||''}" placeholder="Adsgram adult banner ID"></div>
+        <div class="field"><label>Daily Task · Adsgram ID</label><input id="taskId" value="${b.task||''}"></div>
+        <div class="field"><label>Adult rewarded · Adsgram ID</label><input id="adultId" value="${b.adult||''}"></div>
+      </div>
+      <button class="btn primary" style="margin-top:14px" onclick="saveAds()">💾 Save All Ad IDs</button>
+    </div>
+    <div class="card"><h3>🖼 Movie tab banner</h3>
+      <p class="muted smalltext">Shows under the scrolling ticker on Movies home</p>
+      <div class="switch" style="margin:10px 0">
+        <span>Show movie banner</span>
+        <span class="toggle ${s.showMovieBanner!==false?'on':''}" id="togMovieBan" onclick="this.classList.toggle('on')"><i></i></span>
+      </div>
+      <div class="field"><label>Banner image URL</label><input id="movieBanImg" value="${(s.movieBannerImg||'').replace(/"/g,'&quot;')}" placeholder="https://...jpg"></div>
+      <div class="field" style="margin-top:8px"><label>Click link</label><input id="movieBanLink" value="${(s.movieBannerLink||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
+    </div>
+    <div class="card"><h3>🖼 Adult tab banner</h3>
+      <p class="muted smalltext">Shows under the scrolling ticker on Adult zone</p>
+      <div class="switch" style="margin:10px 0">
+        <span>Show adult banner</span>
+        <span class="toggle ${s.showAdultBanner!==false?'on':''}" id="togAdultBan" onclick="this.classList.toggle('on')"><i></i></span>
+      </div>
+      <div class="field"><label>Banner image URL</label><input id="adultBanImg" value="${(s.adultBannerImg||'').replace(/"/g,'&quot;')}" placeholder="https://...jpg"></div>
+      <div class="field" style="margin-top:8px"><label>Click link</label><input id="adultBanLink" value="${(s.adultBannerLink||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
+    </div>
+  </div>
+  <button class="btn primary" style="margin-top:14px;width:100%;padding:14px" onclick="saveAds();saveBanners()">💾 Save Banner Settings</button>
+  <div class="card" style="margin-top:14px"><div class="toolbar"><h3 style="margin:0">Extra Ad Blocks</h3><button class="btn primary" onclick="openAdBlock()">＋ Add Ad Block</button></div><div id="extraAds" class="tag-list"></div></div>`;
+}
+function saveBanners(){
+  const on=id=>{const el=document.getElementById(id);return el?el.classList.contains('on'):true};
+  A.settings.showMovieBanner=on('togMovieBan');
+  A.settings.showAdultBanner=on('togAdultBan');
+  A.settings.movieBannerImg=(document.getElementById('movieBanImg')||{}).value||'';
+  A.settings.movieBannerLink=(document.getElementById('movieBanLink')||{}).value||'';
+  A.settings.adultBannerImg=(document.getElementById('adultBanImg')||{}).value||'';
+  A.settings.adultBannerLink=(document.getElementById('adultBanLink')||{}).value||'';
+  save();
+  toast('Banner settings saved');
+}
+
+function saveAds(){const b=A.settings.adBlocks=A.settings.adBlocks||{};b.rewarded=($('#rewardedId')||{}).value?.trim?.()||'';b.interstitial=($('#interstitialId')||{}).value?.trim?.()||'';b.banner=($('#bannerId')||{}).value?.trim?.()||'';b.bannerAdult=($('#bannerAdultId')||{}).value?.trim?.()||'';b.task=($('#taskId')||{}).value?.trim?.()||'';b.adult=($('#adultId')||{}).value?.trim?.()||'';try{saveBanners()}catch(e){};save();toast('All Ad IDs & banners saved')}
 function tasks(){
   if(!A.settings.tasks||!A.settings.tasks.length){
     A.settings.tasks=[
-      {name:"Watch rewarded ad",reward:A.settings.adReward||2,limit:A.settings.dailyAdLimit||20,type:"ad"},
-      {name:"Join Telegram channel",reward:5,limit:1,type:"link"},
-      {name:"Refer a friend",reward:A.settings.referralReward||20,limit:10,type:"share"},
-      {name:"Daily login",reward:2,limit:1,type:"login"}
+      {name:"one click",reward:2,limit:1,type:"countdown",seconds:5,link:""},
+      {name:"Watch rewarded ad",reward:A.settings.adReward||2,limit:A.settings.dailyAdLimit||20,type:"ad",link:""},
+      {name:"Join Telegram channel",reward:5,limit:1,type:"link",link:A.settings.telegramChannelLink||""},
+      {name:"Refer a friend",reward:A.settings.referralReward||20,limit:10,type:"share",link:""}
     ];
   }
-  const rows=A.settings.tasks.map((t,i)=>`<tr>
-    <td><input value="${t.name||""}" onchange="A.settings.tasks[${i}].name=this.value;save()" style="width:100%"></td>
-    <td><input type="number" value="${t.reward||0}" onchange="A.settings.tasks[${i}].reward=Number(this.value)||0;save()" style="width:70px"></td>
-    <td><input type="number" value="${t.limit||1}" onchange="A.settings.tasks[${i}].limit=Number(this.value)||1;save()" style="width:70px"></td>
-    <td>
-      <select onchange="A.settings.tasks[${i}].type=this.value;save()">
-        <option value="countdown" ${t.type==="countdown"||t.type==="oneclick"?"selected":""}>countdown</option>
-        <option value="ad" ${t.type==="ad"?"selected":""}>ad</option>
-        <option value="link" ${t.type==="link"?"selected":""}>link</option>
-        <option value="share" ${t.type==="share"?"selected":""}>share</option>
-        <option value="login" ${t.type==="login"?"selected":""}>login</option>
-      </select>
-    </td>
-    <td><input type="number" value="${t.seconds||5}" title="Countdown secs" onchange="A.settings.tasks[${i}].seconds=Number(this.value)||5;save()" style="width:60px">
-      <button class="btn" onclick="openTask('',${i})">Edit</button>
-      <button class="btn danger" onclick="A.settings.tasks.splice(${i},1);save();render()">Del</button></td>
-  </tr>`).join("");
-  return `<div class="toolbar"><button class="btn primary" onclick="A.settings.tasks.push({name:'New Task',reward:2,limit:1,type:'ad'});save();render()">＋ Add Task</button></div>
-  <div class="card table-wrap"><table class="table"><thead><tr><th>Task</th><th>Reward</th><th>Daily Limit</th><th>Type</th><th>Action</th></tr></thead>
-  <tbody>${rows}</tbody></table></div>
-  <p class="muted">Join bonus / referral reward are in Settings. Tasks appear on user Daily Tasks page.</p>`;
+  const cards=A.settings.tasks.map((t,i)=>`
+  <div class="card task-admin-card" style="margin-bottom:12px">
+    <div class="toolbar" style="margin-bottom:10px">
+      <h3 style="margin:0;font-size:15px">🎁 Task #${i+1}</h3>
+      <button class="btn danger" onclick="A.settings.tasks.splice(${i},1);save();render()">🗑 Delete</button>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label>Task Name</label><input value="${(t.name||"").replace(/"/g,"&quot;")}" onchange="A.settings.tasks[${i}].name=this.value;save()"></div>
+      <div class="field"><label>Reward Points</label><input type="number" value="${t.reward||0}" onchange="A.settings.tasks[${i}].reward=Number(this.value)||0;save()"></div>
+      <div class="field"><label>Daily Limit</label><input type="number" value="${t.limit||1}" onchange="A.settings.tasks[${i}].limit=Number(this.value)||1;save()"></div>
+      <div class="field"><label>Type</label>
+        <select onchange="A.settings.tasks[${i}].type=this.value;save();render()">
+          <option value="countdown" ${t.type==="countdown"||t.type==="oneclick"?"selected":""}>Countdown (one-click)</option>
+          <option value="ad" ${t.type==="ad"?"selected":""}>Watch Ad</option>
+          <option value="link" ${t.type==="link"?"selected":""}>Open Link</option>
+          <option value="share" ${t.type==="share"?"selected":""}>Share Referral</option>
+          <option value="login" ${t.type==="login"?"selected":""}>Daily Login</option>
+        </select>
+      </div>
+      <div class="field"><label>Countdown Seconds</label><input type="number" value="${t.seconds||5}" onchange="A.settings.tasks[${i}].seconds=Number(this.value)||5;save()"></div>
+      <div class="field" style="grid-column:1/-1"><label>Link URL (for link type / join channel)</label>
+        <input value="${(t.link||"").replace(/"/g,"&quot;")}" placeholder="https://t.me/..." onchange="A.settings.tasks[${i}].link=this.value;save()">
+      </div>
+    </div>
+  </div>`).join("");
+  return `<div class="toolbar">
+    <div><h2 style="margin:0;font-size:18px">Daily Tasks</h2><p class="muted smalltext" style="margin:4px 0 0">Add · Edit · Delete · Link · Points · Limit — all here</p></div>
+    <button class="btn primary" onclick="A.settings.tasks.push({name:'New Task',reward:2,limit:1,type:'countdown',seconds:5,link:''});save();render()">＋ Add Task</button>
+  </div>
+  ${cards||'<div class="card muted">No tasks yet. Click Add Task.</div>'}
+  <div class="card" style="margin-top:8px"><p class="muted smalltext">User app → Drawer → Daily Tasks shows these. Countdown tasks show timer like the reference video. Link tasks open the URL you set.</p></div>`;
 }
 
 function payments(){
@@ -248,26 +336,32 @@ function payView(i){
   const p=list[i]; if(!p)return;
   const img=p.proofData||p.proofUrl||"";
   const isUrl=typeof img==="string"&&(img.startsWith("http")||img.startsWith("data:"));
-  showModal(`<div class="modal-head"><h2>Payment Detail</h2><button class="btn" onclick="closeModal()">×</button></div>
-    <div class="form-grid" style="grid-template-columns:1fr 1fr">
-      <div class="field"><label>User</label><div>${p.user||"-"} (${p.uid||"-"})</div></div>
-      <div class="field"><label>Package</label><div>${p.pkg||"-"}</div></div>
-      <div class="field"><label>USDT</label><div>${p.usdt||0}</div></div>
-      <div class="field"><label>Points</label><div>${p.points||0}</div></div>
-      <div class="field"><label>TxID</label><div style="word-break:break-all">${p.txid||"-"}</div></div>
-      <div class="field"><label>Status</label><div>${p.status||"pending"}</div></div>
-      <div class="field"><label>Date / Time</label><div>${p.date||p.time||"-"}</div></div>
-      <div class="field"><label>Wallet</label><div>${p.wallet||p.network||"-"}</div></div>
-      <div class="field" style="grid-column:1/-1"><label>Screenshot / Proof</label>
-        ${isUrl?`<img src="${img}" style="max-width:100%;border-radius:12px;margin-top:8px;border:1px solid #2a334d" alt="proof">`:`<div class="muted">${p.proof||"No image attached"}</div>`}
+  showModal(`<div class="modal-head"><div><h2>Payment Proof</h2><p class="muted smalltext" style="margin:4px 0 0">Full screenshot · details · actions</p></div><button class="btn" onclick="closeModal()">×</button></div>
+    <div class="pay-view-grid">
+      <div class="pay-view-meta">
+        <div class="pay-meta-row"><span>User</span><b>${p.user||"-"}</b></div>
+        <div class="pay-meta-row"><span>Telegram ID</span><b>${p.uid||"-"}</b></div>
+        <div class="pay-meta-row"><span>Package</span><b>${p.pkg||"-"}</b></div>
+        <div class="pay-meta-row"><span>USDT</span><b>${p.usdt||0}</b></div>
+        <div class="pay-meta-row"><span>Points</span><b>${p.points||0}</b></div>
+        <div class="pay-meta-row"><span>Status</span><b class="badge ${p.status==="approved"?"green":p.status==="rejected"?"red":"yellow"}">${p.status||"pending"}</b></div>
+        <div class="pay-meta-row"><span>Date / Time</span><b>${p.date||p.time||"-"}</b></div>
+        <div class="pay-meta-row"><span>Wallet / Network</span><b>${p.wallet||p.network||"-"}</b></div>
+        <div class="pay-meta-row"><span>TxID</span><b style="word-break:break-all;font-size:12px">${p.txid||"-"}</b></div>
+      </div>
+      <div class="pay-view-proof">
+        <div class="pay-proof-label">Screenshot / Proof</div>
+        ${isUrl?`<div class="pay-proof-frame"><img src="${img}" alt="payment proof" onclick="window.open(this.src,'_blank')" title="Click to open full size"></div>
+        <div class="muted smalltext" style="margin-top:8px">Tap image to open full size · scroll if tall</div>`:`<div class="pay-proof-empty">${p.proof||"No image attached"}</div>`}
       </div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-      ${(!p.status||p.status==="pending")?`<button class="btn primary" onclick="closeModal();payAction(${i},'approved')">Accept & Credit Points</button>
-      <button class="btn danger" onclick="closeModal();payAction(${i},'rejected')">Reject</button>`:""}
+    <div class="pay-view-actions">
+      ${(!p.status||p.status==="pending")?`<button class="btn primary" onclick="closeModal();payAction(${i},'approved')">✓ Accept & Credit Points</button>
+      <button class="btn danger" onclick="closeModal();payAction(${i},'rejected')">✕ Reject</button>`:""}
       <button class="btn" onclick="closeModal()">Close</button>
     </div>`);
 }
+
 function payAction(i,st){
   const list=JSON.parse(localStorage.getItem("cinehub4_payments")||"[]");
   if(!list[i])return;
@@ -287,7 +381,7 @@ function payAction(i,st){
     }catch(e){}
   }
   render();toast(st==="approved"?"Accepted · points credited":"Rejected");
-}
+    }
 function payDelete(i){
   const list=JSON.parse(localStorage.getItem("cinehub4_payments")||"[]");
   list.splice(i,1);
@@ -323,9 +417,12 @@ function settings(){
   <div class="card"><h3>Brand & Links</h3>
     <div class="form-grid">
       <div class="field"><label>App Name</label><input id="s_appName" value="${s.appName||""}"></div>
-      <div class="field"><label>Bot Username</label><input id="s_botUser" value="${s.botUsername||""}"></div>
-      <div class="field"><label>Bot Link</label><input id="s_botLink" value="${s.telegramBotLink||""}"></div>
+      <div class="field"><label>Bot Username</label><input id="s_botUser" value="${s.botUsername||""}" placeholder="@Cinehub4bot"></div>
+      <div class="field"><label>Bot Link</label><input id="s_botLink" value="${s.telegramBotLink||""}" placeholder="https://t.me/Cinehub4bot"></div>
       <div class="field"><label>Channel Link</label><input id="s_channel" value="${s.telegramChannelLink||""}"></div>
+      <div class="field"><label>Mini App short name</label><input id="s_miniName" value="${s.miniAppName||"Hub4"}" placeholder="Hub4"></div>
+      <div class="field"><label>Mini App full link</label><input id="s_miniLink" value="${s.miniAppLink||"https://t.me/Cinehub4bot/Hub4"}" placeholder="https://t.me/Cinehub4bot/Hub4"></div>
+      <div class="field" style="grid-column:1/-1"><label class="muted smalltext">⚠️ BotFather short name = <b>Hub4</b> → share link will be <code>t.me/Cinehub4bot/Hub4?startapp=movie_ID</code></label></div>
       <div class="field" style="grid-column:1/-1"><label>How to Watch / Unlock message</label><textarea id="s_howWatch" rows="2">${s.howToWatchText||""}</textarea></div>
       <div class="field"><label>How to Earn Video URL</label><input id="s_howEarn" value="${s.howToEarnVideo||""}"></div>
       <div class="field"><label>How to Buy Video URL</label><input id="s_howBuy" value="${s.howToBuyVideo||""}"></div>
@@ -408,6 +505,8 @@ function saveAllSettings(){
   if(g("s_botUser")) s.botUsername=g("s_botUser").value;
   if(g("s_botLink")) s.telegramBotLink=g("s_botLink").value;
   if(g("s_channel")) s.telegramChannelLink=g("s_channel").value;
+  if(g("s_miniName")) s.miniAppName=(g("s_miniName").value||"Hub4").trim().replace(/^\/+|\/+$/g,"");
+  if(g("s_miniLink")) s.miniAppLink=g("s_miniLink").value.trim();
   if(g("s_howWatch")) s.howToWatchText=g("s_howWatch").value;
   if(g("s_howEarn")) s.howToEarnVideo=g("s_howEarn").value;
   if(g("s_howBuy")) s.howToBuyVideo=g("s_howBuy").value;
@@ -451,7 +550,7 @@ function saveAllSettings(){
     localStorage.setItem("cinehub4_settings",JSON.stringify(shared));
   }catch(e){}
   toast("All settings saved");
-}
+  }
 
 function saveBrand(){A.settings.appName=$('#appName').value.trim()||'Cine Hub4';A.settings.botUsername=$('#botUser').value.trim();save();toast('Brand saved. Refresh user app to see it')}
 function openMovie(id=null){const m=id?A.movies.find(x=>x.id===id):null;showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="mTitle" value="${m?.title||''}"></div><div class="field"><label>Year</label><input id="mYear" type="number" value="${m?.year||2026}"></div><div class="field"><label>Category</label><select id="mCat">${A.settings.categories.filter(x=>x!=='All').map(c=>`<option ${m?.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Rating</label><input id="mRating" type="number" step=".1" value="${m?.rating||8}"></div><div class="field"><label>Poster URL</label><input id="mPoster" value="${m?.poster||''}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="s1" value="${m?.server1||''}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="s2" value="${m?.server2||''}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="s3" value="${m?.server3||''}" placeholder="https://..."></div><div class="field"><label>Adult?</label><select id="mAdult"><option value="0">No</option><option value="1" ${m?.adult?'selected':''}>Yes</option></select></div></div><button class="btn primary" style="margin-top:15px" onclick="saveMovie(${id||0})">Save Movie</button>`)}
@@ -528,12 +627,16 @@ const UI_TEXT_KEYS=[
   "Yes, Enter","No, Watch Movie","✓ I confirm that I am 18 or older",
   "Verified User","OVERVIEW","My Points","Total Referrals","REFERRAL SYSTEM",
   "Per Referral Reward","Join Bonus","Referral Code","Your Referral Link","Copy Link","Share Link",
-  "Daily Tasks","Buy Points","Watch Ad & Earn","Watch Ad Now","Start",
+  "Daily Tasks","Buy Points","Watch Ad & Earn","Watch Ad Now","Start","Done",
+  "More Point Earning","Watch Ads & Earn Points",
+  "Complete ads and premium earning tasks to unlock exclusive videos instantly.",
+  "Instant Reward","Unlock Videos","Daily task","completed today",
   "EARN & UNLOCK","Current Balance","Points Per Ad","Ads Watched","Daily Limit",
-  "EARNING SETTINGS","Reward Per Ad","Maximum Daily Ads","Remaining Today","MORE EARNING BUTTONS",
+  "EARNING SETTINGS","Reward Per Ad","Maximum Daily Ads","Remaining Today","MORE EARNING BUTTONS","Reward",
   "UNLOCK NOTICE","MOVIE CONTENT","Unlock this content using ads or points.",
-  "Need","Remaining","Unlock Video","Use My Points","Share","More Movies",
-  "Do you want to leave?","Stay here","Leave","Points","Back"
+  "Need","Remaining","Unlock Video","Use My Points","Share","More Movies","More Watching",
+  "Do you want to leave?","Stay here","Leave","Leaving will close the mini app.","Points","Back",
+  "Keep this page open until countdown ends.","Opening Ad","Please wait while ad is loading."
 ];
 function uiTextRowsHtml(){
   const s=A.settings;
@@ -573,4 +676,4 @@ function collectUiTexts(){
     if(bv&&bv.trim()) bn[key]=bv.trim();
   });
   A.settings.uiTexts={en,bn};
-    }
+}
