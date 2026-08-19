@@ -56,13 +56,13 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
 
 /* Sticky pills */
 /* Sticky pills — jhak-jhamak glow + shine like video */
-.hero-pills-sticky{position:sticky;top:0;z-index:20;background:var(--bg,#07090f);padding:2px 0 12px}
-.hero-pills{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hero-pills-sticky{position:sticky;top:0;z-index:20;background:transparent;padding:2px 0 12px;pointer-events:none}
+.hero-pills{display:grid;grid-template-columns:1fr 1fr;gap:10px;pointer-events:auto}
 .hero-pill{border:0;border-radius:16px;padding:14px 12px;color:#fff;text-align:left;position:relative;overflow:hidden;min-height:58px;cursor:pointer;transition:box-shadow .35s ease,filter .25s ease,transform .2s ease}
 .hero-pill .t{display:block;font-size:14px;font-weight:900}
 .hero-pill .s{display:block;font-size:10px;opacity:.85;margin-top:2px;font-weight:700;letter-spacing:.4px}
-.hero-pill.blue{background:linear-gradient(135deg,#3b82f6,#1d4ed8);box-shadow:0 0 18px #3b82f644,0 0 4px #60a5fa33 inset}
-.hero-pill.orange{background:linear-gradient(135deg,#fb923c,#ea580c);box-shadow:0 0 18px #fb923c44,0 0 4px #fdba7433 inset}
+.hero-pill.blue{background:linear-gradient(135deg,rgba(59,130,246,.88),rgba(29,78,216,.88));box-shadow:0 0 18px #3b82f644,0 0 4px #60a5fa33 inset;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.hero-pill.orange{background:linear-gradient(135deg,rgba(251,146,60,.88),rgba(234,88,12,.88));box-shadow:0 0 18px #fb923c44,0 0 4px #fdba7433 inset;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 /* Active = strong light comes out */
 .hero-pill.active{filter:brightness(1.18);transform:scale(1.02)}
 .hero-pill.blue.active{box-shadow:0 0 32px #3b82f6aa,0 0 60px #2563eb66,0 0 8px #93c5fd55 inset}

@@ -181,7 +181,7 @@ function wireAdminNav(){
 }
 wireAdminNav();
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSidebar()});
-function dashboard(){return `<div class="grid stats"><div class="card stat"><span class="label">Total Users</span><div class="num">${money(A.users)}</div><span class="up">↑ 8.4%</span><span class="ico">♙</span></div><div class="card stat"><span class="label">Movies</span><div class="num">${A.movies.length}</div><span class="up">Live library</span><span class="ico">🎬</span></div><div class="card stat"><span class="label">Points Issued</span><div class="num">${money(A.points)}</div><span class="up">Economy active</span><span class="ico">◈</span></div><div class="card stat"><span class="label">Pending Payments</span><div class="num">3</div><span class="up">Needs review</span><span class="ico">৳</span></div></div><div class="grid section-grid"><div class="card"><h3>Platform Activity</h3><div class="muted smalltext">Clicks, downloads and ad rewards</div><div class="chart">${[38,55,48,72,66,91,76].map(x=>`<div class="bar" style="height:${x}%"></div>`).join('')}</div></div><div class="card"><h3>Quick Controls</h3><div class="quick"><button onclick="openMovie()"><b>＋ Add Movie</b>Publish title</button><button onclick="setSection('ads')"><b>◉ Ad IDs</b>Manage every ad block</button><button onclick="setSection('content')"><b>🔗 Links & Video</b>Telegram + How to Earn</button><button onclick="setSection('categories')"><b>▦ Categories</b>Add / rename / delete</button></div></div></div><div class="card" style="margin-top:14px"><h3>System Status</h3><div class="switch"><span>Movie Library</span><span class="badge green">ONLINE</span></div><div class="switch"><span>Points & 15-hour unlock</span><span class="badge green">ACTIVE</span></div><div class="switch"><span>Adult Library</span><span class="badge ${A.adultEnabled?'green':'red'}">${A.adultEnabled?'ENABLED':'DISABLED'}</span></div></div>`}
+function dashboard(){return `<div class="grid stats"><div class="card stat"><span class="label">Total Users</span><div class="num">${money(A.users)}</div><span class="up">↑ 8.4%</span><span class="ico">♙</span></div><div class="card stat"><span class="label">Movies</span><div class="num">${A.movies.length}</div><span class="up">Live library</span><span class="ico">🎬</span></div><div class="card stat"><span class="label">Points Issued</span><div class="num">${money(A.points)}</div><span class="up">Economy active</span><span class="ico">◈</span></div><div class="card stat"><span class="label">Pending Payments</span><div class="num">3</div><span class="up">Needs review</span><span class="ico">৳</span></div></div><div class="grid section-grid"><div class="card"><h3>Platform Activity</h3><div class="muted smalltext">Clicks, downloads and ad rewards</div><div class="chart">${[38,55,48,72,66,91,76].map(x=>`<div class="bar" style="height:${x}%"></div>`).join('')}</div></div><div class="card"><h3>Quick Controls</h3><div class="quick"><button onclick="openMovie()"><b>＋ Add Movie</b>Publish title</button><button onclick="setSection('ads')"><b>◉ Ad IDs</b>Manage every ad block</button><button onclick="setSection('content')"><b>🔗 Links & Video</b>Telegram + How to Watch</button><button onclick="setSection('categories')"><b>▦ Categories</b>Add / rename / delete</button></div></div></div><div class="card" style="margin-top:14px"><h3>System Status</h3><div class="switch"><span>Movie Library</span><span class="badge green">ONLINE</span></div><div class="switch"><span>Points & 15-hour unlock</span><span class="badge green">ACTIVE</span></div><div class="switch"><span>Adult Library</span><span class="badge ${A.adultEnabled?'green':'red'}">${A.adultEnabled?'ENABLED':'DISABLED'}</span></div></div>`}
 function movies(){return `<div class="toolbar"><div class="left"><button class="btn primary" onclick="openMovie()">＋ Add Movie</button><button class="btn" onclick="openTmdbImport()">Import TMDB</button></div><input class="search" id="movieSearch" placeholder="Search movie..." oninput="filterMovies()"></div><div class="card table-wrap"><table class="table"><thead><tr><th>Movie</th><th>Category</th><th>Rating</th><th>Clicks</th><th>Downloads</th><th>Status</th><th>Action</th></tr></thead><tbody id="movieBody">${movieRows(A.movies)}</tbody></table></div>`}
 function movieRows(ms){return ms.map(m=>`<tr><td><div class="movie-row"><div class="thumb">${(m.title||'?').slice(0,1)}</div><div><b>${m.title}</b><div class="muted">${m.year}</div></div></div></td><td>${m.category||m.type||'Movie'}</td><td>⭐ ${m.rating}</td><td>${money(m.clicks||0)}</td><td>${money(m.downloads||0)}</td><td><span class="badge ${m.status==='Published'?'green':''}">${m.status}</span></td><td class="action-cell"><button type="button" class="btn dots-btn" data-mid="${m.id}" aria-label="Actions">⋮</button><div class="dots-menu hidden" id="dm-${m.id}"><button type="button" onclick="editMovie(${JSON.stringify(String(m.id))});closeAllDots()">Edit</button><button type="button" class="danger" onclick="deleteMovie(${JSON.stringify(String(m.id))});closeAllDots()">Delete</button></div></td></tr>`).join('')}
 function closeAllDots(){document.querySelectorAll('.dots-menu').forEach(el=>el.classList.add('hidden'))}
@@ -468,9 +468,43 @@ function deleteCategoryAdult(i){if(A.settings.adultCategories[i]==='All'){toast(
 function saveAdultTexts(){A.settings.adultLibraryBadge=$('#aLibBadge').value.trim();A.settings.adultLibraryTitle=$('#aLibTitle').value.trim();A.settings.adultLibraryDesc=$('#aLibDesc').value.trim();A.settings.adultTickerText=$('#aTicker').value.trim();A.settings.adultNewLabel=$('#aNewLabel').value.trim();A.settings.adultNewSub=$('#aNewSub').value.trim();A.settings.adultTrendingLabel=$('#aTrendLabel').value.trim();A.settings.adultTrendingSub=$('#aTrendSub').value.trim();save();toast('Adult page text saved')}
 function adultMovieRows(ms){return ms.length?ms.map(m=>`<tr><td><div class="movie-row"><div class="thumb">${(m.title||'?').slice(0,1)}</div><div><b>${m.title}</b><div class="muted">${m.year}</div></div></div></td><td>${m.category||'Adult'}</td><td>⭐ ${m.rating}</td><td>${money(m.clicks||0)}</td><td>${money(m.downloads||0)}</td><td><span class="badge ${m.status==='Published'?'green':''}">${m.status}</span></td><td class="action-cell"><button type="button" class="btn dots-btn" data-mid="${m.id}" aria-label="Actions">⋮</button><div class="dots-menu hidden" id="dm-${m.id}"><button type="button" onclick="editAdultMovie(${JSON.stringify(String(m.id))});closeAllDots()">Edit</button><button type="button" class="danger" onclick="deleteMovie(${JSON.stringify(String(m.id))});closeAllDots()">Delete</button></div></td></tr>`).join(''):`<tr><td colspan="7" class="muted">No adult movies yet. Use “＋ Add Adult Movie” above.</td></tr>`}
 function requests(){return `<div class="card table-wrap"><table class="table"><thead><tr><th>User</th><th>Requested Title</th><th>Date</th><th>Priority</th><th>Status</th><th>Action</th></tr></thead><tbody>${[['@demo_user_1','Avengers: Secret Wars','Today','High','Pending'],['@moviefan','Interstellar','Yesterday','Normal','Pending'],['@sifat_demo','Dune: Part Three','Yesterday','Normal','Searching']].map(r=>`<tr><td>${r[0]}</td><td><b>${r[1]}</b></td><td>${r[2]}</td><td>${r[3]}</td><td><span class="badge">${r[4]}</span></td><td><button class="btn" onclick="toast('Request manager opened')">Manage</button></td></tr>`).join('')}</tbody></table></div>`}
-function contentPage(){return `<div class="grid section-grid"><div class="card"><h3>Telegram & Support Links</h3><div class="field"><label>Bot / Telegram Link</label><input id="botLink" value="${A.settings.telegramBotLink||''}" placeholder="https://t.me/Cinehub4bot"></div><div class="field" style="margin-top:12px"><label>Movie Channel Link</label><input id="channelLink" value="${A.settings.telegramChannelLink||''}" placeholder="https://t.me/yourchannel"></div><button class="btn primary" style="margin-top:14px" onclick="saveLinks()">Save Links</button></div><div class="card"><h3>How To Earn Video</h3><div class="field"><label>Video URL (YouTube/Telegram/MP4)</label><input id="howVideo" value="${A.settings.howToWatchVideo||''}" placeholder="https://...video..."></div><button class="btn primary" style="margin-top:14px" onclick="saveVideo()">Save Video</button><div class="muted smalltext" style="margin-top:10px">User Settings → How To Earn will open this URL.</div></div></div><div class="card" style="margin-top:14px"><h3>App Content Shortcuts</h3><div class="quick"><button onclick="setSection('categories')"><b>▦ Categories</b>Manage all movie categories</button><button onclick="setSection('ads')"><b>◉ Ad IDs</b>Change or add every ad block</button><button onclick="setSection('adult')"><b>18+ Adult</b>Separate library and ad</button><button onclick="setSection('settings')"><b>⚙ Settings</b>Brand, language and controls</button></div></div>`}
-function saveLinks(){A.settings.telegramBotLink=$('#botLink').value.trim();A.settings.telegramChannelLink=$('#channelLink').value.trim();save();toast('Telegram links saved')}
-function saveVideo(){A.settings.howToWatchVideo=$('#howVideo').value.trim();save();toast('How To Earn video saved')}
+function contentPage(){const s=A.settings;return `<div class="toolbar"><div><h2 style="margin:0;font-size:18px">Links & Videos</h2><p class="muted smalltext" style="margin:4px 0 0">Each link is independent — change only what you need</p></div></div>
+<div class="grid section-grid">
+  <div class="card"><h3>▶ How to Watch (Movies)</h3>
+    <div class="field"><label>Button label</label><input id="lnk_howLabel" value="${s.howToWatchLabel||'▶ How to Watch'}"></div>
+    <div class="field" style="margin-top:10px"><label>Link / Video URL</label><input id="lnk_howWatch" value="${s.howToWatchVideo||''}" placeholder="https://..."></div>
+  </div>
+  <div class="card"><h3>▶ How to Watch (Adult)</h3>
+    <div class="field"><label>Button label</label><input id="lnk_adultHowLabel" value="${s.adultHowToWatchLabel||'▶ How to Watch'}"></div>
+    <div class="field" style="margin-top:10px"><label>Link / Video URL</label><input id="lnk_adultHowWatch" value="${s.adultHowToWatchVideo||''}" placeholder="https://..."></div>
+  </div>
+  <div class="card"><h3>🛒 How to Buy</h3>
+    <div class="field"><label>Link / Video URL</label><input id="lnk_howBuy" value="${s.howToBuyVideo||''}" placeholder="https://..."></div>
+  </div>
+  <div class="card"><h3>📘 Tutorial (Profile)</h3>
+    <div class="field"><label>Watch Tutorial Video URL</label><input id="lnk_tutorial" value="${s.watchTutorialVideo||''}" placeholder="https://..."></div>
+  </div>
+  <div class="card"><h3>📱 Telegram Links</h3>
+    <div class="field"><label>Bot link (menu / Telegram button)</label><input id="lnk_bot" value="${s.telegramBotLink||''}" placeholder="https://t.me/YourBot"></div>
+    <div class="field" style="margin-top:10px"><label>Channel link</label><input id="lnk_channel" value="${s.telegramChannelLink||''}" placeholder="https://t.me/channel"></div>
+    <div class="field" style="margin-top:10px"><label>Mini App link</label><input id="lnk_mini" value="${s.miniAppLink||''}" placeholder="https://t.me/YourBot/Hub4"></div>
+  </div>
+</div>
+<button class="btn primary" style="margin-top:14px" onclick="saveAllLinks()">Save All Links</button>`}
+function saveAllLinks(){
+  const g=id=>document.getElementById(id);
+  if(g('lnk_howLabel')) A.settings.howToWatchLabel=g('lnk_howLabel').value.trim();
+  if(g('lnk_howWatch')) A.settings.howToWatchVideo=g('lnk_howWatch').value.trim();
+  if(g('lnk_adultHowLabel')) A.settings.adultHowToWatchLabel=g('lnk_adultHowLabel').value.trim();
+  if(g('lnk_adultHowWatch')) A.settings.adultHowToWatchVideo=g('lnk_adultHowWatch').value.trim();
+  if(g('lnk_howBuy')) A.settings.howToBuyVideo=g('lnk_howBuy').value.trim();
+  if(g('lnk_tutorial')) A.settings.watchTutorialVideo=g('lnk_tutorial').value.trim();
+  if(g('lnk_bot')) A.settings.telegramBotLink=g('lnk_bot').value.trim();
+  if(g('lnk_channel')) A.settings.telegramChannelLink=g('lnk_channel').value.trim();
+  if(g('lnk_mini')) A.settings.miniAppLink=g('lnk_mini').value.trim();
+  save(); toast('All links saved to Firebase');
+}
+function saveVideo(){saveAllLinks()}
 function broadcast(){return `<div class="card"><h3>Broadcast Center</h3><div class="form-grid"><div class="field"><label>Audience</label><select><option>All users</option><option>Active users</option><option>Users with points</option></select></div><div class="field"><label>Type</label><select><option>Text</option><option>Movie announcement</option></select></div></div><div class="field" style="margin-top:12px"><label>Message</label><textarea placeholder="Write your broadcast..."></textarea></div><button class="btn primary" style="margin-top:12px" onclick="toast('Broadcast queued in demo')">Send Broadcast</button></div>`}
 function settings(){
   const s=A.settings;
@@ -624,7 +658,53 @@ function saveAllSettings(){
 
 function saveBrand(){A.settings.appName=$('#appName').value.trim()||'Cine Hub4';A.settings.botUsername=$('#botUser').value.trim();save();toast('Brand saved. Refresh user app to see it')}
 function openMovie(id=null){const m=id!=null&&id!==0&&id!==''?A.movies.find(x=>String(x.id)===String(id)):null;const idArg=m?JSON.stringify(String(m.id)):'null';showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="mTitle" value="${(m?.title||'').replace(/"/g,'&quot;')}"></div><div class="field"><label>Year</label><input id="mYear" type="number" value="${m?.year||2026}"></div><div class="field"><label>Category</label><select id="mCat">${A.settings.categories.filter(x=>x!=='All').map(c=>`<option ${m?.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Rating</label><input id="mRating" type="number" step=".1" value="${m?.rating||8}"></div><div class="field"><label>Poster URL</label><input id="mPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="s1" value="${(m?.server1||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="s2" value="${(m?.server2||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="s3" value="${(m?.server3||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Adult?</label><select id="mAdult"><option value="0">No</option><option value="1" ${m?.adult?'selected':''}>Yes</option></select></div></div><button class="btn primary" style="margin-top:15px" onclick="saveMovie(${idArg})">Save Movie</button>`)}
-function saveMovie(id){id=(id===0||id===null||id===undefined||id==='')?null:id;const old=id!=null?A.movies.find(m=>String(m.id)===String(id)):null;const isAdult=$('#mAdult').value==='1';let cat=$('#mCat').value;if(isAdult){const ac=(A.settings.adultCategories||[]).filter(x=>x!=='All');if(ac.length&&!ac.includes(cat))cat=ac[0];}const x={id:id!=null?String(id):("manual_"+Date.now()),title:$('#mTitle').value||'Untitled Movie',type:isAdult?'Adult':'Movie',year:+$('#mYear').value||2026,rating:+$('#mRating').value||8,category:cat,poster:$('#mPoster').value.trim(),server1:$('#s1').value.trim(),server2:$('#s2').value.trim(),server3:$('#s3').value.trim(),server1_link:$('#s1').value.trim(),server2_link:$('#s2').value.trim(),server3_link:$('#s3').value.trim(),adult:isAdult,clicks:old?.clicks||0,downloads:old?.downloads||0,status:'Published',manual_movie:true,added_time:old?.added_time||Date.now()};toast('Saving...');if(window.CineHubFB){window.CineHubFB.saveMovie(x).then(function(saved){if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);else A.movies.unshift(saved);save(true);closeModal();render();toast(isAdult?'Saved as Adult (only in Adult tab)':'Movie saved')}).catch(function(e){console.error(e);toast('Save failed: '+(e&&e.message?e.message:e))})}else{if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?x:m);else A.movies.unshift(x);save();closeModal();render();toast(isAdult?'Saved as Adult (only in Adult tab)':'Movie saved')}}
+function saveMovie(id){
+  id=(id===0||id===null||id===undefined||id==='')?null:id;
+  const old=id!=null?A.movies.find(m=>String(m.id)===String(id)):null;
+  const isAdult=$('#mAdult').value==='1';
+  let cat=$('#mCat').value;
+  if(isAdult){
+    const ac=(A.settings.adultCategories||[]).filter(x=>x!=='All');
+    if(ac.length&&!ac.includes(cat))cat=ac[0];
+  }
+  const s1=($('#s1')||{}).value?$('#s1').value.trim():'';
+  const s2=($('#s2')||{}).value?$('#s2').value.trim():'';
+  const s3=($('#s3')||{}).value?$('#s3').value.trim():'';
+  const x={
+    id:id!=null?String(id):("m_"+Date.now()),
+    title:($('#mTitle').value||'Untitled Movie').trim(),
+    type:isAdult?'Adult':'Movie',
+    year:+$('#mYear').value||new Date().getFullYear(),
+    rating:+$('#mRating').value||8,
+    category:cat||'All Movies',
+    poster:($('#mPoster').value||'').trim(),
+    server1:s1, server2:s2, server3:s3,
+    server1_link:s1, server2_link:s2, server3_link:s3,
+    s1:s1, s2:s2, s3:s3,
+    s1on:true, s2on:true, s3on:true,
+    adult:isAdult,
+    clicks:old?.clicks||0, downloads:old?.downloads||0, views:old?.views||0,
+    status:'Published', manual_movie:true, source:'manual',
+    added_time:old?.added_time||Date.now()
+  };
+  toast('Saving...');
+  if(!window.CineHubFB){
+    if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?x:m);else A.movies.unshift(x);
+    save(true);closeModal();render();toast(isAdult?'Saved as Adult':'Movie saved (local)');
+    return;
+  }
+  const tmo=setTimeout(function(){toast('Still saving… check network / Deploy');},8000);
+  window.CineHubFB.saveMovie(x).then(function(saved){
+    clearTimeout(tmo);
+    if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);else A.movies.unshift(saved);
+    save(true);closeModal();render();
+    toast(isAdult?'Saved as Adult (Adult tab)':'Movie saved to Firebase');
+  }).catch(function(e){
+    clearTimeout(tmo);
+    console.error(e);
+    toast('Save failed: '+(e&&e.message?e.message:String(e)));
+  });
+}
 function editMovie(id){openMovie(id)}function deleteMovie(id){if(confirm('Delete this movie?')){if(window.CineHubFB){window.CineHubFB.deleteMovie(id).then(function(){A.movies=A.movies.filter(m=>String(m.id)!==String(id));save(true);render();toast('Movie deleted')}).catch(function(e){console.error(e);toast('Delete failed: '+(e&&e.message?e.message:e))})}else{A.movies=A.movies.filter(m=>m.id!==id);save();render();toast('Movie deleted')}}}
 function openCategory(index=null){const old=index===null?'':A.settings.categories[index];showModal(`<div class="modal-head"><h2>${index===null?'Add':'Edit'} Category</h2><button class="btn" onclick="closeModal()">×</button></div><div class="field"><label>Category name</label><input id="catName" value="${old}"></div><button class="btn primary" style="margin-top:15px" onclick="saveCategory(${index===null?-1:index})">Save Category</button>`)}
 function editCategory(i){openCategory(i)}function saveCategory(i){const n=$('#catName').value.trim();if(!n)return;if(i<0)A.settings.categories.push(n);else A.settings.categories[i]=n;save();closeModal();render();toast('Category saved')}

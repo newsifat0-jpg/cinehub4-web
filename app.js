@@ -383,6 +383,10 @@ function tickerAdult(){
 function listForAdult(){let list=movies.filter(m=>m.adult);if(state.adultCategory&&state.adultCategory!=="All"){list=list.filter(m=>(m.category||"").toLowerCase()===state.adultCategory.toLowerCase())}if(state.adultMode==="trending")list=list.slice().sort((a,b)=>(b.views||b.clicks||0)-(a.views||a.clicks||0));else list=list.slice().sort((a,b)=>b.id-a.id);return list}
 function series(){const list=movies.filter(m=>!m.adult&&(m.category||"").toLowerCase().includes("series"));return menuOnlyHeader(t("Series"))+`<div class="section-title"><b>${t("Series")}</b><span>${t("Complete series")}</span></div>${list.map((m,i)=>card(m,i)).join("")||`<div class="panel">${t("Series not added yet.")}</div>`}`}
 function adult(){
+  // Adult library fully off from admin → hide everything on user side
+  if(cfg.adultEnabled===false || cfg.adultLibraryEnabled===false){
+    return `<div class="empty" style="padding:40px 16px;text-align:center">${t("Adult library is currently unavailable.")}</div>`;
+  }
   if(!state.adultOK){
     return `<div class="gate-wrap">
       <div class="gate-card">
@@ -491,17 +495,37 @@ function getTasks(){
     {name:"Daily login",reward:2,limit:1,type:"login",resetHours:24,permanent:false}
   ];
 }
-/** Whether a task (by index) is currently completed/locked, and the storage key that tracks it.
- *  Permanent tasks stay done forever. Others reset automatically after tk.resetHours (default 24). */
+/** Task progress: supports limit > 1. Shows Done only after required completions.
+ *  Permanent tasks stay done forever. Others reset after tk.resetHours (default 24). */
 function taskResetInfo(i,tk){
   const key="cinehub4_task_"+i+"_done_at";
+  const countKey="cinehub4_task_"+i+"_count";
+  const limit=Math.max(1, Number(tk&&tk.limit)||1);
+  let count=Number(localStorage.getItem(countKey)||0);
   const raw=localStorage.getItem(key);
-  if(!raw) return {done:false,key};
-  if(tk&&tk.permanent) return {done:true,key};
-  const hours=Number(tk&&tk.resetHours);
-  const h=(isFinite(hours)&&hours>0)?hours:24;
-  const elapsedHours=(Date.now()-Number(raw))/3600000;
-  return {done:elapsedHours<h,key};
+  // Reset window expired → clear count
+  if(raw && !(tk&&tk.permanent)){
+    const hours=Number(tk&&tk.resetHours);
+    const h=(isFinite(hours)&&hours>0)?hours:24;
+    const elapsedHours=(Date.now()-Number(raw))/3600000;
+    if(elapsedHours>=h){
+      localStorage.removeItem(key);
+      localStorage.removeItem(countKey);
+      count=0;
+    }
+  }
+  if(tk&&tk.permanent && count>=limit) return {done:true,key,countKey,count,limit};
+  const done = count >= limit;
+  return {done:done,key,countKey,count,limit};
+}
+function markTaskProgress(i,tk){
+  const st=taskResetInfo(i,tk);
+  const next=st.count+1;
+  localStorage.setItem(st.countKey,String(next));
+  if(next>=st.limit){
+    localStorage.setItem(st.key,String(Date.now()));
+  }
+  return next>=st.limit;
 }
 function tasks(){
   loadSharedSettings();
@@ -540,7 +564,8 @@ function tasks(){
   <div class="pf-section">🎁 ${t("MORE EARNING BUTTONS")}</div>
   ${list.map((tk,i)=>{
     const st=taskResetInfo(i,tk);
-    const statusLabel=st.done?(tk.permanent?t("Completed"):t("completed today")):(tk.permanent?t("One-time task"):t("Daily task"));
+    const prog=st.limit>1?(` · ${st.count}/${st.limit}`):"";
+    const statusLabel=st.done?(tk.permanent?t("Completed"):t("Done")):(tk.permanent?t("One-time task"):t("Daily task"))+prog;
     return `<div class="task-row ${st.done?"done":""}">
       <div class="task-ico">🎁</div>
       <div class="task-meta"><b>${tk.name}</b><span>${t("Reward")}: ${tk.reward} pt · ${statusLabel}</span></div>
@@ -551,40 +576,31 @@ function tasks(){
 function runTask(i){
   const t=getTasks()[i];if(!t)return;
   const st=taskResetInfo(i,t);
-  if(t.limit===1 && st.done){toast(t.permanent?"Already completed":"Already completed today");return}
+  if(st.done){toast(t.permanent?"Already completed":"Done");return}
+  const credit=function(){
+    state.points+=Number(t.reward||0);save();
+    const finished=markTaskProgress(i,t);
+    toast("+"+(t.reward||0)+" points"+(finished?" · Done":" · "+(st.count+1)+"/"+st.limit));
+    render(true);
+  };
   if(t.type==="ad"){watchAd('task');return}
   if(t.type==="link"){
     openLink(t.link||cfg.telegramChannelLink||cfg.telegramBotLink);
-    // credit after opening (demo)
-    state.points+=Number(t.reward||0);save();
-    localStorage.setItem(st.key,String(Date.now()));
-    toast("+"+(t.reward||0)+" points");
-    render(true);
+    credit();
     return;
   }
   if(t.type==="share"){shareRefLink();return}
   if(t.type==="countdown"||t.type==="oneclick"){
     const secs=Number(t.seconds||t.secs||5);
-    showCountdownTask(t.name||"one click",secs,function(){
-      state.points+=Number(t.reward||1);save();
-      localStorage.setItem(st.key,String(Date.now()));
-      toast("+"+(t.reward||1)+" points added");
-      render(true);
-    });
+    showCountdownTask(t.name||"one click",secs,credit);
     return;
   }
   if(t.type==="login"){
-    const key="cinehub4_login_"+new Date().toDateString();
-    if(localStorage.getItem(key)){toast("Already claimed today");return}
-    state.points+=Number(t.reward||2);
-    localStorage.setItem("cinehub4_points",String(state.points));
-    localStorage.setItem(key,"1");
-    toast("+"+(t.reward||2)+" points");
-    render(true);
+    credit();
   }
 }
 
-function settings(){return pageBackBar("Settings")+`<div class="section-title"><b>⚙ Settings</b></div><div class="panel"><div class="task"><span>Language</span><select class="pill" style="appearance:auto" onchange="CINEHUB4_LANG.set(this.value)"><option value="en" ${CINEHUB4_LANG.get()==="en"?"selected":""}>English</option><option value="bn" ${CINEHUB4_LANG.get()==="bn"?"selected":""}>বাংলা</option></select></div><div class="task"><span>Telegram</span><button class="pill" onclick="openLink(cfg.telegramBotLink)">Open</button></div><div class="task"><span>How To Earn</span><button class="pill" onclick="howToEarn()">Watch Video</button></div></div>`}
+function settings(){return pageBackBar("Settings")+`<div class="section-title"><b>⚙ Settings</b></div><div class="panel"><div class="task"><span>Language</span><select class="pill" style="appearance:auto" onchange="CINEHUB4_LANG.set(this.value)"><option value="en" ${CINEHUB4_LANG.get()==="en"?"selected":""}>English</option><option value="bn" ${CINEHUB4_LANG.get()==="bn"?"selected":""}>বাংলা</option></select></div><div class="task"><span>Telegram</span><button class="pill" onclick="openLink(cfg.telegramBotLink)">Open</button></div><div class="task"><span>How to Watch</span><button class="pill" onclick="howToEarn()">Open</button></div></div>`}
 
 function getPackages(){
   const list = (cfg.packages&&cfg.packages.length)?cfg.packages:[
@@ -955,10 +971,11 @@ function openServer(movieId,serverNo){
   const m=movies.find(x=>x.id===movieId||String(x.id)===String(movieId));
   if(!m){toast("Movie not found");return}
   const title=(m.title||"").split("|")[0].trim()||"Movie";
-  let url="";
-  if(serverNo===1) url=m.server1||m.server1_link||"";
-  else if(serverNo===2) url=m.server2||m.server2_link||"";
-  else if(serverNo===3) url=m.server3||m.server3_link||"";
+  let url="", on=true;
+  if(serverNo===1){ url=m.server1||m.server1_link||m.s1||""; on=m.server1_status!==false&&m.s1on!==false; }
+  else if(serverNo===2){ url=m.server2||m.server2_link||m.s2||""; on=m.server2_status!==false&&m.s2on!==false; }
+  else if(serverNo===3){ url=m.server3||m.server3_link||m.s3||""; on=m.server3_status!==false&&m.s3on!==false; }
+  if(!on){toast(t("Server")+" "+serverNo+" offline");return}
   if(!url){toast(t("Server")+" "+serverNo+" unavailable");return}
   // track click
   try{ if(window.CineHubFB) window.CineHubFB.incClicks(m.id); }catch(e){}
