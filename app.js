@@ -151,7 +151,8 @@ function loadUserFromFB(){
 }
 setTimeout(function(){loadMoviesFromFB();loadUserFromFB()},150);
 function toast(t){const x=$("#toast");if(!x)return;x.textContent=t;x.classList.add("show");setTimeout(()=>x.classList.remove("show"),1600)}
-function showPageTransition(cb){
+function showPageTransition(cb,opts){
+  opts=opts||{};
   const el=document.getElementById("pageTransition");
   if(!el){if(cb)cb();return}
   el.classList.remove("hidden");
@@ -161,6 +162,8 @@ function showPageTransition(cb){
   void el.offsetWidth;
   el.classList.add("show");
   try{window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.("light")}catch(e){}
+  // hold: first open longer; normal nav slightly shorter than original but still full splash
+  const hold = opts.hold != null ? opts.hold : 900;
   setTimeout(function(){
     try{if(cb)cb()}catch(e){console.error(e)}
     setTimeout(function(){
@@ -171,7 +174,7 @@ function showPageTransition(cb){
         el.setAttribute("aria-hidden","true");
       },350);
     },250);
-  },1100);
+  },hold);
 }
 
 function nav(p,opts={}){
@@ -1201,9 +1204,9 @@ function isAdminUser(){
 // Secure admin check: backend verifies Telegram initData. No admin IDs are exposed to the browser.
 function loadAdminIdsApp(){
   try{
-    if(!window.APP_CONFIG || !window.APP_CONFIG.apiBaseUrl){ alert("DEBUG: apiBaseUrl missing in config.js"); return; }
+    if(!window.APP_CONFIG || !window.APP_CONFIG.apiBaseUrl){ return; }
     const initData=window.Telegram?.WebApp?.initData||"";
-    if(!initData){ alert("DEBUG: initData is empty. App must be opened via Telegram bot's Mini App button, not a plain browser link."); return; }
+    if(!initData){ return; }
     fetch(window.APP_CONFIG.apiBaseUrl,{
       method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
       body:JSON.stringify({action:"adminCheck",initData:initData})
@@ -1212,16 +1215,10 @@ function loadAdminIdsApp(){
         window.__ADMIN_IDS=[String(window.Telegram.WebApp.initDataUnsafe.user.id)];
       }else{
         window.__ADMIN_IDS=[];
-        // TEMP DEBUG - remove after fixing admin access
-        if(res&&res.data){
-          alert("DEBUG\nYour Telegram ID: "+res.data.debugId+"\nVerified: "+res.data.debugVerified+"\nADMIN_IDS on server: "+res.data.debugAdminIdsRaw+"\nReason: "+res.data.debugReason+"\ninitData length: "+res.data.debugInitDataLen+"\nHash match: "+res.data.debugHashMatch+"\nauth_date: "+res.data.debugAuthDate+"\nnow: "+res.data.debugNow+"\ndiff(sec): "+res.data.debugDateDiffSec+"\nkeys: "+res.data.debugKeys+"\ntoken len: "+res.data.debugTokenLen+"\ntoken ends: "+res.data.debugTokenPreview);
-        }else{
-          alert("DEBUG\nBad response: "+JSON.stringify(res));
-        }
       }
       try{setupAdminButton();render(true)}catch(e){}
-    }).catch(function(err){window.__ADMIN_IDS=[];alert("DEBUG fetch error: "+err);try{setupAdminButton()}catch(e){}});
-  }catch(e){alert("DEBUG outer error: "+e);}
+    }).catch(function(err){window.__ADMIN_IDS=[];try{setupAdminButton()}catch(e){}});
+  }catch(e){}
 }
 setTimeout(loadAdminIdsApp, 250);
 
@@ -1231,6 +1228,15 @@ function loadPublicAppConfig(){
     window.CineHubFB.loadConfig().then(function(c){
       if(!c) return;
       try{ Object.assign(window.APP_CONFIG,c); }catch(e){}
+      // Apply live admin settings into runtime cfg (Firebase is source of truth)
+      try{
+        Object.keys(c).forEach(function(k){
+          if(c[k]!==undefined&&c[k]!==null) cfg[k]=c[k];
+        });
+        if(c.adBlocks) cfg.adBlocks=Object.assign({},cfg.adBlocks||{},c.adBlocks);
+        localStorage.setItem("cinehub4_settings",JSON.stringify(Object.assign({},JSON.parse(localStorage.getItem("cinehub4_settings")||"{}"),c)));
+      }catch(e){}
+      try{ applyTheme(); }catch(e){}
       try{ render(true); }catch(e){}
     }).catch(function(){});
   }catch(e){}
@@ -1271,6 +1277,13 @@ const qel=$("#q");if(qel){qel.addEventListener("input",()=>{/* live optional */}
 }catch(err){console.error("render",err);const screen=$("#screen");if(screen)screen.innerHTML="<div style=\"padding:20px;color:#f88\">Render failed: "+String(err.message||err)+"</div>"}
 }
 try{window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand()}catch(e){}
+/* First open: slightly longer splash (once per session) */
+try{
+  if(!sessionStorage.getItem("cinehub4_splash_done")){
+    sessionStorage.setItem("cinehub4_splash_done","1");
+    showPageTransition(function(){},{hold:1400});
+  }
+}catch(e){}
 if($("#backBtn"))$("#backBtn").onclick=()=>goBack();
 $$(".nav-item").forEach(b=>b.onclick=()=>nav(b.dataset.page));
 setupAdminButton();setTimeout(setupAdminButton,250);setTimeout(setupAdminButton,1000);
