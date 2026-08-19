@@ -2,7 +2,6 @@
 window.APP_CONFIG = {
   appName: "Cine Hub4",
   appId: "cinehub4",
-   adminIds: ["5605543865"],
   apiBaseUrl: "https://script.google.com/macros/s/AKfycbxXSsyQUbGETkYE3KOWWglNLkucBu_LRYp4f7Ioxg1LCP3HSbhbGpBW8aEiMYvNRrlR/exec",
   botUsername: "@Cinehub4bot",
   unlockHours: 15,
