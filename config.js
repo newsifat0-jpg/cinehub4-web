@@ -1,7 +1,6 @@
 /* Cine Hub4 frontend configuration */
 window.APP_CONFIG = {
   appName: "Cine Hub4",
-  apiBaseUrl: "https://script.google.com/macros/s/AKfycby5qWrxgdrW2KUKkSTmo97JZ9QupTRWaXPE7NkS_76E5fkjpBz0eBo9O8a3goQq4aDG/exec",
   botUsername: "@Cinehub4bot",
   unlockHours: 15,
   unlockCost: 5,
