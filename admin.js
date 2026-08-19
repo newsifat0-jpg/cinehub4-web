@@ -50,6 +50,27 @@ const DEFAULT={
     {name:"Ultimate Package",price:14.99,points:2000,tag:"POPULAR"}
   ],
   adBlocks:{rewarded:"43222",interstitial:"",banner:"",task:"",adult:"",extra:{}},
+  // Multi-network slots: each placement can use a different ad network
+  adSlots:{
+    rewarded:{network:"adsgram",id:"43222"},
+    unlock:{network:"adsgram",id:""},
+    interstitial:{network:"adsgram",id:""},
+    task:{network:"adsgram",id:""},
+    banner:{network:"adsgram",id:""},
+    bannerAdult:{network:"adsgram",id:""},
+    adult:{network:"adsgram",id:""}
+  },
+  adNetworkDefaults:{
+    adsgram:{label:"Adsgram",type:"sdk"},
+    monetag:{label:"Monetag",type:"zone"},
+    richads:{label:"RichAds",type:"zone"},
+    onclicka:{label:"OnClicka",type:"zone"},
+    aads:{label:"AADS",type:"zone"},
+    hilltop:{label:"HilltopAds",type:"zone"},
+    custom:{label:"Custom Link",type:"link"}
+  },
+  adLinkSeconds:20,
+
   uiTexts:{en:{},bn:{}},
   themeAccent:"#7c5cff",
   themeAccent2:"#5b8cff",
@@ -68,7 +89,8 @@ function loadAdminMovies(){
   });
 }
 setTimeout(loadAdminMovies,200);
-A.settings.adBlocks={...DEFAULT.adBlocks,...(A.settings.adBlocks||{})};A.settings.categories=A.settings.categories||DEFAULT.categories;A.settings.adultCategories=A.settings.adultCategories&&A.settings.adultCategories.length?A.settings.adultCategories:DEFAULT.adultCategories;
+A.settings.adBlocks={...DEFAULT.adBlocks,...(A.settings.adBlocks||{})};
+ensureAdSlots();A.settings.categories=A.settings.categories||DEFAULT.categories;A.settings.adultCategories=A.settings.adultCategories&&A.settings.adultCategories.length?A.settings.adultCategories:DEFAULT.adultCategories;
 function el(id){return document.getElementById(id)}
 function contentEl(){return el("content")}
 function titleEl(){return el("pageTitle")}
@@ -98,6 +120,27 @@ function money(n){return Number(n).toLocaleString()}
 function getTelegramUserId(){try{return window.Telegram?.WebApp?.initDataUnsafe?.user?.id?String(window.Telegram.WebApp.initDataUnsafe.user.id):''}catch(e){return ''}}
 // Admin IDs loaded from Firestore config/main (not in public source)
 window.__ADMIN_IDS = window.__ADMIN_IDS || [];
+
+function ensureAdSlots(){
+  A.settings.adSlots = A.settings.adSlots || {};
+  const b = A.settings.adBlocks || {};
+  const slots = ["rewarded","unlock","interstitial","task","banner","bannerAdult","adult"];
+  slots.forEach(function(k){
+    if (!A.settings.adSlots[k]) {
+      A.settings.adSlots[k] = { network: "adsgram", id: String(b[k] || (k==="unlock"?b.interstitial||b.rewarded:"") || "") };
+    }
+    if (!A.settings.adSlots[k].network) A.settings.adSlots[k].network = "adsgram";
+    if (A.settings.adSlots[k].id == null) A.settings.adSlots[k].id = "";
+  });
+  // Keep legacy adBlocks in sync for older app builds
+  A.settings.adBlocks = A.settings.adBlocks || {};
+  slots.forEach(function(k){
+    if (A.settings.adSlots[k] && A.settings.adSlots[k].id) {
+      A.settings.adBlocks[k] = A.settings.adSlots[k].id;
+    }
+  });
+}
+
 function allowedAdminIds(){return (window.__ADMIN_IDS||[]).map(String)}
 function isTelegramAdmin(){const id=getTelegramUserId();return !!id&&allowedAdminIds().includes(id)}
 function openAdmin(){
@@ -108,7 +151,8 @@ function openAdmin(){
   try{
     if(window.CineHubFB){
       window.CineHubFB.loadConfig().then(function(c){
-        if(c){ A.settings={...A.settings,...c}; A.settings.adBlocks={...DEFAULT.adBlocks,...(A.settings.adBlocks||{})}; A.settings.categories=A.settings.categories||DEFAULT.categories; A.settings.adultCategories=A.settings.adultCategories&&A.settings.adultCategories.length?A.settings.adultCategories:DEFAULT.adultCategories; localStorage.setItem("cinehub4_settings",JSON.stringify(A.settings)); render(); }
+        if(c){ A.settings={...A.settings,...c}; A.settings.adBlocks={...DEFAULT.adBlocks,...(A.settings.adBlocks||{})};
+ensureAdSlots(); A.settings.categories=A.settings.categories||DEFAULT.categories; A.settings.adultCategories=A.settings.adultCategories&&A.settings.adultCategories.length?A.settings.adultCategories:DEFAULT.adultCategories; localStorage.setItem("cinehub4_settings",JSON.stringify(A.settings)); render(); }
       }).catch(function(){});
     }
   }catch(e){}
@@ -309,57 +353,181 @@ function points(){return `<div class="toolbar"><div><h2 style="margin:0;font-siz
 <button class="btn primary" style="margin-top:14px;width:100%;padding:14px" onclick="savePoints()">💾 Save Unlock & Points Settings</button>`}
 function savePoints(){A.settings.unlockCost=+$('#unlockCost').value||5;A.settings.unlockHours=+$('#unlockHours').value||15;A.settings.adReward=+$('#adRewardP').value||2;A.settings.dailyAdLimit=+$('#dailyLimitP').value||20;A.settings.dailyUnlockLimit=+$('#dailyUnlockLimit').value||0;A.settings.adsForUnlock=+$('#adsForUnlockP').value||5;A.settings.downloadServers=Math.max(1,Math.min(10,+$('#downloadServersP').value||3));A.settings.joinBonus=+$('#bonus').value||10;A.settings.newUserBonus=A.settings.joinBonus;A.settings.referralReward=+$('#ref').value||20;save();render();toast('Points & Unlock settings saved')}
 function ads(){
-  const b=A.settings.adBlocks||{};
-  const s=A.settings;
-  return `<div class="toolbar"><div><h2 style="margin:0;font-size:18px">Ads & Banners</h2>
-    <p class="muted smalltext" style="margin:4px 0 0">All ads use Adsgram (partner.adsgram.ai) · paste Block IDs below</p></div></div>
-  <div class="grid section-grid">
-    <div class="card"><h3>Ad Block IDs</h3>
-      <div class="form-grid">
-        <div class="field"><label>Rewarded / Unlock · Adsgram ID</label><input id="rewardedId" value="${b.rewarded||''}"></div>
-        <div class="field"><label>Interstitial</label><input id="interstitialId" value="${b.interstitial||''}"></div>
-        <div class="field"><label>Movie banner · Adsgram Block ID</label><input id="bannerId" value="${b.banner||''}" placeholder="e.g. 123456 or task-123"></div>
-        <div class="field"><label>Adult banner · Adsgram Block ID</label><input id="bannerAdultId" value="${b.bannerAdult||''}" placeholder="Adsgram adult banner ID"></div>
-        <div class="field"><label>Daily Task · Adsgram ID</label><input id="taskId" value="${b.task||''}"></div>
-        <div class="field"><label>Adult rewarded · Adsgram ID</label><input id="adultId" value="${b.adult||''}"></div>
+  ensureAdSlots();
+  const slots = A.settings.adSlots || {};
+  const s = A.settings;
+  const AD_NETS = [
+    ["adsgram","Adsgram — Rewarded / Interstitial / Task"],
+    ["monetag","Monetag — Rewarded Interstitial SDK"],
+    ["richads","RichAds — Banner / push-style"],
+    ["onclicka","OnClicka — Rewarded + Banner"],
+    ["tads","TADS — Native TMA ads"],
+    ["adsonar","AdSonar — Multi-network"],
+    ["propeller","PropellerAds — Telegram format"],
+    ["adexium","Adexium — Banner / Rewarded"],
+    ["aads","AADS"],
+    ["hilltop","HilltopAds"],
+    ["custom","Custom Link / URL"]
+  ];
+  function netSel(id, cur){
+    return '<select id="'+id+'">'+AD_NETS.map(function(n){
+      return '<option value="'+n[0]+'"'+(cur===n[0]?' selected':'')+'>'+n[1]+'</option>';
+    }).join('')+'</select>';
+  }
+  function val(slot){ return String((slots[slot]||{}).id||"").replace(/"/g,'&quot;'); }
+  function net(slot){ return (slots[slot]||{}).network || "adsgram"; }
+
+  // Main rewarded = rewarded slot; main banner = banner slot
+  return `<div class="toolbar"><div>
+    <h2 style="margin:0;font-size:18px">Ads & Networks</h2>
+    <p class="muted smalltext" style="margin:4px 0 0">মিনি অ্যাপ মুভি বটের জন্য · শুধু Network + ID/লিংক বসান</p>
+  </div></div>
+
+  <div class="card" style="border:1px solid #3b82f6;margin-bottom:12px">
+    <h3>🎬 মেইন রিওয়ার্ডেড (পয়েন্ট · আনলক · ডেইলি টাস্ক · অ্যাডাল্ট)</h3>
+    <p class="muted smalltext">একটা Network + একটা ID দিলেই সব রিওয়ার্ডেড জায়গায় চলবে। নিচে আলাদা ওভাররাইড করতে পারবেন।</p>
+    <div class="form-grid" style="margin-top:10px">
+      <div class="field"><label>Network</label>${netSel("mainRewNet", net("rewarded"))}</div>
+      <div class="field"><label>Block ID / Zone ID / SDK ID</label>
+        <input id="mainRewId" value="${val("rewarded")}" placeholder="e.g. Adsgram 43222 · Monetag zone · URL">
       </div>
-      <button class="btn primary" style="margin-top:14px" onclick="saveAds()">💾 Save All Ad IDs</button>
     </div>
-    <div class="card"><h3>🖼 Movie tab banner</h3>
-      <p class="muted smalltext">Shows under the scrolling ticker on Movies home</p>
+    <label class="switch" style="margin-top:12px;display:flex;gap:10px;align-items:center">
+      <input type="checkbox" id="applyRewAll" checked>
+      <span>এই ID সব রিওয়ার্ডেড স্লটে কপি করো (Unlock / Task / Adult)</span>
+    </label>
+  </div>
+
+  <div class="card" style="border:1px solid #f59e0b;margin-bottom:12px">
+    <h3>🖼 মেইন ব্যানার (মুভি হোম · অ্যাডাল্ট হোম)</h3>
+    <p class="muted smalltext">ব্যানার/ক্লিক অ্যাডের জন্য Network + ID বা ইমেজ URL</p>
+    <div class="form-grid" style="margin-top:10px">
+      <div class="field"><label>Network</label>${netSel("mainBanNet", net("banner"))}</div>
+      <div class="field"><label>Block ID / Zone / URL</label>
+        <input id="mainBanId" value="${val("banner")}" placeholder="Adsgram task ID বা zone বা https://...">
+      </div>
+    </div>
+    <label class="switch" style="margin-top:12px;display:flex;gap:10px;align-items:center">
+      <input type="checkbox" id="applyBanAll" checked>
+      <span>অ্যাডাল্ট ব্যানারেও একই ID ব্যবহার করো</span>
+    </label>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <h3>⏱ Non-SDK কাউন্টডাউন</h3>
+    <p class="muted smalltext">Monetag/RichAds/Custom লিংক মোডে অ্যাড খোলার পর কত সেকেন্ড পর রিওয়ার্ড দেবে</p>
+    <div class="field" style="max-width:200px">
+      <input id="adLinkSeconds" type="number" min="5" max="120" value="${Number(s.adLinkSeconds)||20}">
+    </div>
+  </div>
+
+  <details class="card" style="margin-bottom:12px">
+    <summary style="cursor:pointer;font-weight:700;padding:4px 0">⚙ অ্যাডভান্সড · প্রতি স্লটে আলাদা নেটওয়ার্ক (ঐচ্ছিক)</summary>
+    <p class="muted smalltext" style="margin:8px 0">খালি রাখলে মেইন রিওয়ার্ডেড/ব্যানার ব্যবহার হবে</p>
+    ${[
+      ["unlock","Movie Unlock"],
+      ["interstitial","Interstitial (fallback)"],
+      ["task","Daily Task only"],
+      ["adult","Adult rewarded only"],
+      ["bannerAdult","Adult banner only"]
+    ].map(function(row){
+      return '<div class="form-grid" style="margin-top:10px;padding-top:10px;border-top:1px solid #1a2236">'+
+        '<div class="field"><label>'+row[1]+' · Network</label>'+netSel("net_"+row[0], net(row[0]))+'</div>'+
+        '<div class="field"><label>ID / Zone / URL</label><input id="id_'+row[0]+'" value="'+val(row[0])+'" placeholder="খালি = মেইন ব্যবহার"></div>'+
+        '</div>';
+    }).join("")}
+  </details>
+
+  <div class="grid section-grid">
+    <div class="card"><h3>🖼 Movie tab — কাস্টম ইমেজ ব্যানার</h3>
+      <p class="muted smalltext">নেটওয়ার্ক ব্যানারের বদলে নিজের ইমেজ চাইলে</p>
       <div class="switch" style="margin:10px 0">
         <span>Show movie banner</span>
         <span class="toggle ${s.showMovieBanner!==false?'on':''}" id="togMovieBan" onclick="this.classList.toggle('on')"><i></i></span>
       </div>
-      <div class="field"><label>Banner image URL</label><input id="movieBanImg" value="${(s.movieBannerImg||'').replace(/"/g,'&quot;')}" placeholder="https://...jpg"></div>
+      <div class="field"><label>Image URL</label><input id="movieBanImg" value="${(s.movieBannerImg||'').replace(/"/g,'&quot;')}" placeholder="https://...jpg"></div>
       <div class="field" style="margin-top:8px"><label>Click link</label><input id="movieBanLink" value="${(s.movieBannerLink||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
     </div>
-    <div class="card"><h3>🖼 Adult tab banner</h3>
-      <p class="muted smalltext">Shows under the scrolling ticker on Adult zone</p>
+    <div class="card"><h3>🖼 Adult tab — কাস্টম ইমেজ</h3>
       <div class="switch" style="margin:10px 0">
         <span>Show adult banner</span>
         <span class="toggle ${s.showAdultBanner!==false?'on':''}" id="togAdultBan" onclick="this.classList.toggle('on')"><i></i></span>
       </div>
-      <div class="field"><label>Banner image URL</label><input id="adultBanImg" value="${(s.adultBannerImg||'').replace(/"/g,'&quot;')}" placeholder="https://...jpg"></div>
+      <div class="field"><label>Image URL</label><input id="adultBanImg" value="${(s.adultBannerImg||'').replace(/"/g,'&quot;')}" placeholder="https://...jpg"></div>
       <div class="field" style="margin-top:8px"><label>Click link</label><input id="adultBanLink" value="${(s.adultBannerLink||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
     </div>
   </div>
-  <button class="btn primary" style="margin-top:14px;width:100%;padding:14px" onclick="saveAds();saveBanners()">💾 Save Banner Settings</button>
-  <div class="card" style="margin-top:14px"><div class="toolbar"><h3 style="margin:0">Extra Ad Blocks</h3><button class="btn primary" onclick="openAdBlock()">＋ Add Ad Block</button></div><div id="extraAds" class="tag-list"></div></div>`;
+
+  <button class="btn primary" style="margin-top:14px;width:100%;padding:14px" onclick="saveAds()">💾 Save Ad Settings</button>
+  <div class="card" style="margin-top:14px">
+    <h3>সাপোর্টেড নেটওয়ার্ক</h3>
+    <p class="muted smalltext">
+      <b>Adsgram</b> · <b>Monetag</b> · RichAds · OnClicka · TADS · AdSonar · PropellerAds · Adexium · AADS · Hilltop · Custom URL<br>
+      মুভি বট: রিওয়ার্ডেড → পয়েন্ট/আনলক/টাস্ক · ব্যানার → হোম স্ক্রিন
+    </p>
+  </div>`;
 }
-function saveBanners(){
-  const on=id=>{const el=document.getElementById(id);return el?el.classList.contains('on'):true};
-  A.settings.showMovieBanner=on('togMovieBan');
-  A.settings.showAdultBanner=on('togAdultBan');
-  A.settings.movieBannerImg=(document.getElementById('movieBanImg')||{}).value||'';
-  A.settings.movieBannerLink=(document.getElementById('movieBanLink')||{}).value||'';
-  A.settings.adultBannerImg=(document.getElementById('adultBanImg')||{}).value||'';
-  A.settings.adultBannerLink=(document.getElementById('adultBanLink')||{}).value||'';
+function saveAds(){
+  ensureAdSlots();
+  A.settings.adSlots = A.settings.adSlots || {};
+  A.settings.adBlocks = A.settings.adBlocks || {};
+
+  const mainRewNet = (document.getElementById("mainRewNet")||{}).value || "adsgram";
+  const mainRewId = String((document.getElementById("mainRewId")||{}).value || "").trim();
+  const mainBanNet = (document.getElementById("mainBanNet")||{}).value || "adsgram";
+  const mainBanId = String((document.getElementById("mainBanId")||{}).value || "").trim();
+  const applyRew = (document.getElementById("applyRewAll")||{}).checked !== false;
+  const applyBan = (document.getElementById("applyBanAll")||{}).checked !== false;
+
+  // Main rewarded
+  A.settings.adSlots.rewarded = { network: mainRewNet, id: mainRewId };
+  A.settings.adBlocks.rewarded = mainRewId;
+
+  const rewSlots = ["unlock","interstitial","task","adult"];
+  rewSlots.forEach(function(k){
+    const netEl = document.getElementById("net_"+k);
+    const idEl = document.getElementById("id_"+k);
+    let network = netEl ? netEl.value : mainRewNet;
+    let id = idEl ? String(idEl.value||"").trim() : "";
+    if (applyRew || !id) {
+      // use main if empty or apply-all checked
+      if (applyRew || !id) {
+        network = mainRewNet;
+        id = mainRewId;
+      }
+    }
+    // if advanced has explicit id, keep it when applyRew is off
+    if (!applyRew && idEl && String(idEl.value||"").trim()) {
+      network = netEl ? netEl.value : mainRewNet;
+      id = String(idEl.value||"").trim();
+    }
+    A.settings.adSlots[k] = { network: network, id: id };
+    A.settings.adBlocks[k] = id;
+  });
+
+  // Main banner
+  A.settings.adSlots.banner = { network: mainBanNet, id: mainBanId };
+  A.settings.adBlocks.banner = mainBanId;
+
+  const banAdultNetEl = document.getElementById("net_bannerAdult");
+  const banAdultIdEl = document.getElementById("id_bannerAdult");
+  let banAdultNet = banAdultNetEl ? banAdultNetEl.value : mainBanNet;
+  let banAdultId = banAdultIdEl ? String(banAdultIdEl.value||"").trim() : "";
+  if (applyBan || !banAdultId) {
+    banAdultNet = mainBanNet;
+    banAdultId = mainBanId;
+  }
+  A.settings.adSlots.bannerAdult = { network: banAdultNet, id: banAdultId };
+  A.settings.adBlocks.bannerAdult = banAdultId;
+
+  const sec = document.getElementById("adLinkSeconds");
+  if (sec) A.settings.adLinkSeconds = Math.max(5, Math.min(120, Number(sec.value)||20));
+
+  try { saveBanners(); } catch(e) {}
   save();
-  toast('Banner settings saved');
+  toast("Ad networks saved — rewarded + banner ready");
 }
 
-function saveAds(){const b=A.settings.adBlocks=A.settings.adBlocks||{};b.rewarded=($('#rewardedId')||{}).value?.trim?.()||'';b.interstitial=($('#interstitialId')||{}).value?.trim?.()||'';b.banner=($('#bannerId')||{}).value?.trim?.()||'';b.bannerAdult=($('#bannerAdultId')||{}).value?.trim?.()||'';b.task=($('#taskId')||{}).value?.trim?.()||'';b.adult=($('#adultId')||{}).value?.trim?.()||'';try{saveBanners()}catch(e){};save();toast('All Ad IDs & banners saved')}
 function tasks(){
   if(!A.settings.tasks||!A.settings.tasks.length){
     A.settings.tasks=[

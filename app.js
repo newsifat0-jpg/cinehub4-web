@@ -345,9 +345,11 @@ function showAdsgramBanner(blockId, zone){
 function onBannerClick(zone){
   loadSharedSettings();
   const isAdult = zone==="adult";
-  const blocks = cfg.adBlocks||{};
-  const blockId = String(isAdult ? (blocks.bannerAdult||blocks.banner||"") : (blocks.banner||"")).trim();
-  if(blockId){showAdsgramBanner(blockId, zone);return}
+  const slot = resolveAdSlot(isAdult ? "bannerAdult" : "banner");
+  if(slot && String(slot.id||"").trim()){
+    playAdNetwork(slot, function(){ toast(t("Ad completed")); });
+    return;
+  }
   const link = isAdult ? (cfg.adultBannerLink||"") : (cfg.movieBannerLink||"");
   if(link){openLink(link);return}
   toast(t("Banner ad"));
@@ -1039,18 +1041,225 @@ function showCountdownTask(name,secs,onDone){
     }
   },1000);
 }
+function resolveAdSlot(mode){
+  loadSharedSettings();
+  const slots = cfg.adSlots || {};
+  const b = cfg.adBlocks || {};
+  // Map mode → slot key
+  let key = "rewarded";
+  if(mode==="adult") key="adult";
+  else if(mode==="task") key="task";
+  else if(mode==="unlock") key="unlock";
+  else if(mode==="banner") key="banner";
+  else if(mode==="bannerAdult") key="bannerAdult";
+  else if(mode==="interstitial") key="interstitial";
+
+  let slot = slots[key];
+  if(!slot || (!slot.id && !slot.network)){
+    // legacy fallback from adBlocks only
+    let id = "";
+    if(key==="adult") id=b.adult||b.rewarded||"";
+    else if(key==="task") id=b.task||b.rewarded||"";
+    else if(key==="unlock") id=b.unlock||b.interstitial||b.rewarded||"";
+    else if(key==="banner") id=b.banner||"";
+    else if(key==="bannerAdult") id=b.bannerAdult||b.banner||"";
+    else id=b.rewarded||"";
+    slot = { network: "adsgram", id: id };
+  }
+  // unlock empty → try interstitial then rewarded
+  if(key==="unlock" && !(slot.id||"").trim()){
+    const inter = slots.interstitial || {network:"adsgram", id:b.interstitial||""};
+    if((inter.id||"").trim()) return inter;
+    const rew = slots.rewarded || {network:"adsgram", id:b.rewarded||""};
+    return rew;
+  }
+  if(key==="adult" && !(slot.id||"").trim()){
+    return slots.rewarded || {network:"adsgram", id:b.rewarded||""};
+  }
+  if(key==="task" && !(slot.id||"").trim()){
+    return slots.rewarded || {network:"adsgram", id:b.rewarded||""};
+  }
+  return slot;
+}
+
+function loadAdScriptOnce(src, globalCheck){
+  return new Promise(function(resolve){
+    if(globalCheck && globalCheck()){ resolve(true); return; }
+    if(!src){ resolve(false); return; }
+    const existing = document.querySelector('script[data-adsrc="'+src+'"]');
+    if(existing){
+      setTimeout(function(){ resolve(!!(globalCheck && globalCheck())); }, 400);
+      return;
+    }
+    const s = document.createElement("script");
+    s.src = src;
+    s.async = true;
+    s.setAttribute("data-adsrc", src);
+    s.onload = function(){ resolve(true); };
+    s.onerror = function(){ resolve(false); };
+    document.head.appendChild(s);
+  });
+}
+
+function openAdLink(url){
+  try{
+    if(window.Telegram && window.Telegram.WebApp){
+      if(window.Telegram.WebApp.openLink){
+        window.Telegram.WebApp.openLink(url, {try_instant_view:false});
+        return true;
+      }
+    }
+  }catch(e){}
+  try{ window.open(url, "_blank"); return true; }catch(e){}
+  return false;
+}
+
+/** Non-SDK networks: open zone/URL then countdown before reward */
+function playLinkAd(slot, onDone){
+  const id = String(slot.id||"").trim();
+  if(!id){ toast(t("Admin has not configured this Ad Block ID")); return; }
+  let url = id;
+  // If looks like bare zone id (digits), build common redirect patterns per network
+  if(!/^https?:\/\//i.test(id)){
+    const net = (slot.network||"").toLowerCase();
+    if(net==="monetag"){
+      url = "https://otieu.com/4/"+encodeURIComponent(id);
+    } else if(net==="onclicka" || net==="propeller" || net==="adexium" || net==="adsonar" || net==="tads" || net==="richads" || net==="aads" || net==="hilltop"){
+      // Bare zone IDs need full tracking URL from dashboard — prompt admin
+      toast(t("Paste full ad URL for this network")+" ("+net+")");
+      return;
+    } else {
+      toast(t("Paste full ad URL for this network"));
+      return;
+    }
+  }
+  if(!/^https?:\/\//i.test(url)){
+    toast(t("Invalid ad URL"));
+    return;
+  }
+  openAdLink(url);
+  const total = Math.max(5, Math.min(120, Number(cfg.adLinkSeconds)||20));
+  let left = total;
+  const ov = document.createElement("div");
+  ov.className = "modal";
+  ov.innerHTML = `<div class="modal-card cd-card open-ad-card">
+    <div class="cd-ring-wrap">
+      <svg class="cd-svg" viewBox="0 0 100 100"><circle class="cd-bg" cx="50" cy="50" r="42"/><circle class="cd-fg" id="adNetFg" cx="50" cy="50" r="42" style="stroke-dasharray:264;stroke-dashoffset:0"/></svg>
+      <div class="cd-play">▶</div>
+    </div>
+    <b class="cd-title">${t("Watching Ad")}</b>
+    <div class="muted cd-sub">${(slot.network||"ad").toUpperCase()} · ${t("Keep this page open until countdown ends.")}</div>
+    <div class="cd-num" id="adNetNum">${left}s</div>
+    <button type="button" class="btn" style="margin-top:12px" id="adNetCancel">${t("Cancel")}</button>
+  </div>`;
+  document.body.appendChild(ov);
+  const circ = 2*Math.PI*42;
+  const tick = setInterval(function(){
+    left--;
+    const el = document.getElementById("adNetNum");
+    const fg = document.getElementById("adNetFg");
+    if(el) el.textContent = left+"s";
+    if(fg) fg.style.strokeDashoffset = String(circ * (1 - Math.max(0,left)/total));
+    if(left <= 0){
+      clearInterval(tick);
+      ov.remove();
+      if(onDone) onDone();
+    }
+  }, 1000);
+  const cancel = document.getElementById("adNetCancel");
+  if(cancel) cancel.onclick = function(){ clearInterval(tick); ov.remove(); toast(t("Ad closed")); };
+}
+
+function playAdsgram(blockId, onDone){
+  if(!blockId){ toast(t("Admin has not configured this Ad Block ID")); return; }
+  function tryShow(){
+    if(window.Adsgram && typeof window.Adsgram.init==="function"){
+      try{
+        const ad = window.Adsgram.init({blockId:String(blockId), debug:!!cfg.adsgramDebug});
+        toast(t("Opening Ad"));
+        ad.show().then(function(){ if(onDone) onDone(); }).catch(function(){
+          if(cfg.adsgramDebug && onDone) onDone();
+          else toast(t("Ad closed"));
+        });
+        return true;
+      }catch(e){ console.warn(e); }
+    }
+    return false;
+  }
+  if(tryShow()) return;
+  loadAdScriptOnce("https://sad.adsgram.ai/js/sad.min.js", function(){ return !!(window.Adsgram && window.Adsgram.init); })
+    .then(function(ok){
+      if(ok && tryShow()) return;
+      toast(t("Adsgram loading… try again"));
+    });
+}
+
+function playMonetag(zoneId, onDone){
+  const id = String(zoneId||"").trim();
+  if(!id){ toast(t("Admin has not configured this Ad Block ID")); return; }
+  const fnName = "show_"+id;
+  function tryShow(){
+    if(typeof window[fnName]==="function"){
+      try{
+        var p = window[fnName]();
+        if(p && typeof p.then==="function"){
+          p.then(function(){ if(onDone) onDone(); }).catch(function(){ toast(t("Ad closed")); });
+        } else {
+          if(onDone) onDone();
+        }
+        return true;
+      }catch(e){ console.warn(e); }
+    }
+    return false;
+  }
+  if(tryShow()) return;
+  // Inject Monetag-style tag then retry
+  if(!document.querySelector('script[data-monetag="'+id+'"]')){
+    var s = document.createElement("script");
+    s.src = "https://libtl.com/sdk.js";
+    s.async = true;
+    s.setAttribute("data-zone", id);
+    s.setAttribute("data-sdk", fnName);
+    s.setAttribute("data-monetag", id);
+    document.head.appendChild(s);
+  }
+  setTimeout(function(){
+    if(tryShow()) return;
+    playLinkAd({network:"monetag", id:id}, onDone);
+  }, 1200);
+}
+
+function playTads(widgetId, onDone){
+  const id = String(widgetId||"").trim();
+  if(!id){ toast(t("Admin has not configured this Ad Block ID")); return; }
+  // TADS uses widget embed — fallback to link/countdown if no global
+  if(window.TADS && typeof window.TADS.show==="function"){
+    try{
+      window.TADS.show(id).then(function(){ if(onDone) onDone(); }).catch(function(){ toast(t("Ad closed")); });
+      return;
+    }catch(e){}
+  }
+  playLinkAd({network:"tads", id:id}, onDone);
+}
+
+function playAdNetwork(slot, onDone){
+  const net = String((slot&&slot.network)||"adsgram").toLowerCase();
+  const id = String((slot&&slot.id)||"").trim();
+  if(!id){ toast(t("Admin has not configured this Ad Block ID")); return; }
+  if(net==="adsgram"){ playAdsgram(id, onDone); return; }
+  if(net==="monetag"){ playMonetag(id, onDone); return; }
+  if(net==="tads"){ playTads(id, onDone); return; }
+  // richads, onclicka, adsonar, propeller, adexium, aads, hilltop, custom → open URL/zone + countdown reward
+  playLinkAd(slot, onDone);
+}
+
 function watchAd(mode){
   loadSharedSettings();
-  // All mini-app ads use Adsgram Block IDs from Admin → Ads
-  const b=cfg.adBlocks||{};
-  let id="";
-  if(mode==="adult") id=b.adult||b.rewarded||"";
-  else if(mode==="task") id=b.task||b.rewarded||"";
-  else if(mode==="unlock") id=b.interstitial||b.rewarded||""; // unlock prefers interstitial
-  else if(mode==="banner"||mode==="bannerAdult") id=(mode==="bannerAdult"?b.bannerAdult:b.banner)||b.rewarded||"";
-  else id=b.rewarded||""; // rewarded / earn points / Watch Ad Now
-  if(!id && mode!=="countdown"){toast(t("Admin has not configured this Ad Block ID"));return}
-  // Daily limit only for earning modes
+  const slot = resolveAdSlot(mode);
+  const id = String((slot&&slot.id)||"").trim();
+  if(!id && mode!=="countdown"){ toast(t("Admin has not configured this Ad Block ID")); return; }
+
+  // Daily limit only for earning modes (not unlock/adult unlock path)
   if(mode!=="unlock" && mode!=="adult"){
     const watched=Number((userData&&userData.ads_today)||localStorage.getItem("cinehub4_ads_today")||0);
     const limit=Number(cfg.dailyAdLimit||20);
@@ -1083,47 +1292,10 @@ function watchAd(mode){
     }
   }
 
-  // —— Real Adsgram (partner.adsgram.ai Block ID) ——
-  if(id && window.Adsgram && typeof window.Adsgram.init==="function"){
-    try{
-      const ad=window.Adsgram.init({blockId:String(id), debug:!!cfg.adsgramDebug});
-      toast(t("Opening Ad"));
-      ad.show().then(function(){ onAdDone(); }).catch(function(){
-        // user closed early / error — still allow demo progress only in debug
-        if(cfg.adsgramDebug) onAdDone();
-        else toast(t("Ad closed"));
-      });
-      return;
-    }catch(e){console.warn("Adsgram",e)}
-  }
-
-  // —— Demo fallback when SDK/ID missing ——
-  const m=document.createElement("div");
-  m.className="modal";
-  m.innerHTML=`<div class="modal-card cd-card open-ad-card">
-    <div class="cd-ring-wrap">
-      <svg class="cd-svg spin-slow" viewBox="0 0 100 100"><circle class="cd-bg" cx="50" cy="50" r="42"/><circle class="cd-fg" cx="50" cy="50" r="42" style="stroke-dasharray:80 184"/></svg>
-      <div class="cd-play">▶</div>
-    </div>
-    <b class="cd-title">${t("Opening Ad")}</b>
-    <div class="muted cd-sub">${t("Please wait while ad is loading.")}</div>
-  </div>`;
-  document.body.appendChild(m);
-  setTimeout(function(){
-    m.innerHTML=`<div class="modal-card"><div class="video-ad"><div><div class="play">▶</div><b>Ad · Demo</b><div class="muted">Demo — set Adsgram Block ID in Admin</div></div></div><div class="progress-bar" style="margin:12px 0"><i id="adProg" style="width:0%;height:100%;display:block;background:linear-gradient(90deg,#3b82f6,#06b6d4);border-radius:999px"></i></div><div class="muted" id="adPct">0%</div><button class="primary cyan wide" id="completeDemoAd" style="margin-top:10px">Complete Ad</button></div>`;
-    let pct=0;
-    const iv=setInterval(function(){
-      pct=Math.min(100,pct+25);
-      const bar=document.getElementById("adProg");
-      const lab=document.getElementById("adPct");
-      if(bar) bar.style.width=pct+"%";
-      if(lab) lab.textContent=pct+"%";
-      if(pct>=100) clearInterval(iv);
-    },400);
-    const btn=document.getElementById("completeDemoAd");
-    if(btn) btn.onclick=function(){ m.remove(); onAdDone(); };
-  },900);
+  playAdNetwork(slot, onAdDone);
 }
+
+
 function startVoiceSearch(){
   try{
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -1306,6 +1478,8 @@ function loadPublicAppConfig(){
           if(c[k]!==undefined&&c[k]!==null) cfg[k]=c[k];
         });
         if(c.adBlocks) cfg.adBlocks=Object.assign({},cfg.adBlocks||{},c.adBlocks);
+        if(c.adSlots) cfg.adSlots=Object.assign({},cfg.adSlots||{},c.adSlots);
+        if(c.adLinkSeconds!=null) cfg.adLinkSeconds=c.adLinkSeconds;
         localStorage.setItem("cinehub4_settings",JSON.stringify(Object.assign({},JSON.parse(localStorage.getItem("cinehub4_settings")||"{}"),c)));
       }catch(e){}
       try{ applyTheme(); }catch(e){}
