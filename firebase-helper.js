@@ -68,6 +68,8 @@
     loadRequests:function(){return api("loadRequests");},
     addRequest:function(req){return api("addRequest",{request:req});},
     loadFavourites:function(uid){return api("loadFavourites",{uid:String(uid||getUid())});},
-    toggleFavourite:function(uid,movieId,title){return api("toggleFavourite",{uid:String(uid||getUid()),movieId:String(movieId),title:title||""});}
+    toggleFavourite:function(uid,movieId,title){return api("toggleFavourite",{uid:String(uid||getUid()),movieId:String(movieId),title:title||""});},
+    searchTmdb:function(query){return api("searchTmdb",{query:String(query||"")});},
+    importTmdbMovie:function(tmdbId){return api("importTmdbMovie",{tmdbId:String(tmdbId||"")});}
   };
 })();
