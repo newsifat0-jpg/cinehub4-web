@@ -147,9 +147,6 @@ function loadUserFromFB(){
     state.points = Number(userData.points) || 1;
     state.userLoaded = true;
     try{render(true)}catch(e){}
-  }).catch(function(e){
-    console.error(e);
-    state.userLoaded = true;
   });
 }
 setTimeout(function(){loadMoviesFromFB();loadUserFromFB()},150);
@@ -204,13 +201,13 @@ function nav(p,opts={}){
   showPageTransition(go);
 }
 function goBack(){
-  // Main tabs → leave dialog (no history walk). Movie detail is a sub-page, not a main tab.
+  // Main tabs + movie detail → leave dialog (no history walk)
   const mainTabs=["movies","home","series","adult","profile","search"];
-  if(mainTabs.includes(state.page)){
+  if(mainTabs.includes(state.page) || state.page==="detail"){
     showLeaveDialog();
     return;
   }
-  // Sub pages (detail, tasks, points, buy, settings) → previous page
+  // Sub pages (tasks, points, buy, settings) → previous page
   let prev=null;
   try{prev=state.history.pop()}catch(e){}
   try{sessionStorage.setItem("cinehub4_history",JSON.stringify(state.history||[]))}catch(e){}
@@ -242,7 +239,7 @@ function card(m,idx){
     </div>
   </article>`;
 }
-function pageBackBar(title,subtitle){return`<div class="page-back-bar"><button type="button" class="page-back-btn" id="pageBackBtn" onclick="goBack()">‹</button><button type="button" class="menu-ham" id="hamBtn">☰</button><div class="page-back-textwrap"><span class="page-back-title">${title||""}</span>${subtitle?`<span class="page-back-sub">🪙 ${subtitle}</span>`:""}</div></div>`}
+function pageBackBar(title){return`<div class="page-back-bar"><button type="button" class="page-back-btn" id="pageBackBtn" onclick="goBack()">‹</button><span class="page-back-title">${title||""}</span></div>`}
 function menuOnlyHeader(title){return`<div class="page-back-bar"><button type="button" class="menu-ham" id="hamBtn">☰</button><span class="page-back-title">${title||""}</span></div>`}
 function bindPageBack(){const b=$("#pageBackBtn");if(b)b.onclick=()=>goBack()}
 function primeHeader(){return`<div class="prime-row"><button type="button" class="menu-ham" id="hamBtn">☰</button><div class="prime-title">Cine <span class="scene-pill">Hub4</span></div></div>`}
@@ -459,46 +456,7 @@ function copyRefLink(){
 }
 
 
-function points(){const refs=Number(localStorage.getItem("cinehub4_refs")||0);return pageBackBar(t("My Points"),t("BALANCE & REWARDS"))+`
-  <div class="earn-hero">
-    <div class="earn-hero-ico">🪙</div>
-    <div>
-      <b>${state.points} ${t("Points")}</b>
-      <p>${t("Your current balance — earn more by watching ads, referring friends, or buy instantly.")}</p>
-      <div class="earn-chips">
-        <span>📺 ${t("Watch & Earn")}</span>
-        <span>👥 ${t("Refer & Earn")}</span>
-        <span>🛒 ${t("Buy Points")}</span>
-      </div>
-    </div>
-  </div>
-  <div class="pf-stats">
-    <div class="pf-stat"><div><b>${state.points}</b><span>${t("Current Balance")}</span></div><div class="ico coin">🪙</div></div>
-    <div class="pf-stat"><div><b>${cfg.adReward||2}</b><span>${t("Points Per Ad")}</span></div><div class="ico gift">🎁</div></div>
-    <div class="pf-stat"><div><b>${cfg.referralReward||20}</b><span>${t("Per Referral")}</span></div><div class="ico eye">👥</div></div>
-    <div class="pf-stat"><div><b>${cfg.dailyAdLimit||20}</b><span>${t("Daily Limit")}</span></div><div class="ico shield">🛡</div></div>
-  </div>
-  <div class="pf-section">💰 ${t("EARNING OPTIONS")}</div>
-  <div class="task-row">
-    <div class="task-ico">📺</div>
-    <div class="task-meta"><b>${t("Watch Ad & Earn")}</b><span>+${cfg.adReward||2} ${t("Points")}</span></div>
-    <button type="button" class="task-start" onclick="watchAd('rewarded')">${t("Watch")}</button>
-  </div>
-  <div class="task-row">
-    <div class="task-ico">🛒</div>
-    <div class="task-meta"><b>${t("Buy Points")}</b><span>${t("Get more instantly")}</span></div>
-    <button type="button" class="task-start" onclick="nav('buy')">${t("Buy")}</button>
-  </div>
-  <div class="task-row">
-    <div class="task-ico">👥</div>
-    <div class="task-meta"><b>${t("Refer & Earn")}</b><span>+${cfg.referralReward||20} ${t("pt per referral")}</span></div>
-    <button type="button" class="task-start" onclick="shareRef()">${t("Share")}</button>
-  </div>
-  <div class="pf-section">⏱ ${t("DAILY AD LIMIT")}</div>
-  <div class="pf-panel">
-    <div class="pf-row"><span>${t("Only for earning points")}</span><b>${cfg.dailyAdLimit||20}/${t("day")}</b></div>
-  </div>
-  <div class="muted" style="font-size:11px;margin-top:8px;padding:0 2px">${t("Movie unlock is not limited by the daily ad limit.")}</div>`}
+function points(){return pageBackBar(t("My Points"))+`<div class="section-title"><b>🪙 My Points</b><span>${state.points} points</span></div><div class="panel"><div class="amount">${state.points} <span class="muted">points</span></div><div class="task"><span>📺 Watch Ad & Earn</span><b>+${cfg.adReward}</b><button class="primary cyan" onclick="watchAd('rewarded')">Watch</button></div><div class="task"><span>🛒 Buy Points</span><button class="primary pink" onclick="nav('buy')">Buy</button></div><div class="task"><span>👥 Refer & Earn</span><button class="pill" onclick="shareRef()">Share</button></div></div><div class="panel"><h3>Daily Ad Limit</h3><div class="task"><span>Only for earning points</span><b>${cfg.dailyAdLimit}/day</b></div><div class="muted">${t("Movie unlock is not limited by the daily ad limit.")}</div></div>`}
 
 function getTasks(){
   // Always prefer live admin settings
@@ -533,7 +491,7 @@ function tasks(){
   const limit=Number(cfg.dailyAdLimit||20);
   const rem=Math.max(0,limit-watched);
   const list=getTasks();
-  return pageBackBar(t("More Point Earning"),t("EARN & UNLOCK"))+`
+  return pageBackBar(t("More Point Earning"))+`
   <div class="earn-hero">
     <div class="earn-hero-ico">⚡</div>
     <div>
@@ -580,21 +538,31 @@ function runTask(i){
   if(t.type==="link"){
     openLink(t.link||cfg.telegramChannelLink||cfg.telegramBotLink);
     // credit after opening (demo)
-    if(window.CineHubFB&&window.CineHubFB.claimTask){window.CineHubFB.claimTask(t.name).then(function(u){userData=u;state.points=Number(u.points)||0;localStorage.setItem(st.key,String(Date.now()));toast("+"+(t.reward||0)+" points");render(true)}).catch(function(e){toast(e&&e.message?e.message:"Task failed")});}
+    state.points+=Number(t.reward||0);save();
+    localStorage.setItem(st.key,String(Date.now()));
+    toast("+"+(t.reward||0)+" points");
+    render(true);
     return;
   }
   if(t.type==="share"){shareRefLink();return}
   if(t.type==="countdown"||t.type==="oneclick"){
     const secs=Number(t.seconds||t.secs||5);
     showCountdownTask(t.name||"one click",secs,function(){
-      if(window.CineHubFB&&window.CineHubFB.claimTask){window.CineHubFB.claimTask(t.name).then(function(u){userData=u;state.points=Number(u.points)||0;localStorage.setItem(st.key,String(Date.now()));toast("+"+(t.reward||1)+" points added");render(true)}).catch(function(e){toast(e&&e.message?e.message:"Task failed")});}
+      state.points+=Number(t.reward||1);save();
+      localStorage.setItem(st.key,String(Date.now()));
+      toast("+"+(t.reward||1)+" points added");
+      render(true);
     });
     return;
   }
   if(t.type==="login"){
     const key="cinehub4_login_"+new Date().toDateString();
     if(localStorage.getItem(key)){toast("Already claimed today");return}
-    if(window.CineHubFB&&window.CineHubFB.claimTask){window.CineHubFB.claimTask(t.name).then(function(u){userData=u;state.points=Number(u.points)||0;localStorage.setItem(key,"1");toast("+"+(t.reward||2)+" points");render(true)}).catch(function(e){toast(e&&e.message?e.message:"Task failed")});}
+    state.points+=Number(t.reward||2);
+    localStorage.setItem("cinehub4_points",String(state.points));
+    localStorage.setItem(key,"1");
+    toast("+"+(t.reward||2)+" points");
+    render(true);
   }
 }
 
@@ -808,6 +776,7 @@ function markMovieUnlocked(id){
   userData.unlocks[String(id)]=exp;
   try{localStorage.setItem(unlockKey(id),String(exp))}catch(e){}
   try{localStorage.removeItem(progressKey(id))}catch(e){}
+  if(window.CineHubFB) window.CineHubFB.setUnlock(null, id, hours);
   state.unlockProgress=Number(cfg.unlockCost)||5;
   return hours;
 }
@@ -953,15 +922,12 @@ function usePointsForUnlock(){
     toast(t("Not enough points")+" ("+need+" "+t("needed")+")");
     return;
   }
-  if(window.CineHubFB&&window.CineHubFB.unlockByPoints){
-    window.CineHubFB.unlockByPoints(id,need,Number(cfg.unlockHours)||15).then(function(u){
-      userData=u||userData; state.points=Number(userData.points)||0; setUnlockProgress(id,cost); markMovieUnlocked(id);
-      toast(t("Unlocked for")+" "+(Number(cfg.unlockHours)||15)+" "+t("hours")+" · -"+need+" "+t("Points")); render(false);
-    }).catch(function(e){toast(e&&e.message==='not_enough_points'?t("Not enough points"):t("Unlock failed"));});
-    return;
-  }
-  state.points-=need; save(); setUnlockProgress(id,cost); const h=markMovieUnlocked(id);
-  toast(t("Unlocked for")+" "+h+" "+t("hours")+" · -"+need+" "+t("Points")); render(false);
+  state.points-=need;
+  save();
+  setUnlockProgress(id,cost);
+  const h=markMovieUnlocked(id);
+  toast(t("Unlocked for")+" "+h+" "+t("hours")+" · -"+need+" "+t("Points"));
+  render(false);
 }
 function unlockWithAds(){watchAd("unlock")}
 function unlockPoints(){usePointsForUnlock()}
@@ -1060,26 +1026,25 @@ function watchAd(mode){
     if(mode==="unlock"){
       const mid=state.detailId;
       const needAds=Number(cfg.adsForUnlock)||Number(cfg.unlockCost)||5;
-      if(window.CineHubFB&&window.CineHubFB.unlockByAds){
-        window.CineHubFB.unlockByAds(mid,needAds,Number(cfg.unlockHours)||15).then(function(u){
-          userData=u||userData; state.points=Number(userData.points)||0;
-          const unlocked=window.CineHubFB.isUnlocked(userData,mid);
-          const prog=unlocked?needAds:Number((userData.unlock_progress||{})[String(mid)]||0);
-          setUnlockProgress(mid,prog);
-          if(unlocked){markMovieUnlocked(mid);toast(t("Unlocked for")+" "+(Number(cfg.unlockHours)||15)+" "+t("hours"));}
-          else toast("+1 "+t("ad progress")+" ("+prog+"/"+needAds+")");
-          render(false);
-        }).catch(function(){toast(t("Unlock failed"));});
-      }else{
-        let prog=getUnlockProgress(mid)+1; setUnlockProgress(mid,prog);
-        toast("+1 "+t("ad progress")+" ("+prog+"/"+needAds+")");
-        if(prog>=needAds)markMovieUnlocked(mid); render(false);
+      let prog=getUnlockProgress(mid)+1;
+      setUnlockProgress(mid,prog);
+      toast("+1 "+t("ad progress")+" ("+prog+"/"+needAds+")");
+      if(prog>=needAds){
+        const h=markMovieUnlocked(mid);
+        toast(t("Unlocked for")+" "+h+" "+t("hours"));
       }
+      render(false);
     }else{
       const reward=Number(cfg.adReward||2);
-      const finish=function(u){userData=u||userData;state.points=Number(userData.points)||0;toast("+"+reward+" "+t("points added"));render(true);};
-      if(window.CineHubFB&&window.CineHubFB.claimAdReward){window.CineHubFB.claimAdReward(reward,Number(cfg.dailyAdLimit||20)).then(finish).catch(function(e){toast(e&&e.message==='daily_ad_limit'?t("Daily ad limit reached"):t("Reward failed"));});}
-      else{state.points+=reward;save();toast("+"+reward+" "+t("points added"));render(true);}
+      state.points+=reward;
+      const watched=Number((userData&&userData.ads_today)||localStorage.getItem("cinehub4_ads_today")||0)+1;
+      if(userData){userData.ads_today=watched;userData.ads_day=new Date().toDateString();}
+      localStorage.setItem("cinehub4_ads_today",String(watched));
+      localStorage.setItem("cinehub4_ads_day",new Date().toDateString());
+      if(window.CineHubFB) window.CineHubFB.updateUserField(null,{ads_today:watched,ads_day:new Date().toDateString()});
+      save();
+      toast("+"+reward+" "+t("points added"));
+      render(true);
     }
   }
 
@@ -1233,20 +1198,38 @@ function isAdminUser(){
     return ids.map(String).includes(uid);
   }catch(e){return false}
 }
-// Load admin IDs from Firestore config/main (not in public source)
+// Secure admin check: backend verifies Telegram initData. No admin IDs are exposed to the browser.
 function loadAdminIdsApp(){
-  if(!window.CineHubFB) return;
-  window.CineHubFB.loadConfig().then(function(cfg){
-    if(!cfg) return;
-    var ids = [];
-    if(cfg && cfg.is_admin){
-      try{ var me=window.Telegram?.WebApp?.initDataUnsafe?.user; if(me&&me.id) ids=[String(me.id)]; }catch(e){}
-    }
-    window.__ADMIN_IDS = ids;
-    try{render(true)}catch(e){}
-  }).catch(function(){});
+  try{
+    if(!window.APP_CONFIG || !window.APP_CONFIG.apiBaseUrl) return;
+    const initData=window.Telegram?.WebApp?.initData||"";
+    if(!initData) return;
+    fetch(window.APP_CONFIG.apiBaseUrl,{
+      method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify({action:"adminCheck",initData:initData})
+    }).then(r=>r.json()).then(function(res){
+      if(res&&res.ok&&res.data&&res.data.isAdmin){
+        window.__ADMIN_IDS=[String(window.Telegram.WebApp.initDataUnsafe.user.id)];
+      }else{
+        window.__ADMIN_IDS=[];
+      }
+      try{setupAdminButton();render(true)}catch(e){}
+    }).catch(function(){window.__ADMIN_IDS=[];try{setupAdminButton()}catch(e){}});
+  }catch(e){}
 }
-setTimeout(loadAdminIdsApp, 200);
+setTimeout(loadAdminIdsApp, 250);
+
+function loadPublicAppConfig(){
+  try{
+    if(!window.CineHubFB) return;
+    window.CineHubFB.loadConfig().then(function(c){
+      if(!c) return;
+      try{ Object.assign(window.APP_CONFIG,c); }catch(e){}
+      try{ render(true); }catch(e){}
+    }).catch(function(){});
+  }catch(e){}
+}
+setTimeout(loadPublicAppConfig, 500);
 function setupAdminButton(){
   try{
     const btn=document.getElementById("adminPanelBtn");
