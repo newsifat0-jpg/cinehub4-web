@@ -128,7 +128,7 @@ function loadAdminIdsFromFB(){
           if(app)app.classList.add("hidden");
           // TEMP DEBUG - remove after fixing admin access
           if(res&&res.data){
-            alert("DEBUG\nYour Telegram ID: "+res.data.debugId+"\nVerified: "+res.data.debugVerified+"\nADMIN_IDS on server: "+res.data.debugAdminIdsRaw+"\nReason: "+res.data.debugReason+"\ninitData length: "+res.data.debugInitDataLen+"\nHash match: "+res.data.debugHashMatch+"\nauth_date: "+res.data.debugAuthDate+"\nnow: "+res.data.debugNow+"\ndiff(sec): "+res.data.debugDateDiffSec);
+            alert("DEBUG\nYour Telegram ID: "+res.data.debugId+"\nVerified: "+res.data.debugVerified+"\nADMIN_IDS on server: "+res.data.debugAdminIdsRaw+"\nReason: "+res.data.debugReason+"\ninitData length: "+res.data.debugInitDataLen+"\nHash match: "+res.data.debugHashMatch+"\nauth_date: "+res.data.debugAuthDate+"\nnow: "+res.data.debugNow+"\ndiff(sec): "+res.data.debugDateDiffSec+"\nkeys: "+res.data.debugKeys+"\ntoken len: "+res.data.debugTokenLen+"\ntoken ends: "+res.data.debugTokenPreview);
           }else{
             alert("DEBUG\nNo response data. Check APP_CONFIG.apiBaseUrl and BOT_TOKEN.");
           }
