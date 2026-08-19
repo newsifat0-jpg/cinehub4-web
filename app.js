@@ -114,14 +114,45 @@ const defaults={appName:"Cine Hub4",botUsername:"@Cinehub4bot",telegramBotLink:"
 let cfg={...defaults,...JSON.parse(localStorage.getItem("cinehub4_settings")||"{}")};
 if(!cfg.categories||!cfg.categories.length)cfg.categories=defaults.categories.slice();
 if(!cfg.adultCategories||!cfg.adultCategories.length)cfg.adultCategories=defaults.adultCategories.slice();
-let movies=JSON.parse(localStorage.getItem("cinehub4_movies")||"null")||[
-{id:1,title:"PRINCE (প্রিন্স) | Full Movie | Shakib Khan | Tasnia Farin | ফুল মুভি",year:2026,rating:8.7,genre:"Action • Drama",category:"Bangla Moves",clicks:1030,downloads:921,likes:34,duration:"2:27:35",poster:"",views:1030},
-{id:2,title:"Taandob (তাণ্ডব) | Official Trailer | Shakib Khan | Jaya | Sabila",year:2026,rating:8.1,genre:"Action",category:"Bangla Moves",clicks:357,downloads:120,likes:6,duration:"2:08:20",poster:"",views:357},
-{id:3,title:"SPIDER-MAN: Brand New Day",year:2026,rating:8.5,genre:"Action • Adventure",category:"Hollywood Movie Hindi",clicks:1207,downloads:641,likes:88,duration:"2:15:00",poster:"",views:1207},
-{id:4,title:"Demo Adult Title | 18+ Sample",year:2026,rating:7.5,genre:"Adult",category:"Adult Movie",adult:true,clicks:410,downloads:90,likes:12,duration:"0:35:00",poster:"",views:410},
-{id:5,title:"Demo Anime Title | 18+ Sample",year:2026,rating:7.8,genre:"Adult",category:"Anime",adult:true,clicks:260,downloads:55,likes:9,duration:"0:24:00",poster:"",views:260}];
-const state={page:localStorage.getItem("cinehub4_page")||"movies",adultOK:false,points:Number(localStorage.getItem("cinehub4_points")||1),query:"",category:"All Movies",mode:"new",adultCategory:"All",adultMode:"new",history:JSON.parse(sessionStorage.getItem("cinehub4_history")||"[]"),unlockProgress:0,buyStep:null,buyOrder:null};
-function save(){localStorage.setItem("cinehub4_movies",JSON.stringify(movies));localStorage.setItem("cinehub4_points",state.points)}
+let movies=[];
+let userData={points:1,unlocks:{},ads_today:0,ads_day:"",language:"en",refs:0};
+const state={page:localStorage.getItem("cinehub4_page")||"movies",adultOK:false,points:1,query:"",category:"All Movies",mode:"new",adultCategory:"All",adultMode:"new",history:JSON.parse(sessionStorage.getItem("cinehub4_history")||"[]"),unlockProgress:0,buyStep:null,buyOrder:null,moviesLoaded:false,userLoaded:false};
+function save(){
+  // points & unlocks go to Firebase users/{uid}
+  if(window.CineHubFB){
+    window.CineHubFB.updateUserField(null,{
+      points: state.points,
+      unlocks: userData.unlocks || {},
+      ads_today: userData.ads_today || 0,
+      ads_day: userData.ads_day || "",
+      language: userData.language || "en",
+      refs: userData.refs || 0
+    });
+  } else {
+    localStorage.setItem("cinehub4_points",state.points);
+  }
+}
+function loadMoviesFromFB(){
+  if(!window.CineHubFB){state.moviesLoaded=true;try{render(true)}catch(e){}return}
+  window.CineHubFB.listenMovies(function(list){
+    movies=list||[];
+    state.moviesLoaded=true;
+    try{render(true)}catch(e){console.error(e)}
+  });
+}
+function loadUserFromFB(){
+  if(!window.CineHubFB){state.userLoaded=true;return}
+  window.CineHubFB.loadUser().then(function(u){
+    userData = u || userData;
+    state.points = Number(userData.points) || 1;
+    state.userLoaded = true;
+    try{render(true)}catch(e){}
+  }).catch(function(e){
+    console.error(e);
+    state.userLoaded = true;
+  });
+}
+setTimeout(function(){loadMoviesFromFB();loadUserFromFB()},150);
 function toast(t){const x=$("#toast");if(!x)return;x.textContent=t;x.classList.add("show");setTimeout(()=>x.classList.remove("show"),1600)}
 function showPageTransition(cb){
   const el=document.getElementById("pageTransition");
@@ -173,13 +204,13 @@ function nav(p,opts={}){
   showPageTransition(go);
 }
 function goBack(){
-  // Main tabs + movie detail → leave dialog (no history walk)
+  // Main tabs → leave dialog (no history walk). Movie detail is a sub-page, not a main tab.
   const mainTabs=["movies","home","series","adult","profile","search"];
-  if(mainTabs.includes(state.page) || state.page==="detail"){
+  if(mainTabs.includes(state.page)){
     showLeaveDialog();
     return;
   }
-  // Sub pages (tasks, points, buy, settings) → previous page
+  // Sub pages (detail, tasks, points, buy, settings) → previous page
   let prev=null;
   try{prev=state.history.pop()}catch(e){}
   try{sessionStorage.setItem("cinehub4_history",JSON.stringify(state.history||[]))}catch(e){}
@@ -211,7 +242,7 @@ function card(m,idx){
     </div>
   </article>`;
 }
-function pageBackBar(title){return`<div class="page-back-bar"><button type="button" class="page-back-btn" id="pageBackBtn" onclick="goBack()">‹</button><span class="page-back-title">${title||""}</span></div>`}
+function pageBackBar(title,subtitle){return`<div class="page-back-bar"><button type="button" class="page-back-btn" id="pageBackBtn" onclick="goBack()">‹</button><button type="button" class="menu-ham" id="hamBtn">☰</button><div class="page-back-textwrap"><span class="page-back-title">${title||""}</span>${subtitle?`<span class="page-back-sub">🪙 ${subtitle}</span>`:""}</div></div>`}
 function menuOnlyHeader(title){return`<div class="page-back-bar"><button type="button" class="menu-ham" id="hamBtn">☰</button><span class="page-back-title">${title||""}</span></div>`}
 function bindPageBack(){const b=$("#pageBackBtn");if(b)b.onclick=()=>goBack()}
 function primeHeader(){return`<div class="prime-row"><button type="button" class="menu-ham" id="hamBtn">☰</button><div class="prime-title">Cine <span class="scene-pill">Hub4</span></div></div>`}
@@ -428,7 +459,46 @@ function copyRefLink(){
 }
 
 
-function points(){return pageBackBar(t("My Points"))+`<div class="section-title"><b>🪙 My Points</b><span>${state.points} points</span></div><div class="panel"><div class="amount">${state.points} <span class="muted">points</span></div><div class="task"><span>📺 Watch Ad & Earn</span><b>+${cfg.adReward}</b><button class="primary cyan" onclick="watchAd('rewarded')">Watch</button></div><div class="task"><span>🛒 Buy Points</span><button class="primary pink" onclick="nav('buy')">Buy</button></div><div class="task"><span>👥 Refer & Earn</span><button class="pill" onclick="shareRef()">Share</button></div></div><div class="panel"><h3>Daily Ad Limit</h3><div class="task"><span>Only for earning points</span><b>${cfg.dailyAdLimit}/day</b></div><div class="muted">${t("Movie unlock is not limited by the daily ad limit.")}</div></div>`}
+function points(){const refs=Number(localStorage.getItem("cinehub4_refs")||0);return pageBackBar(t("My Points"),t("BALANCE & REWARDS"))+`
+  <div class="earn-hero">
+    <div class="earn-hero-ico">🪙</div>
+    <div>
+      <b>${state.points} ${t("Points")}</b>
+      <p>${t("Your current balance — earn more by watching ads, referring friends, or buy instantly.")}</p>
+      <div class="earn-chips">
+        <span>📺 ${t("Watch & Earn")}</span>
+        <span>👥 ${t("Refer & Earn")}</span>
+        <span>🛒 ${t("Buy Points")}</span>
+      </div>
+    </div>
+  </div>
+  <div class="pf-stats">
+    <div class="pf-stat"><div><b>${state.points}</b><span>${t("Current Balance")}</span></div><div class="ico coin">🪙</div></div>
+    <div class="pf-stat"><div><b>${cfg.adReward||2}</b><span>${t("Points Per Ad")}</span></div><div class="ico gift">🎁</div></div>
+    <div class="pf-stat"><div><b>${cfg.referralReward||20}</b><span>${t("Per Referral")}</span></div><div class="ico eye">👥</div></div>
+    <div class="pf-stat"><div><b>${cfg.dailyAdLimit||20}</b><span>${t("Daily Limit")}</span></div><div class="ico shield">🛡</div></div>
+  </div>
+  <div class="pf-section">💰 ${t("EARNING OPTIONS")}</div>
+  <div class="task-row">
+    <div class="task-ico">📺</div>
+    <div class="task-meta"><b>${t("Watch Ad & Earn")}</b><span>+${cfg.adReward||2} ${t("Points")}</span></div>
+    <button type="button" class="task-start" onclick="watchAd('rewarded')">${t("Watch")}</button>
+  </div>
+  <div class="task-row">
+    <div class="task-ico">🛒</div>
+    <div class="task-meta"><b>${t("Buy Points")}</b><span>${t("Get more instantly")}</span></div>
+    <button type="button" class="task-start" onclick="nav('buy')">${t("Buy")}</button>
+  </div>
+  <div class="task-row">
+    <div class="task-ico">👥</div>
+    <div class="task-meta"><b>${t("Refer & Earn")}</b><span>+${cfg.referralReward||20} ${t("pt per referral")}</span></div>
+    <button type="button" class="task-start" onclick="shareRef()">${t("Share")}</button>
+  </div>
+  <div class="pf-section">⏱ ${t("DAILY AD LIMIT")}</div>
+  <div class="pf-panel">
+    <div class="pf-row"><span>${t("Only for earning points")}</span><b>${cfg.dailyAdLimit||20}/${t("day")}</b></div>
+  </div>
+  <div class="muted" style="font-size:11px;margin-top:8px;padding:0 2px">${t("Movie unlock is not limited by the daily ad limit.")}</div>`}
 
 function getTasks(){
   // Always prefer live admin settings
@@ -459,11 +529,11 @@ function taskResetInfo(i,tk){
 }
 function tasks(){
   loadSharedSettings();
-  const watched=Number(localStorage.getItem("cinehub4_ads_today")||0);
+  const watched=Number((userData&&userData.ads_today)||localStorage.getItem("cinehub4_ads_today")||0);
   const limit=Number(cfg.dailyAdLimit||20);
   const rem=Math.max(0,limit-watched);
   const list=getTasks();
-  return pageBackBar(t("More Point Earning"))+`
+  return pageBackBar(t("More Point Earning"),t("EARN & UNLOCK"))+`
   <div class="earn-hero">
     <div class="earn-hero-ico">⚡</div>
     <div>
@@ -510,31 +580,21 @@ function runTask(i){
   if(t.type==="link"){
     openLink(t.link||cfg.telegramChannelLink||cfg.telegramBotLink);
     // credit after opening (demo)
-    state.points+=Number(t.reward||0);save();
-    localStorage.setItem(st.key,String(Date.now()));
-    toast("+"+(t.reward||0)+" points");
-    render(true);
+    if(window.CineHubFB&&window.CineHubFB.claimTask){window.CineHubFB.claimTask(t.name).then(function(u){userData=u;state.points=Number(u.points)||0;localStorage.setItem(st.key,String(Date.now()));toast("+"+(t.reward||0)+" points");render(true)}).catch(function(e){toast(e&&e.message?e.message:"Task failed")});}
     return;
   }
   if(t.type==="share"){shareRefLink();return}
   if(t.type==="countdown"||t.type==="oneclick"){
     const secs=Number(t.seconds||t.secs||5);
     showCountdownTask(t.name||"one click",secs,function(){
-      state.points+=Number(t.reward||1);save();
-      localStorage.setItem(st.key,String(Date.now()));
-      toast("+"+(t.reward||1)+" points added");
-      render(true);
+      if(window.CineHubFB&&window.CineHubFB.claimTask){window.CineHubFB.claimTask(t.name).then(function(u){userData=u;state.points=Number(u.points)||0;localStorage.setItem(st.key,String(Date.now()));toast("+"+(t.reward||1)+" points added");render(true)}).catch(function(e){toast(e&&e.message?e.message:"Task failed")});}
     });
     return;
   }
   if(t.type==="login"){
     const key="cinehub4_login_"+new Date().toDateString();
     if(localStorage.getItem(key)){toast("Already claimed today");return}
-    state.points+=Number(t.reward||2);
-    localStorage.setItem("cinehub4_points",String(state.points));
-    localStorage.setItem(key,"1");
-    toast("+"+(t.reward||2)+" points");
-    render(true);
+    if(window.CineHubFB&&window.CineHubFB.claimTask){window.CineHubFB.claimTask(t.name).then(function(u){userData=u;state.points=Number(u.points)||0;localStorage.setItem(key,"1");toast("+"+(t.reward||2)+" points");render(true)}).catch(function(e){toast(e&&e.message?e.message:"Task failed")});}
   }
 }
 
@@ -594,10 +654,9 @@ function submitPayment(){
     const user=tg?((tg.first_name||"")+(tg.last_name?" "+tg.last_name:"")):("User "+(localStorage.getItem("cinehub4_uid")||""));
     const uid=String(tg?.id||localStorage.getItem("cinehub4_uid")||"");
     const now=new Date();
-    const list=JSON.parse(localStorage.getItem("cinehub4_payments")||"[]");
-    list.push({
-      id:Date.now(),
+    const paymentObj={
       user:user,
+      userId:uid,
       uid:uid,
       pkg:order.name,
       usdt:order.price,
@@ -611,8 +670,14 @@ function submitPayment(){
       ts:now.getTime(),
       date:now.toLocaleString(),
       created:now.toISOString()
-    });
-    localStorage.setItem("cinehub4_payments",JSON.stringify(list));
+    };
+    if(window.CineHubFB){
+      window.CineHubFB.addPayment(paymentObj).catch(function(e){console.error(e)});
+    } else {
+      const list=JSON.parse(localStorage.getItem("cinehub4_payments")||"[]");
+      list.push(Object.assign({id:Date.now()},paymentObj));
+      localStorage.setItem("cinehub4_payments",JSON.stringify(list));
+    }
     state.buyStep=null;state.buyOrder=null;state.selectedWallet=null;
     toast(t("Payment request submitted"));
     nav("profile");
@@ -727,13 +792,20 @@ function unlockKey(id){return "cinehub4_unlock_"+id}
 function progressKey(id){return "cinehub4_uprog_"+id}
 function isMovieUnlocked(id){
   try{
-    const exp=Number(localStorage.getItem(unlockKey(id))||0);
-    return exp>Date.now();
+    if(userData && userData.unlocks){
+      const exp=Number(userData.unlocks[String(id)]||0);
+      if(exp>Date.now()) return true;
+    }
+    // fallback local
+    const exp2=Number(localStorage.getItem(unlockKey(id))||0);
+    return exp2>Date.now();
   }catch(e){return false}
 }
 function markMovieUnlocked(id){
   const hours=Number(cfg.unlockHours)||15;
   const exp=Date.now()+hours*3600*1000;
+  if(!userData.unlocks) userData.unlocks={};
+  userData.unlocks[String(id)]=exp;
   try{localStorage.setItem(unlockKey(id),String(exp))}catch(e){}
   try{localStorage.removeItem(progressKey(id))}catch(e){}
   state.unlockProgress=Number(cfg.unlockCost)||5;
@@ -881,29 +953,39 @@ function usePointsForUnlock(){
     toast(t("Not enough points")+" ("+need+" "+t("needed")+")");
     return;
   }
-  state.points-=need;
-  save();
-  setUnlockProgress(id,cost);
-  const h=markMovieUnlocked(id);
-  toast(t("Unlocked for")+" "+h+" "+t("hours")+" · -"+need+" "+t("Points"));
-  render(false);
+  if(window.CineHubFB&&window.CineHubFB.unlockByPoints){
+    window.CineHubFB.unlockByPoints(id,need,Number(cfg.unlockHours)||15).then(function(u){
+      userData=u||userData; state.points=Number(userData.points)||0; setUnlockProgress(id,cost); markMovieUnlocked(id);
+      toast(t("Unlocked for")+" "+(Number(cfg.unlockHours)||15)+" "+t("hours")+" · -"+need+" "+t("Points")); render(false);
+    }).catch(function(e){toast(e&&e.message==='not_enough_points'?t("Not enough points"):t("Unlock failed"));});
+    return;
+  }
+  state.points-=need; save(); setUnlockProgress(id,cost); const h=markMovieUnlocked(id);
+  toast(t("Unlocked for")+" "+h+" "+t("hours")+" · -"+need+" "+t("Points")); render(false);
 }
 function unlockWithAds(){watchAd("unlock")}
 function unlockPoints(){usePointsForUnlock()}
 
 function openServer(movieId,serverNo){
   if(!isMovieUnlocked(movieId)){toast(t("Unlock required"));return}
-  const m=movies.find(x=>x.id===movieId);
-  const title=m?(m.title||"").split("|")[0].trim():"Movie";
-  const demoUrl=(m&&(m.videoUrl||m.downloadUrl))||cfg.demoVideoUrl||"https://www.w3schools.com/html/mov_bbb.mp4";
+  const m=movies.find(x=>x.id===movieId||String(x.id)===String(movieId));
+  if(!m){toast("Movie not found");return}
+  const title=(m.title||"").split("|")[0].trim()||"Movie";
+  let url="";
+  if(serverNo===1) url=m.server1||m.server1_link||"";
+  else if(serverNo===2) url=m.server2||m.server2_link||"";
+  else if(serverNo===3) url=m.server3||m.server3_link||"";
+  if(!url){toast(t("Server")+" "+serverNo+" unavailable");return}
+  // track click
+  try{ if(window.CineHubFB) window.CineHubFB.incClicks(m.id); }catch(e){}
   toast(t("Server")+" "+serverNo+" · "+title);
   try{
     if(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.openLink){
-      window.Telegram.WebApp.openLink(demoUrl);
+      window.Telegram.WebApp.openLink(url);
       return;
     }
   }catch(e){}
-  window.open(demoUrl,"_blank");
+  window.open(url,"_blank");
 }
 function playDemoVideo(movieId){
   if(!isMovieUnlocked(movieId)){toast(t("Unlock required"));return}
@@ -969,7 +1051,7 @@ function watchAd(mode){
   if(!id && mode!=="countdown"){toast(t("Admin has not configured this Ad Block ID"));return}
   // Daily limit only for earning modes
   if(mode!=="unlock" && mode!=="adult"){
-    const watched=Number(localStorage.getItem("cinehub4_ads_today")||0);
+    const watched=Number((userData&&userData.ads_today)||localStorage.getItem("cinehub4_ads_today")||0);
     const limit=Number(cfg.dailyAdLimit||20);
     if(watched>=limit){toast(t("Daily ad limit reached"));return}
   }
@@ -978,23 +1060,26 @@ function watchAd(mode){
     if(mode==="unlock"){
       const mid=state.detailId;
       const needAds=Number(cfg.adsForUnlock)||Number(cfg.unlockCost)||5;
-      let prog=getUnlockProgress(mid)+1;
-      setUnlockProgress(mid,prog);
-      toast("+1 "+t("ad progress")+" ("+prog+"/"+needAds+")");
-      if(prog>=needAds){
-        const h=markMovieUnlocked(mid);
-        toast(t("Unlocked for")+" "+h+" "+t("hours"));
+      if(window.CineHubFB&&window.CineHubFB.unlockByAds){
+        window.CineHubFB.unlockByAds(mid,needAds,Number(cfg.unlockHours)||15).then(function(u){
+          userData=u||userData; state.points=Number(userData.points)||0;
+          const unlocked=window.CineHubFB.isUnlocked(userData,mid);
+          const prog=unlocked?needAds:Number((userData.unlock_progress||{})[String(mid)]||0);
+          setUnlockProgress(mid,prog);
+          if(unlocked){markMovieUnlocked(mid);toast(t("Unlocked for")+" "+(Number(cfg.unlockHours)||15)+" "+t("hours"));}
+          else toast("+1 "+t("ad progress")+" ("+prog+"/"+needAds+")");
+          render(false);
+        }).catch(function(){toast(t("Unlock failed"));});
+      }else{
+        let prog=getUnlockProgress(mid)+1; setUnlockProgress(mid,prog);
+        toast("+1 "+t("ad progress")+" ("+prog+"/"+needAds+")");
+        if(prog>=needAds)markMovieUnlocked(mid); render(false);
       }
-      render(false);
     }else{
       const reward=Number(cfg.adReward||2);
-      state.points+=reward;
-      const watched=Number(localStorage.getItem("cinehub4_ads_today")||0)+1;
-      localStorage.setItem("cinehub4_ads_today",String(watched));
-      localStorage.setItem("cinehub4_ads_day",new Date().toDateString());
-      save();
-      toast("+"+reward+" "+t("points added"));
-      render(true);
+      const finish=function(u){userData=u||userData;state.points=Number(userData.points)||0;toast("+"+reward+" "+t("points added"));render(true);};
+      if(window.CineHubFB&&window.CineHubFB.claimAdReward){window.CineHubFB.claimAdReward(reward,Number(cfg.dailyAdLimit||20)).then(finish).catch(function(e){toast(e&&e.message==='daily_ad_limit'?t("Daily ad limit reached"):t("Reward failed"));});}
+      else{state.points+=reward;save();toast("+"+reward+" "+t("points added"));render(true);}
     }
   }
 
@@ -1142,14 +1227,26 @@ function bindDrawer(){
 }
 function isAdminUser(){
   try{
-    const ids=(window.APP_CONFIG&&window.APP_CONFIG.adminIds)||[];
-    const demo=(window.APP_CONFIG&&window.APP_CONFIG.adminDemoId)||"";
+    const ids=(window.__ADMIN_IDS||[]);
     const tg=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initDataUnsafe&&window.Telegram.WebApp.initDataUnsafe.user;
     const uid=tg&&tg.id!=null?String(tg.id):"";
-    if(demo&&uid&&String(demo)===uid) return true;
     return ids.map(String).includes(uid);
   }catch(e){return false}
 }
+// Load admin IDs from Firestore config/main (not in public source)
+function loadAdminIdsApp(){
+  if(!window.CineHubFB) return;
+  window.CineHubFB.loadConfig().then(function(cfg){
+    if(!cfg) return;
+    var ids = [];
+    if(cfg && cfg.is_admin){
+      try{ var me=window.Telegram?.WebApp?.initDataUnsafe?.user; if(me&&me.id) ids=[String(me.id)]; }catch(e){}
+    }
+    window.__ADMIN_IDS = ids;
+    try{render(true)}catch(e){}
+  }).catch(function(){});
+}
+setTimeout(loadAdminIdsApp, 200);
 function setupAdminButton(){
   try{
     const btn=document.getElementById("adminPanelBtn");
