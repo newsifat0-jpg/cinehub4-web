@@ -1201,9 +1201,9 @@ function isAdminUser(){
 // Secure admin check: backend verifies Telegram initData. No admin IDs are exposed to the browser.
 function loadAdminIdsApp(){
   try{
-    if(!window.APP_CONFIG || !window.APP_CONFIG.apiBaseUrl) return;
+    if(!window.APP_CONFIG || !window.APP_CONFIG.apiBaseUrl){ alert("DEBUG: apiBaseUrl missing in config.js"); return; }
     const initData=window.Telegram?.WebApp?.initData||"";
-    if(!initData) return;
+    if(!initData){ alert("DEBUG: initData is empty. App must be opened via Telegram bot's Mini App button, not a plain browser link."); return; }
     fetch(window.APP_CONFIG.apiBaseUrl,{
       method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
       body:JSON.stringify({action:"adminCheck",initData:initData})
@@ -1212,10 +1212,16 @@ function loadAdminIdsApp(){
         window.__ADMIN_IDS=[String(window.Telegram.WebApp.initDataUnsafe.user.id)];
       }else{
         window.__ADMIN_IDS=[];
+        // TEMP DEBUG - remove after fixing admin access
+        if(res&&res.data){
+          alert("DEBUG\nYour Telegram ID: "+res.data.debugId+"\nVerified: "+res.data.debugVerified+"\nADMIN_IDS on server: "+res.data.debugAdminIdsRaw);
+        }else{
+          alert("DEBUG\nBad response: "+JSON.stringify(res));
+        }
       }
       try{setupAdminButton();render(true)}catch(e){}
-    }).catch(function(){window.__ADMIN_IDS=[];try{setupAdminButton()}catch(e){}});
-  }catch(e){}
+    }).catch(function(err){window.__ADMIN_IDS=[];alert("DEBUG fetch error: "+err);try{setupAdminButton()}catch(e){}});
+  }catch(e){alert("DEBUG outer error: "+e);}
 }
 setTimeout(loadAdminIdsApp, 250);
 
