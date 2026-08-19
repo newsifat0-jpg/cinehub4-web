@@ -80,9 +80,12 @@ function save(){
       A.settings.usdtNetwork=A.settings.wallets[0].network||A.settings.usdtNetwork||"TRC20";
     }
   }catch(e){}
-  // movies are saved to Firestore via CineHubFB.saveMovie / deleteMovie
   localStorage.setItem("cinehub4_settings",JSON.stringify(A.settings));
-  if(window.CineHubFB&&window.CineHubFB.saveConfig){window.CineHubFB.saveConfig(A.settings).catch(function(e){console.error("saveConfig",e);toast("Settings save failed")});}
+  try{
+    if(window.CineHubFB && isTelegramAdmin()){
+      window.CineHubFB.saveConfig(A.settings).then(function(){toast("Saved");}).catch(function(e){console.error(e);toast("Save failed");});
+    }
+  }catch(e){}
 }
 function toast(msg){const te=el('toast')||toastEl;if(!te)return;te.textContent=msg;te.classList.add('show');setTimeout(()=>te.classList.remove('show'),1700)}
 function money(n){return Number(n).toLocaleString()}
@@ -91,20 +94,41 @@ function getTelegramUserId(){try{return window.Telegram?.WebApp?.initDataUnsafe?
 window.__ADMIN_IDS = window.__ADMIN_IDS || [];
 function allowedAdminIds(){return (window.__ADMIN_IDS||[]).map(String)}
 function isTelegramAdmin(){const id=getTelegramUserId();return !!id&&allowedAdminIds().includes(id)}
-function openAdmin(){localStorage.setItem('cinehub4_admin_session','1');$("#adminGate").classList.add('hidden');$("#adminApp").classList.remove('hidden');wireAdminNav();render()}
-function adminLogin(){loadAdminIdsFromFB();setTimeout(function(){if(isTelegramAdmin())openAdmin();else toast('এই Telegram account-এর Admin access নেই')},700)}
-function loadAdminIdsFromFB(){
-  if(!window.CineHubFB) return;
-  window.CineHubFB.loadConfig().then(function(cfg){
-    if(!cfg) return;
-    var ids = [];
-    if(cfg && cfg.is_admin){
-      try{ var me=window.Telegram?.WebApp?.initDataUnsafe?.user; if(me&&me.id) ids=[String(me.id)]; }catch(e){}
+function openAdmin(){
+  localStorage.setItem('cinehub4_admin_session','1');
+  $("#adminGate").classList.add('hidden');
+  $("#adminApp").classList.remove('hidden');
+  wireAdminNav();
+  try{
+    if(window.CineHubFB){
+      window.CineHubFB.loadConfig().then(function(c){
+        if(c){ A.settings={...A.settings,...c}; A.settings.adBlocks={...DEFAULT.adBlocks,...(A.settings.adBlocks||{})}; A.settings.categories=A.settings.categories||DEFAULT.categories; A.settings.adultCategories=A.settings.adultCategories&&A.settings.adultCategories.length?A.settings.adultCategories:DEFAULT.adultCategories; localStorage.setItem("cinehub4_settings",JSON.stringify(A.settings)); render(); }
+      }).catch(function(){});
     }
-    window.__ADMIN_IDS = ids;
-    // auto open if already admin
-    if(isTelegramAdmin()) openAdmin();
-  }).catch(function(e){console.error("loadAdminIds",e)});
+  }catch(e){}
+  render();
+}
+function adminLogin(){const telegramId=getTelegramUserId();const v=$("#adminIdInput").value.trim();if(telegramId){if(isTelegramAdmin())openAdmin();else toast('এই Telegram account-এর Admin access নেই');return}if(v&&allowedAdminIds().includes(v))openAdmin();else toast('Admin ID not authorized')}
+function loadAdminIdsFromFB(){
+  try{
+    const initData=window.Telegram?.WebApp?.initData||"";
+    const api=window.APP_CONFIG&&window.APP_CONFIG.apiBaseUrl;
+    if(!initData||!api){return;}
+    fetch(api,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"adminCheck",initData:initData})})
+      .then(r=>r.json()).then(function(res){
+        if(res&&res.ok&&res.data&&res.data.isAdmin){
+          const id=window.Telegram.WebApp.initDataUnsafe.user.id;
+          window.__ADMIN_IDS=[String(id)];
+          openAdmin();
+        }else{
+          window.__ADMIN_IDS=[];
+          const gate=document.getElementById("adminGate");
+          const app=document.getElementById("adminApp");
+          if(gate)gate.classList.remove("hidden");
+          if(app)app.classList.add("hidden");
+        }
+      }).catch(function(e){console.error("adminCheck",e)});
+  }catch(e){console.error("adminCheck",e)}
 }
 function boot(){try{window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand()}catch(e){} loadAdminIdsFromFB(); setTimeout(function(){if(isTelegramAdmin())openAdmin()},300);setTimeout(function(){if(isTelegramAdmin())openAdmin()},1200)}
 function sectionTitle(s){const map={dashboard:'Dashboard',movies:'Movies',categories:'Categories',users:'Users',points:'Points & Unlocks',ads:'Ads & Ad IDs',tasks:'Daily Tasks',payments:'Payments',adult:'Adult Library',requests:'Movie Requests',content:'Links & Videos',broadcast:'Broadcast',settings:'Settings'};return map[s]||s}
