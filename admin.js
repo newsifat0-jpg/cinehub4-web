@@ -57,7 +57,17 @@ const DEFAULT={
   themePink:"#ec4899",
   themeBg:"#0a0c14"
 };
-const A={section:"dashboard",settings:{...DEFAULT,...JSON.parse(localStorage.getItem("cinehub4_settings")||"{}")},movies:JSON.parse(localStorage.getItem("cinehub4_movies")||"null")||[{id:1,title:"PRINCE",type:"Movie",year:2026,rating:8.7,clicks:1842,downloads:921,status:"Published",category:"Bangla Moves"},{id:2,title:"ROCKSTAR",type:"Movie",year:2026,rating:8.1,clicks:1421,downloads:702,status:"Published",category:"Bangla Moves"},{id:3,title:"SPIDER-MAN: Brand New Day",type:"Movie",year:2026,rating:8.5,clicks:1207,downloads:641,status:"Draft",category:"Hollywood Movie Hindi"},{id:4,title:"Demo Adult Title | 18+ Sample",type:"Adult",year:2026,rating:7.5,clicks:410,downloads:90,status:"Published",category:"Adult Movie",adult:true},{id:5,title:"Demo Anime Title | 18+ Sample",type:"Adult",year:2026,rating:7.8,clicks:260,downloads:55,status:"Published",category:"Anime",adult:true}],users:12480,points:156240,adultEnabled:true};
+const A={section:"dashboard",settings:{...DEFAULT,...JSON.parse(localStorage.getItem("cinehub4_settings")||"{}")},movies:[],users:12480,points:156240,adultEnabled:true,moviesLoaded:false};
+/* Load movies from Firebase */
+function loadAdminMovies(){
+  if(!window.CineHubFB){A.moviesLoaded=true;try{render()}catch(e){}return}
+  window.CineHubFB.listenMovies(function(list){
+    A.movies=list||[];
+    A.moviesLoaded=true;
+    try{render()}catch(e){console.error(e)}
+  });
+}
+setTimeout(loadAdminMovies,200);
 A.settings.adBlocks={...DEFAULT.adBlocks,...(A.settings.adBlocks||{})};A.settings.categories=A.settings.categories||DEFAULT.categories;A.settings.adultCategories=A.settings.adultCategories&&A.settings.adultCategories.length?A.settings.adultCategories:DEFAULT.adultCategories;
 function el(id){return document.getElementById(id)}
 function contentEl(){return el("content")}
@@ -70,17 +80,33 @@ function save(){
       A.settings.usdtNetwork=A.settings.wallets[0].network||A.settings.usdtNetwork||"TRC20";
     }
   }catch(e){}
-  localStorage.setItem("cinehub4_movies",JSON.stringify(A.movies));
+  // movies are saved to Firestore via CineHubFB.saveMovie / deleteMovie
   localStorage.setItem("cinehub4_settings",JSON.stringify(A.settings));
+  if(window.CineHubFB&&window.CineHubFB.saveConfig){window.CineHubFB.saveConfig(A.settings).catch(function(e){console.error("saveConfig",e);toast("Settings save failed")});}
 }
 function toast(msg){const te=el('toast')||toastEl;if(!te)return;te.textContent=msg;te.classList.add('show');setTimeout(()=>te.classList.remove('show'),1700)}
 function money(n){return Number(n).toLocaleString()}
 function getTelegramUserId(){try{return window.Telegram?.WebApp?.initDataUnsafe?.user?.id?String(window.Telegram.WebApp.initDataUnsafe.user.id):''}catch(e){return ''}}
-function allowedAdminIds(){return (window.APP_CONFIG?.adminIds||[window.APP_CONFIG?.adminDemoId]).map(String)}
+// Admin IDs loaded from Firestore config/main (not in public source)
+window.__ADMIN_IDS = window.__ADMIN_IDS || [];
+function allowedAdminIds(){return (window.__ADMIN_IDS||[]).map(String)}
 function isTelegramAdmin(){const id=getTelegramUserId();return !!id&&allowedAdminIds().includes(id)}
 function openAdmin(){localStorage.setItem('cinehub4_admin_session','1');$("#adminGate").classList.add('hidden');$("#adminApp").classList.remove('hidden');wireAdminNav();render()}
-function adminLogin(){const telegramId=getTelegramUserId();const v=$("#adminIdInput").value.trim();if(telegramId){if(isTelegramAdmin())openAdmin();else toast('এই Telegram account-এর Admin access নেই');return}if(v&&allowedAdminIds().includes(v))openAdmin();else toast('Admin ID not authorized')}
-function boot(){try{window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand()}catch(e){} setTimeout(()=>{if(isTelegramAdmin())openAdmin()},100);setTimeout(()=>{if(isTelegramAdmin())openAdmin()},800)}
+function adminLogin(){loadAdminIdsFromFB();setTimeout(function(){if(isTelegramAdmin())openAdmin();else toast('এই Telegram account-এর Admin access নেই')},700)}
+function loadAdminIdsFromFB(){
+  if(!window.CineHubFB) return;
+  window.CineHubFB.loadConfig().then(function(cfg){
+    if(!cfg) return;
+    var ids = [];
+    if(cfg && cfg.is_admin){
+      try{ var me=window.Telegram?.WebApp?.initDataUnsafe?.user; if(me&&me.id) ids=[String(me.id)]; }catch(e){}
+    }
+    window.__ADMIN_IDS = ids;
+    // auto open if already admin
+    if(isTelegramAdmin()) openAdmin();
+  }).catch(function(e){console.error("loadAdminIds",e)});
+}
+function boot(){try{window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand()}catch(e){} loadAdminIdsFromFB(); setTimeout(function(){if(isTelegramAdmin())openAdmin()},300);setTimeout(function(){if(isTelegramAdmin())openAdmin()},1200)}
 function sectionTitle(s){const map={dashboard:'Dashboard',movies:'Movies',categories:'Categories',users:'Users',points:'Points & Unlocks',ads:'Ads & Ad IDs',tasks:'Daily Tasks',payments:'Payments',adult:'Adult Library',requests:'Movie Requests',content:'Links & Videos',broadcast:'Broadcast',settings:'Settings'};return map[s]||s}
 function closeSidebar(){const sb=document.querySelector('.sidebar');if(sb)sb.classList.remove('open');const bd=document.getElementById('sideBackdrop');if(bd)bd.classList.add('hidden')}
 function openSidebar(){const sb=document.querySelector('.sidebar');if(sb)sb.classList.add('open');const bd=document.getElementById('sideBackdrop');if(bd)bd.classList.remove('hidden')}
@@ -562,8 +588,8 @@ function saveAllSettings(){
 
 function saveBrand(){A.settings.appName=$('#appName').value.trim()||'Cine Hub4';A.settings.botUsername=$('#botUser').value.trim();save();toast('Brand saved. Refresh user app to see it')}
 function openMovie(id=null){const m=id?A.movies.find(x=>x.id===id):null;showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="mTitle" value="${m?.title||''}"></div><div class="field"><label>Year</label><input id="mYear" type="number" value="${m?.year||2026}"></div><div class="field"><label>Category</label><select id="mCat">${A.settings.categories.filter(x=>x!=='All').map(c=>`<option ${m?.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Rating</label><input id="mRating" type="number" step=".1" value="${m?.rating||8}"></div><div class="field"><label>Poster URL</label><input id="mPoster" value="${m?.poster||''}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="s1" value="${m?.server1||''}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="s2" value="${m?.server2||''}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="s3" value="${m?.server3||''}" placeholder="https://..."></div><div class="field"><label>Adult?</label><select id="mAdult"><option value="0">No</option><option value="1" ${m?.adult?'selected':''}>Yes</option></select></div></div><button class="btn primary" style="margin-top:15px" onclick="saveMovie(${id||0})">Save Movie</button>`)}
-function saveMovie(id){const old=id?A.movies.find(m=>m.id===id):null;const isAdult=$('#mAdult').value==='1';let cat=$('#mCat').value;if(isAdult){const ac=(A.settings.adultCategories||[]).filter(x=>x!=='All');if(ac.length&&!ac.includes(cat))cat=ac[0];}const x={id:id||Date.now(),title:$('#mTitle').value||'Untitled Movie',type:isAdult?'Adult':'Movie',year:+$('#mYear').value||2026,rating:+$('#mRating').value||8,category:cat,poster:$('#mPoster').value.trim(),server1:$('#s1').value.trim(),server2:$('#s2').value.trim(),server3:$('#s3').value.trim(),adult:isAdult,clicks:old?.clicks||0,downloads:old?.downloads||0,status:'Published'};if(id)A.movies=A.movies.map(m=>m.id===id?x:m);else A.movies.unshift(x);save();closeModal();render();toast(isAdult?'Saved as Adult (only in Adult tab)':'Movie saved')}
-function editMovie(id){openMovie(id)}function deleteMovie(id){if(confirm('Delete this movie?')){A.movies=A.movies.filter(m=>m.id!==id);save();render();toast('Movie deleted')}}
+function saveMovie(id){const old=id?A.movies.find(m=>m.id===id||String(m.id)===String(id)):null;const isAdult=$('#mAdult').value==='1';let cat=$('#mCat').value;if(isAdult){const ac=(A.settings.adultCategories||[]).filter(x=>x!=='All');if(ac.length&&!ac.includes(cat))cat=ac[0];}const x={id:id||("manual_"+Date.now()),title:$('#mTitle').value||'Untitled Movie',type:isAdult?'Adult':'Movie',year:+$('#mYear').value||2026,rating:+$('#mRating').value||8,category:cat,poster:$('#mPoster').value.trim(),server1:$('#s1').value.trim(),server2:$('#s2').value.trim(),server3:$('#s3').value.trim(),adult:isAdult,clicks:old?.clicks||0,downloads:old?.downloads||0,status:'Published',manual_movie:true};toast('Saving...');if(window.CineHubFB){window.CineHubFB.saveMovie(x).then(function(saved){if(id)A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);else A.movies.unshift(saved);save();closeModal();render();toast(isAdult?'Saved as Adult (only in Adult tab)':'Movie saved')}).catch(function(e){console.error(e);toast('Save failed')})}else{if(id)A.movies=A.movies.map(m=>m.id===id?x:m);else A.movies.unshift(x);save();closeModal();render();toast(isAdult?'Saved as Adult (only in Adult tab)':'Movie saved')}}
+function editMovie(id){openMovie(id)}function deleteMovie(id){if(confirm('Delete this movie?')){if(window.CineHubFB){window.CineHubFB.deleteMovie(id).then(function(){A.movies=A.movies.filter(m=>String(m.id)!==String(id));save();render();toast('Movie deleted')}).catch(function(e){console.error(e);toast('Delete failed')})}else{A.movies=A.movies.filter(m=>m.id!==id);save();render();toast('Movie deleted')}}}
 function openCategory(index=null){const old=index===null?'':A.settings.categories[index];showModal(`<div class="modal-head"><h2>${index===null?'Add':'Edit'} Category</h2><button class="btn" onclick="closeModal()">×</button></div><div class="field"><label>Category name</label><input id="catName" value="${old}"></div><button class="btn primary" style="margin-top:15px" onclick="saveCategory(${index===null?-1:index})">Save Category</button>`)}
 function editCategory(i){openCategory(i)}function saveCategory(i){const n=$('#catName').value.trim();if(!n)return;if(i<0)A.settings.categories.push(n);else A.settings.categories[i]=n;save();closeModal();render();toast('Category saved')}
 function deleteCategory(i){if(A.settings.categories[i]==='All'){toast('All category cannot be deleted');return}if(confirm('Delete this category?')){A.settings.categories.splice(i,1);save();render();toast('Category deleted')}}
@@ -600,7 +626,7 @@ function saveTask(idx){
 function openAdBlock(){showModal(`<div class="modal-head"><h2>Add Ad Block</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Ad Block Name</label><input id="extraAdName" placeholder="e.g. Home Reward"></div><div class="field"><label>Ad Block ID</label><input id="extraAdId" placeholder="43222"></div></div><button class="btn primary" style="margin-top:15px" onclick="saveExtraAd()">Add Ad Block</button>`)}
 function saveExtraAd(){const n=$('#extraAdName').value.trim(),id=$('#extraAdId').value.trim();if(!n||!id)return;A.settings.adBlocks.extra=A.settings.adBlocks.extra||{};A.settings.adBlocks.extra[n]=id;save();closeModal();render();toast('Ad block added')}
 function openAdultMovie(id=null){const m=id?A.movies.find(x=>x.id===id):null;const cats=A.settings.adultCategories.filter(x=>x!=='All');showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Adult Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="adultTitle" value="${m?.title||''}" placeholder="Adult title"></div><div class="field"><label>Year</label><input id="adultYear" type="number" value="${m?.year||new Date().getFullYear()}"></div><div class="field"><label>Category</label><select id="adultCat">${cats.map(c=>`<option ${m?.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Rating</label><input id="adultRating" type="number" step=".1" value="${m?.rating||0}"></div><div class="field"><label>Poster URL</label><input id="adultPoster" value="${m?.poster||''}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="adultS1" value="${m?.server1||''}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="adultS2" value="${m?.server2||''}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="adultS3" value="${m?.server3||''}" placeholder="https://..."></div></div><button class="btn primary" style="margin-top:15px" onclick="saveAdultMovie(${id||0})">Save Adult Movie</button>`)}
-function saveAdultMovie(id){const old=id?A.movies.find(m=>m.id===id):null;const t=$('#adultTitle').value.trim();if(!t)return;const x={id:id||Date.now(),title:t,type:'Adult',year:+$('#adultYear').value||new Date().getFullYear(),rating:+$('#adultRating').value||0,category:$('#adultCat').value,adult:true,poster:$('#adultPoster').value.trim(),server1:$('#adultS1').value.trim(),server2:$('#adultS2').value.trim(),server3:$('#adultS3').value.trim(),clicks:old?.clicks||0,downloads:old?.downloads||0,status:'Published'};if(id)A.movies=A.movies.map(m=>m.id===id?x:m);else A.movies.unshift(x);save();closeModal();render();toast('Adult movie saved')}
+function saveAdultMovie(id){const old=id?A.movies.find(m=>m.id===id||String(m.id)===String(id)):null;const t=$('#adultTitle').value.trim();if(!t)return;const x={id:id||("manual_"+Date.now()),title:t,type:'Adult',year:+$('#adultYear').value||new Date().getFullYear(),rating:+$('#adultRating').value||0,category:$('#adultCat').value,adult:true,poster:$('#adultPoster').value.trim(),server1:$('#adultS1').value.trim(),server2:$('#adultS2').value.trim(),server3:$('#adultS3').value.trim(),clicks:old?.clicks||0,downloads:old?.downloads||0,status:'Published',manual_movie:true};toast('Saving...');if(window.CineHubFB){window.CineHubFB.saveMovie(x).then(function(saved){if(id)A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);else A.movies.unshift(saved);save();closeModal();render();toast('Adult movie saved')}).catch(function(e){console.error(e);toast('Save failed')})}else{if(id)A.movies=A.movies.map(m=>m.id===id?x:m);else A.movies.unshift(x);save();closeModal();render();toast('Adult movie saved')}}
 function editAdultMovie(id){openAdultMovie(id)}
 function showModal(body){$('#modal').innerHTML=`<div class="modal-box">${body}</div>`;$('#modal').classList.remove('hidden')}function closeModal(){$('#modal').classList.add('hidden')}
 function render(){
