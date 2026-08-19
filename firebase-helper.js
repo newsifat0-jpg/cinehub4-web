@@ -92,7 +92,53 @@
         cb(a);
       }, function(){ cb([]); });
     },
-    saveMovie:function(movie){return api("saveMovie",{movie:movie});},
+    saveMovie:function(movie){
+      function writeClient(m){
+        if(!db) return Promise.reject(new Error("No Firebase client"));
+        var id = String(m.id || m.tmdb_id || ("m_" + Date.now())).replace(/\//g, "_");
+        var s1 = String(m.server1 || m.server1_link || m.s1 || "");
+        var s2 = String(m.server2 || m.server2_link || m.s2 || "");
+        var s3 = String(m.server3 || m.server3_link || m.s3 || "");
+        var data = {
+          title: String(m.title || "Untitled"),
+          year: String(m.year || ""),
+          poster: String(m.poster || ""),
+          overview: String(m.overview || ""),
+          rating: Number(m.rating) || 0,
+          category: String(m.category || "All Movies"),
+          type: String(m.type || (m.adult ? "Adult" : "Movie")),
+          adult: !!m.adult,
+          status: String(m.status || "Published"),
+          manual_movie: m.manual_movie !== false,
+          source: String(m.source || "manual"),
+          tmdb_id: String(m.tmdb_id || ""),
+          server1: s1, server2: s2, server3: s3,
+          server1_link: s1, server2_link: s2, server3_link: s3,
+          s1: s1, s2: s2, s3: s3,
+          s1on: true, s2on: true, s3on: true,
+          server1_status: true, server2_status: true, server3_status: true,
+          clicks: Number(m.clicks) || 0,
+          downloads: Number(m.downloads) || 0,
+          views: Number(m.views || m.clicks) || 0,
+          added_time: Number(m.added_time) || Date.now(),
+          created_time: String(m.created_time || new Date().toISOString()),
+          updated_time: Date.now()
+        };
+        return db.collection("movies").doc(id).set(data, {merge:true}).then(function(){
+          return Object.assign({}, data, {id: id});
+        });
+      }
+      // Prefer server API (service account bypasses client rules)
+      return api("saveMovie",{movie:movie}).then(function(saved){
+        return saved;
+      }).catch(function(eApi){
+        // If rules temporarily allow client write, try as last resort
+        if (!db) throw eApi;
+        return writeClient(movie).catch(function(){
+          throw eApi;
+        });
+      });
+    },
     deleteMovie:function(id){return api("deleteMovie",{id:String(id)});},
     incClicks:function(id){return api("incClicks",{id:String(id)});},
     loadConfig:function(){return api("loadPublicConfig");},
@@ -104,12 +150,34 @@
     setUnlock:function(uid,movieId,hours){return api("setUnlock",{uid:String(uid||getUid()),movieId:String(movieId),hours:Number(hours)||15});},
     loadPayments:function(uid){return api("loadPayments",{uid:String(uid||getUid())});},
     addPayment:function(payment){return api("addPayment",{payment:payment});},
+    listPayments:function(){return api("listPayments",{});},
+    updatePayment:function(id,fields){return api("updatePayment",{id:String(id||""),fields:fields||{}});},
+    listRequests:function(){return api("listRequests",{});},
+    updateRequest:function(id,fields){return api("updateRequest",{id:String(id||""),fields:fields||{}});},
+    testFirebase:function(){return api("testFirebase",{});},
     loadRequests:function(){return api("loadRequests");},
     addRequest:function(req){return api("addRequest",{request:req});},
     loadFavourites:function(uid){return api("loadFavourites",{uid:String(uid||getUid())});},
     toggleFavourite:function(uid,movieId,title){return api("toggleFavourite",{uid:String(uid||getUid()),movieId:String(movieId),title:title||""});},
     searchTmdb:function(query){return api("searchTmdb",{query:String(query||"")});},
-    importTmdbMovie:function(tmdbId){return api("importTmdbMovie",{tmdbId:String(tmdbId||"")});},
+    importTmdbMovie:function(tmdbId){
+      // Backend fetches TMDB + saves; if Firebase key broken, search already has data — client will be used by admin importFromSearch
+      return api("importTmdbMovie",{tmdbId:String(tmdbId||"")}).catch(function(err){
+        // Fallback: build minimal movie from tmdb id only (poster may be missing)
+        var m = {
+          id: "tmdb_" + String(tmdbId),
+          tmdb_id: String(tmdbId),
+          title: "TMDB " + tmdbId,
+          source: "tmdb",
+          manual_movie: false,
+          status: "Published",
+          category: "All Movies"
+        };
+        return window.CineHubFB.saveMovie(m).then(function(saved){
+          throw new Error((err && err.message ? err.message : err) + " — partial client save used");
+        }).catch(function(){ throw err; });
+      });
+    },
     loadMoviesApi:function(){
       return api("loadMovies",{}).then(function(list){
         return (list||[]).map(function(m){ return normalizeMovieDoc(m); }).filter(Boolean);

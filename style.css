@@ -48,7 +48,10 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
 .splash-line{width:72px;height:3px;border-radius:99px;background:linear-gradient(90deg,#6d4aff,#22d3ee)}
 
 /* Header row */
-.prime-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.prime-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.home-sticky-top{position:sticky;top:0;z-index:40;background:var(--bg,#07090f);padding:4px 0 8px;margin:0 -2px;box-shadow:0 8px 16px rgba(7,9,15,.65)}
+.home-sticky-top .hero-pills-sticky{position:static;background:transparent;padding:0;pointer-events:auto}
+.home-sticky-top .hero-pills{pointer-events:auto}
 .menu-ham{width:38px;height:38px;border:0;border-radius:12px;background:#161b2c;color:#c8d0e8;font-size:18px;cursor:pointer}
 .prime-title{font-size:16px;font-weight:900;flex:1}
 .scene-pill{background:linear-gradient(90deg,#7b5cff,#00b4ff);-webkit-background-clip:text;background-clip:text;color:transparent}

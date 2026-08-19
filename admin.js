@@ -146,7 +146,7 @@ function boot(){try{window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.ex
 function sectionTitle(s){const map={dashboard:'Dashboard',movies:'Movies',categories:'Categories',users:'Users',points:'Points & Unlocks',ads:'Ads & Ad IDs',tasks:'Daily Tasks',payments:'Payments',adult:'Adult Library',requests:'Movie Requests',content:'Links & Videos',broadcast:'Broadcast',settings:'Settings'};return map[s]||s}
 function closeSidebar(){const sb=document.querySelector('.sidebar');if(sb)sb.classList.remove('open');const bd=document.getElementById('sideBackdrop');if(bd)bd.classList.add('hidden')}
 function openSidebar(){const sb=document.querySelector('.sidebar');if(sb)sb.classList.add('open');const bd=document.getElementById('sideBackdrop');if(bd)bd.classList.remove('hidden')}
-function setSection(s){
+function setSection(s){ if(s==='payments') window.__payLoaded=false; if(s==='requests') window.__reqLoaded=false; 
   try{
     A.section=s;
     const tt=titleEl();
@@ -181,12 +181,61 @@ function wireAdminNav(){
 }
 wireAdminNav();
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSidebar()});
-function dashboard(){return `<div class="grid stats"><div class="card stat"><span class="label">Total Users</span><div class="num">${money(A.users)}</div><span class="up">↑ 8.4%</span><span class="ico">♙</span></div><div class="card stat"><span class="label">Movies</span><div class="num">${A.movies.length}</div><span class="up">Live library</span><span class="ico">🎬</span></div><div class="card stat"><span class="label">Points Issued</span><div class="num">${money(A.points)}</div><span class="up">Economy active</span><span class="ico">◈</span></div><div class="card stat"><span class="label">Pending Payments</span><div class="num">3</div><span class="up">Needs review</span><span class="ico">৳</span></div></div><div class="grid section-grid"><div class="card"><h3>Platform Activity</h3><div class="muted smalltext">Clicks, downloads and ad rewards</div><div class="chart">${[38,55,48,72,66,91,76].map(x=>`<div class="bar" style="height:${x}%"></div>`).join('')}</div></div><div class="card"><h3>Quick Controls</h3><div class="quick"><button onclick="openMovie()"><b>＋ Add Movie</b>Publish title</button><button onclick="setSection('ads')"><b>◉ Ad IDs</b>Manage every ad block</button><button onclick="setSection('content')"><b>🔗 Links & Video</b>Telegram + How to Watch</button><button onclick="setSection('categories')"><b>▦ Categories</b>Add / rename / delete</button></div></div></div><div class="card" style="margin-top:14px"><h3>System Status</h3><div class="switch"><span>Movie Library</span><span class="badge green">ONLINE</span></div><div class="switch"><span>Points & 15-hour unlock</span><span class="badge green">ACTIVE</span></div><div class="switch"><span>Adult Library</span><span class="badge ${A.adultEnabled?'green':'red'}">${A.adultEnabled?'ENABLED':'DISABLED'}</span></div></div>`}
+function dashboard(){return `<div class="grid stats"><div class="card stat"><span class="label">Total Users</span><div class="num">${money(A.users)}</div><span class="up">↑ 8.4%</span><span class="ico">♙</span></div><div class="card stat"><span class="label">Movies</span><div class="num">${A.movies.length}</div><span class="up">Live library</span><span class="ico">🎬</span></div><div class="card stat"><span class="label">Points Issued</span><div class="num">${money(A.points)}</div><span class="up">Economy active</span><span class="ico">◈</span></div><div class="card stat"><span class="label">Pending Payments</span><div class="num">${(A.payments||[]).filter(p=>(p.status||"pending")==="pending").length}</div><span class="up">Needs review</span><span class="ico">৳</span></div></div><div class="grid section-grid"><div class="card"><h3>Platform Activity</h3><div class="muted smalltext">Clicks, downloads and ad rewards</div><div class="chart">${[38,55,48,72,66,91,76].map(x=>`<div class="bar" style="height:${x}%"></div>`).join('')}</div></div><div class="card"><h3>Quick Controls</h3><div class="quick"><button onclick="openMovie()"><b>＋ Add Movie</b>Publish title</button><button onclick="setSection('ads')"><b>◉ Ad IDs</b>Manage every ad block</button><button onclick="setSection('content')"><b>🔗 Links & Video</b>Telegram + How to Watch</button><button onclick="setSection('categories')"><b>▦ Categories</b>Add / rename / delete</button></div></div></div><div class="card" style="margin-top:14px"><h3>System Status</h3><div class="switch"><span>Movie Library</span><span class="badge green">ONLINE</span></div><div class="switch"><span>Points & 15-hour unlock</span><span class="badge green">ACTIVE</span></div><div class="switch"><span>Adult Library</span><span class="badge ${A.adultEnabled?'green':'red'}">${A.adultEnabled?'ENABLED':'DISABLED'}</span></div></div>`}
 function movies(){return `<div class="toolbar"><div class="left"><button class="btn primary" onclick="openMovie()">＋ Add Movie</button><button class="btn" onclick="openTmdbImport()">Import TMDB</button></div><input class="search" id="movieSearch" placeholder="Search movie..." oninput="filterMovies()"></div><div class="card table-wrap"><table class="table"><thead><tr><th>Movie</th><th>Category</th><th>Rating</th><th>Clicks</th><th>Downloads</th><th>Status</th><th>Action</th></tr></thead><tbody id="movieBody">${movieRows(A.movies)}</tbody></table></div>`}
-function movieRows(ms){return ms.map(m=>`<tr><td><div class="movie-row"><div class="thumb">${(m.title||'?').slice(0,1)}</div><div><b>${m.title}</b><div class="muted">${m.year}</div></div></div></td><td>${m.category||m.type||'Movie'}</td><td>⭐ ${m.rating}</td><td>${money(m.clicks||0)}</td><td>${money(m.downloads||0)}</td><td><span class="badge ${m.status==='Published'?'green':''}">${m.status}</span></td><td class="action-cell"><button type="button" class="btn dots-btn" data-mid="${m.id}" aria-label="Actions">⋮</button><div class="dots-menu hidden" id="dm-${m.id}"><button type="button" onclick="editMovie(${JSON.stringify(String(m.id))});closeAllDots()">Edit</button><button type="button" class="danger" onclick="deleteMovie(${JSON.stringify(String(m.id))});closeAllDots()">Delete</button></div></td></tr>`).join('')}
+function movieRows(ms){return (ms||[]).map(function(m,idx){
+  var id=String(m.id!=null?m.id:("idx_"+idx));
+  var title=String(m.title||"Untitled").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+  var year=String(m.year||"");
+  var cat=String(m.category||m.type||"Movie").replace(/</g,"&lt;");
+  var st=String(m.status||"Published");
+  return '<tr data-mid="'+id.replace(/"/g,"&quot;")+'">'+
+    '<td><div class="movie-row"><div class="thumb">'+(title.slice(0,1)||"?")+'</div>'+
+    '<div class="movie-meta"><b class="movie-title">'+title+'</b><div class="muted">'+year+'</div></div></div></td>'+
+    '<td>'+cat+'</td>'+
+    '<td>⭐ '+(m.rating||0)+'</td>'+
+    '<td>'+money(m.clicks||0)+'</td>'+
+    '<td>'+money(m.downloads||0)+'</td>'+
+    '<td><span class="badge '+(st==="Published"?"green":"")+'">'+st+'</span></td>'+
+    '<td class="action-cell"><button type="button" class="btn dots-btn" data-mid="'+id.replace(/"/g,"&quot;")+'" aria-label="Actions">⋮</button>'+
+    '<div class="dots-menu hidden" data-menu-for="'+id.replace(/"/g,"&quot;")+'">'+
+    '<button type="button" class="dots-edit">Edit</button>'+
+    '<button type="button" class="danger dots-del">Delete</button></div></td></tr>';
+}).join("")}
 function closeAllDots(){document.querySelectorAll('.dots-menu').forEach(el=>el.classList.add('hidden'))}
-function toggleDots(id,btn){const menu=document.getElementById('dm-'+id);if(!menu)return;const wasOpen=!menu.classList.contains('hidden');closeAllDots();if(!wasOpen){menu.classList.remove('hidden');const r=btn.getBoundingClientRect();menu.style.top=(r.bottom+4)+'px';menu.style.right=(window.innerWidth-r.right)+'px'}}
-document.addEventListener('click',e=>{const btn=e.target.closest('.dots-btn');if(btn){e.stopPropagation();toggleDots(btn.dataset.mid,btn);return}if(!e.target.closest('.dots-menu'))closeAllDots()});
+function toggleDots(id,btn){
+  const menu=btn.parentElement&&btn.parentElement.querySelector('.dots-menu');
+  if(!menu)return;
+  const wasOpen=!menu.classList.contains('hidden');
+  closeAllDots();
+  if(!wasOpen){
+    menu.classList.remove('hidden');
+    const r=btn.getBoundingClientRect();
+    menu.style.top=(r.bottom+4)+'px';
+    menu.style.right=(window.innerWidth-r.right)+'px';
+  }
+}
+document.addEventListener('click',function(e){
+  const edit=e.target.closest('.dots-edit');
+  if(edit){
+    e.stopPropagation();
+    const mid=(edit.closest('[data-mid]')||edit.closest('tr')||{}).getAttribute&& (edit.closest('tr').getAttribute('data-mid'));
+    closeAllDots();
+    if(mid) openMovie(mid);
+    return;
+  }
+  const del=e.target.closest('.dots-del');
+  if(del){
+    e.stopPropagation();
+    const mid=(del.closest('tr')||{}).getAttribute&&del.closest('tr').getAttribute('data-mid');
+    closeAllDots();
+    if(mid) deleteMovie(mid);
+    return;
+  }
+  const btn=e.target.closest('.dots-btn');
+  if(btn){e.stopPropagation();toggleDots(btn.dataset.mid,btn);return}
+  if(!e.target.closest('.dots-menu'))closeAllDots();
+});
 function filterMovies(){const q=$("#movieSearch").value.toLowerCase();$("#movieBody").innerHTML=movieRows(A.movies.filter(m=>m.title.toLowerCase().includes(q)))}
 function categories(){return `<div class="card"><div class="toolbar"><div><h3 style="margin:0">Movie Categories</h3><div class="muted smalltext">User app category tabs are controlled from here.</div></div><button class="btn primary" onclick="openCategory()">＋ Add Category</button></div><div class="tag-list">${A.settings.categories.map((c,i)=>`<div class="tag-item"><span>${c}</span><div><button class="btn" onclick="editCategory(${i})">Edit</button> <button class="btn danger" onclick="deleteCategory(${i})">Delete</button></div></div>`).join('')}</div></div>`}
 function users(){
@@ -359,102 +408,138 @@ function tasks(){
 }
 
 function payments(){
-  let list=JSON.parse(localStorage.getItem("cinehub4_payments")||"[]");
-  // Sort: pending first (oldest first), then approved/rejected (oldest first) — new ones at bottom of each group
-  list = list.map((p,i)=>({...p,_i:i})).sort((a,b)=>{
-    const rank=s=>(s==="pending"||!s)?0:1;
-    const ra=rank(a.status), rb=rank(b.status);
-    if(ra!==rb) return ra-rb;
-    const ta=a.ts||a.time||a.date||0, tb=b.ts||b.time||b.date||0;
-    return ta-tb; // older first
+  // Trigger async load once
+  if (!window.__payLoaded) {
+    window.__payLoaded = true;
+    if (window.CineHubFB && window.CineHubFB.listPayments) {
+      window.CineHubFB.listPayments().then(function(list){
+        A.payments = Array.isArray(list) ? list : [];
+        try { localStorage.setItem("cinehub4_payments", JSON.stringify(A.payments)); } catch(e){}
+        if (A.section === "payments") render();
+      }).catch(function(e){
+        console.warn("listPayments", e);
+        toast("Payments load failed: " + (e && e.message ? e.message : e));
+      });
+    }
+  }
+  let list = A.payments;
+  if (!list || !list.length) {
+    try { list = JSON.parse(localStorage.getItem("cinehub4_payments")||"[]"); } catch(e){ list = []; }
+  }
+  list = (list || []).map(function(p,i){ p._i = i; return p; });
+  list.sort(function(a,b){
+    const rank = function(s){ return (s==="pending"||!s)?0:1; };
+    const ra = rank(a.status), rb = rank(b.status);
+    if (ra !== rb) return ra - rb;
+    return (Number(a.created_at||a.time||0) - Number(b.created_at||b.time||0));
   });
-  const s=A.settings||{};
-  if(!s.wallets) s.wallets = s.usdtWallet ? [{name:s.usdtNetwork||"USDT TRC20",address:s.usdtWallet,network:s.usdtNetwork||"TRC20"}] : [{name:"USDT TRC20",address:"",network:"TRC20"}];
-  const wRows=(s.wallets||[]).map((w,i)=>`<div class="field" style="grid-column:1/-1;display:grid;grid-template-columns:1.2fr 2fr 1fr auto;gap:8px;align-items:end">
-    <div><label>Name</label><input data-w="${i}" data-k="name" value="${w.name||""}" onchange="A.settings.wallets[${i}].name=this.value;save()"></div>
-    <div><label>Address</label><input data-w="${i}" data-k="address" value="${w.address||""}" onchange="A.settings.wallets[${i}].address=this.value;save()"></div>
-    <div><label>Network</label><input data-w="${i}" data-k="network" value="${w.network||"TRC20"}" onchange="A.settings.wallets[${i}].network=this.value;save()"></div>
-    <button class="btn danger" onclick="A.settings.wallets.splice(${i},1);save();render()">×</button>
-  </div>`).join("");
-  return `<div class="card"><h3>USDT Wallets (user chooses one)</h3>
-    <div class="form-grid">${wRows||'<div class="muted">No wallets</div>'}
-      <button class="btn" onclick="A.settings.wallets=A.settings.wallets||[];A.settings.wallets.push({name:'USDT TRC20',address:'',network:'TRC20'});save();render()">+ Add Wallet</button>
-    </div>
-  </div>
-  <div class="card table-wrap"><h3>Payment Requests</h3>
-  <p class="muted smalltext">Pending first · older first · Accept credits points · View shows screenshot & details</p>
-  <table class="table"><thead><tr>
-    <th>User</th><th>Package</th><th>USDT</th><th>Points</th><th>Date</th><th>Status</th><th>Action</th>
-  </tr></thead><tbody>
-  ${list.length?list.map((p)=>`<tr>
-    <td>${p.user||"-"}<br><small>${p.uid||""}</small></td><td>${p.pkg||"-"}</td><td>${p.usdt||0}</td><td>${p.points||0}</td>
-    <td><small>${p.date||p.time||"-"}</small></td>
-    <td><span class="badge ${p.status==="approved"?"green":p.status==="rejected"?"red":"yellow"}">${p.status||"pending"}</span></td>
-    <td style="white-space:nowrap">
-      <button class="btn" onclick="payView(${p._i})">View</button>
-      ${(!p.status||p.status==="pending")?`<button class="btn primary" onclick="payAction(${p._i},'approved')">Accept</button>
-      <button class="btn danger" onclick="payAction(${p._i},'rejected')">Reject</button>`:""}
-      <button class="btn" onclick="payDelete(${p._i})">Del</button>
-    </td>
-  </tr>`).join(""):'<tr><td colspan="7" class="muted">No payment requests yet</td></tr>'}
-  </tbody></table></div>`;
+  const rows = list.length ? list.map(function(p){
+    const uid = p.userId || p.user_id || p.uid || "—";
+    const pts = p.points || p.amount || 0;
+    const method = p.method || p.gateway || "—";
+    const trx = p.trxId || p.trx || p.transaction_id || "—";
+    const st = p.status || "pending";
+    const idAttr = String(p.id || p._i);
+    return '<tr>'+
+      '<td><b>'+String(uid).replace(/</g,"")+'</b></td>'+
+      '<td>'+pts+'</td>'+
+      '<td>'+String(method).replace(/</g,"")+'</td>'+
+      '<td class="muted">'+String(trx).replace(/</g,"")+'</td>'+
+      '<td><span class="badge '+(st==="approved"?"green":st==="rejected"?"red":"yellow")+'">'+st+'</span></td>'+
+      '<td><button class="btn" onclick="payView(\''+idAttr.replace(/'/g,"\\'")+'\')">View</button></td>'+
+      '<td>'+((!st||st==="pending")?
+        '<button class="btn primary" onclick="payActionId(\''+idAttr.replace(/'/g,"\\'")+'\',\'approved\')">Accept</button> '+
+        '<button class="btn danger" onclick="payActionId(\''+idAttr.replace(/'/g,"\\'")+'\',\'rejected\')">Reject</button>':
+        '<button class="btn danger" onclick="payDeleteId(\''+idAttr.replace(/'/g,"\\'")+'\')">Delete</button>')+
+      '</td></tr>';
+  }).join("") : '<tr><td colspan="7" class="muted">No payment requests yet (from Firebase)</td></tr>';
+  return '<div class="card table-wrap"><table class="table"><thead><tr><th>User</th><th>Points</th><th>Method</th><th>Trx</th><th>Status</th><th>Proof</th><th>Action</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<p class="muted smalltext" style="margin-top:10px">Payments load from Firebase <code>payments</code> collection via admin API. User submits from Profile → Buy Points.</p>';
 }
-function payView(i){
-  const list=JSON.parse(localStorage.getItem("cinehub4_payments")||"[]");
-  const p=list[i]; if(!p)return;
-  const img=p.proofData||p.proofUrl||"";
-  const isUrl=typeof img==="string"&&(img.startsWith("http")||img.startsWith("data:"));
-  showModal(`<div class="modal-head"><div><h2>Payment Proof</h2><p class="muted smalltext" style="margin:4px 0 0">Full screenshot · details · actions</p></div><button class="btn" onclick="closeModal()">×</button></div>
-    <div class="pay-view-grid">
-      <div class="pay-view-meta">
-        <div class="pay-meta-row"><span>User</span><b>${p.user||"-"}</b></div>
-        <div class="pay-meta-row"><span>Telegram ID</span><b>${p.uid||"-"}</b></div>
-        <div class="pay-meta-row"><span>Package</span><b>${p.pkg||"-"}</b></div>
-        <div class="pay-meta-row"><span>USDT</span><b>${p.usdt||0}</b></div>
-        <div class="pay-meta-row"><span>Points</span><b>${p.points||0}</b></div>
-        <div class="pay-meta-row"><span>Status</span><b class="badge ${p.status==="approved"?"green":p.status==="rejected"?"red":"yellow"}">${p.status||"pending"}</b></div>
-        <div class="pay-meta-row"><span>Date / Time</span><b>${p.date||p.time||"-"}</b></div>
-        <div class="pay-meta-row"><span>Wallet / Network</span><b>${p.wallet||p.network||"-"}</b></div>
-        <div class="pay-meta-row"><span>TxID</span><b style="word-break:break-all;font-size:12px">${p.txid||"-"}</b></div>
-      </div>
-      <div class="pay-view-proof">
-        <div class="pay-proof-label">Screenshot / Proof</div>
-        ${isUrl?`<div class="pay-proof-frame"><img src="${img}" alt="payment proof" onclick="window.open(this.src,'_blank')" title="Click to open full size"></div>
-        <div class="muted smalltext" style="margin-top:8px">Tap image to open full size · scroll if tall</div>`:`<div class="pay-proof-empty">${p.proof||"No image attached"}</div>`}
-      </div>
-    </div>
-    <div class="pay-view-actions">
-      ${(!p.status||p.status==="pending")?`<button class="btn primary" onclick="closeModal();payAction(${i},'approved')">✓ Accept & Credit Points</button>
-      <button class="btn danger" onclick="closeModal();payAction(${i},'rejected')">✕ Reject</button>`:""}
-      <button class="btn" onclick="closeModal()">Close</button>
-    </div>`);
+function payFindById(id){
+  var list = A.payments || [];
+  var p = list.find(function(x){ return String(x.id)===String(id); });
+  if (p) return p;
+  try { list = JSON.parse(localStorage.getItem("cinehub4_payments")||"[]"); } catch(e){ list=[]; }
+  return list.find(function(x){ return String(x.id)===String(id); }) || list[Number(id)];
+}
+function payView(id){
+  const p = payFindById(id);
+  if (!p) { toast("Not found"); return; }
+  const img = p.proof || p.image || p.screenshot || "";
+  const isUrl = img && /^https?:\/\//i.test(img);
+  showModal('<div class="modal-head"><h2>Payment Request</h2><button class="btn" onclick="closeModal()">×</button></div>'+
+    '<div class="pay-meta-row"><span>User</span><b>'+String(p.userId||p.uid||"—")+'</b></div>'+
+    '<div class="pay-meta-row"><span>Points</span><b>'+(p.points||p.amount||0)+'</b></div>'+
+    '<div class="pay-meta-row"><span>Method</span><b>'+String(p.method||"—")+'</b></div>'+
+    '<div class="pay-meta-row"><span>Trx</span><b>'+String(p.trxId||p.trx||"—")+'</b></div>'+
+    '<div class="pay-meta-row"><span>Status</span><b class="badge">'+(p.status||"pending")+'</b></div>'+
+    (isUrl?'<div class="pay-proof-frame"><img src="'+img+'" alt="proof" style="max-width:100%;border-radius:8px"></div>':'')+
+    '<div style="margin-top:12px;display:flex;gap:8px">'+
+    ((p.status||"pending")==="pending"?
+      '<button class="btn primary" onclick="closeModal();payActionId(\''+String(p.id).replace(/'/g,"\\'")+'\',\'approved\')">✓ Accept</button>'+
+      '<button class="btn danger" onclick="closeModal();payActionId(\''+String(p.id).replace(/'/g,"\\'")+'\',\'rejected\')">Reject</button>':'')+
+    '</div>');
+}
+function payActionId(id, st){
+  if (!window.CineHubFB || !window.CineHubFB.updatePayment) {
+    toast("API missing"); return;
+  }
+  toast("Updating…");
+  window.CineHubFB.updatePayment(id, {status: st, reviewed_at: Date.now()}).then(function(){
+    window.__payLoaded = false;
+    if (A.payments) {
+      A.payments.forEach(function(p){ if (String(p.id)===String(id)) p.status = st; });
+    }
+    render();
+    toast(st==="approved"?"Accepted":"Rejected");
+  }).catch(function(e){ toast("Failed: "+(e&&e.message?e.message:e)); });
+}
+function payDeleteId(id){
+  // soft-delete via status
+  payActionId(id, "deleted");
 }
 
-function payAction(i,st){
-  const list=JSON.parse(localStorage.getItem("cinehub4_payments")||"[]");
-  if(!list[i])return;
-  if(list[i].status==="approved"&&st==="approved"){toast("Already accepted");return}
-  list[i].status=st;
-  list[i].processedAt=new Date().toISOString();
-  localStorage.setItem("cinehub4_payments",JSON.stringify(list));
-  if(st==="approved"){
-    const pts=Number(list[i].points||0);
-    const cur=Number(localStorage.getItem("cinehub4_points")||0);
-    localStorage.setItem("cinehub4_points",String(cur+pts));
-    try{
-      const uid=list[i].uid||"local";
-      const key="cinehub4_userpts_"+uid;
-      const up=Number(localStorage.getItem(key)||0);
-      localStorage.setItem(key,String(up+pts));
-    }catch(e){}
+function requests(){
+  if (!window.__reqLoaded) {
+    window.__reqLoaded = true;
+    if (window.CineHubFB && window.CineHubFB.listRequests) {
+      window.CineHubFB.listRequests().then(function(list){
+        A.requests = Array.isArray(list) ? list : [];
+        if (A.section === "requests") render();
+      }).catch(function(e){ console.warn(e); toast("Requests load failed: "+(e&&e.message?e.message:e)); });
+    }
   }
-  render();toast(st==="approved"?"Accepted · points credited":"Rejected");
+  const list = A.requests || [];
+  const rows = list.length ? list.map(function(r){
+    const user = r.username || r.userId || r.uid || "—";
+    const title = r.title || r.movie || r.name || "—";
+    const date = r.created_at ? new Date(Number(r.created_at)).toLocaleDateString() : (r.date||"—");
+    const pri = r.priority || "Normal";
+    const st = r.status || "Pending";
+    const id = String(r.id||"");
+    return '<tr><td>'+String(user).replace(/</g,"")+'</td><td><b>'+String(title).replace(/</g,"")+'</b></td><td>'+date+'</td><td>'+pri+'</td>'+
+      '<td><span class="badge">'+st+'</span></td>'+
+      '<td><button class="btn" onclick="reqManage(\''+id.replace(/'/g,"\\'")+'\')">Manage</button> '+
+      '<button class="btn danger" onclick="reqDelete(\''+id.replace(/'/g,"\\'")+'\')">Delete</button></td></tr>';
+  }).join("") : '<tr><td colspan="6" class="muted">No movie requests yet (from Firebase)</td></tr>';
+  return '<div class="card table-wrap"><table class="table"><thead><tr><th>User</th><th>Requested Title</th><th>Date</th><th>Priority</th><th>Status</th><th>Action</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
-function payDelete(i){
-  const list=JSON.parse(localStorage.getItem("cinehub4_payments")||"[]");
-  list.splice(i,1);
-  localStorage.setItem("cinehub4_payments",JSON.stringify(list));
-  render();toast("Deleted");
+function reqManage(id){
+  const r = (A.requests||[]).find(function(x){return String(x.id)===String(id);});
+  if (!r) { toast("Not found"); return; }
+  const st = prompt("Status (Pending / Searching / Done / Rejected):", r.status||"Pending");
+  if (st==null) return;
+  window.CineHubFB.updateRequest(id, {status: st}).then(function(){
+    r.status = st; render(); toast("Updated");
+  }).catch(function(e){ toast(e&&e.message?e.message:e); });
+}
+function reqDelete(id){
+  if (!confirm("Delete this request?")) return;
+  window.CineHubFB.updateRequest(id, {status: "deleted"}).then(function(){
+    A.requests = (A.requests||[]).filter(function(x){return String(x.id)!==String(id);});
+    render(); toast("Deleted");
+  }).catch(function(e){ toast(e&&e.message?e.message:e); });
 }
 
 function adult(){return `<div class="grid section-grid"><div class="card"><h3>Adult Library</h3><div class="switch"><span>Enable adult section</span><span class="toggle ${A.adultEnabled?'on':''}" onclick="A.adultEnabled=!A.adultEnabled;render()"><i></i></span></div><div class="switch"><span>Separate adult ad block</span><span class="badge">${A.settings.adBlocks.adult||'NOT SET'}</span></div><div class="switch"><span>18+ confirmation</span><span class="badge green">REQUIRED</span></div><button class="btn primary" style="margin-top:15px" onclick="openAdultMovie()">＋ Add Adult Movie</button></div><div class="card"><h3>Adult Ad Rule</h3><div class="muted smalltext">Adult advertisements use their own Ad Block ID. This is independent from normal rewarded ads.</div><button class="btn" style="margin-top:12px" onclick="setSection('ads')">Configure Adult Ad</button></div></div>
@@ -525,10 +610,8 @@ function settings(){
       <div class="field"><label>Mini App short name</label><input id="s_miniName" value="${s.miniAppName||"Hub4"}" placeholder="Hub4"></div>
       <div class="field"><label>Mini App full link</label><input id="s_miniLink" value="${s.miniAppLink||"https://t.me/Cinehub4bot/Hub4"}" placeholder="https://t.me/Cinehub4bot/Hub4"></div>
       <div class="field" style="grid-column:1/-1"><label class="muted smalltext">⚠️ BotFather short name = <b>Hub4</b> → share link will be <code>t.me/Cinehub4bot/Hub4?startapp=movie_ID</code></label></div>
-      <div class="field" style="grid-column:1/-1"><label>How to Watch / Unlock message</label><textarea id="s_howWatch" rows="2">${s.howToWatchText||""}</textarea></div>
-      <div class="field"><label>How to Earn Video URL</label><input id="s_howEarn" value="${s.howToWatchVideo||""}"></div>
-      <div class="field"><label>Watch Tutorial Video URL (Profile page)</label><input id="s_watchTutorial" value="${s.watchTutorialVideo||""}" placeholder="https://..."></div>
-      <div class="field"><label>How to Buy Video URL</label><input id="s_howBuy" value="${s.howToBuyVideo||""}"></div>
+      <div class="field" style="grid-column:1/-1"><label>How to Watch / Unlock message (text only)</label><textarea id="s_howWatch" rows="2">${s.howToWatchText||""}</textarea></div>
+      <div class="field" style="grid-column:1/-1"><label class="muted smalltext">Video/URL links → use <b>Links & Videos</b> tab (How to Watch, How to Buy, Tutorial, Telegram)</label></div>
     </div>
   </div>
 
@@ -542,7 +625,7 @@ function settings(){
       <div class="field"><label>Library title</label><input id="s_libTitle" value="${s.libraryTitle||"Cinema Library"}"></div>
       <div class="field" style="grid-column:1/-1"><label>Library description</label><textarea id="s_libDesc" rows="2">${s.libraryDesc||""}</textarea></div>
       <div class="field"><label>How to Watch button text</label><input id="s_howLabel" value="${s.howToWatchLabel||"▶ How to Watch"}"></div>
-      <div class="field"><label>How to Watch link (video/url)</label><input id="s_howEarn2" value="${s.howToWatchVideo||""}" placeholder="https://..."></div>
+      <div class="field"><label class="muted smalltext">Link URL → Links & Videos tab</label><span class="muted">—</span></div>
       <div class="field" style="grid-column:1/-1"><label>Scrolling ticker text</label><textarea id="s_ticker" rows="2">${s.tickerText||""}</textarea></div>
       <div class="field" style="grid-column:1/-1"><label>Categories (comma separated)</label><input id="s_cats" value="${(s.categories||[]).join(", ")}"></div>
     </div>
@@ -611,8 +694,7 @@ function saveAllSettings(){
   if(g("s_miniName")) s.miniAppName=(g("s_miniName").value||"Hub4").trim().replace(/^\/+|\/+$/g,"");
   if(g("s_miniLink")) s.miniAppLink=g("s_miniLink").value.trim();
   if(g("s_howWatch")) s.howToWatchText=g("s_howWatch").value;
-  if(g("s_howEarn")) s.howToWatchVideo=g("s_howEarn").value;
-  if(g("s_watchTutorial")) s.watchTutorialVideo=g("s_watchTutorial").value;
+    if(g("s_watchTutorial")) s.watchTutorialVideo=g("s_watchTutorial").value;
   if(g("s_howBuy")) s.howToBuyVideo=g("s_howBuy").value;
   if(g("s_newLabel")) s.newMoviesLabel=g("s_newLabel").value;
   if(g("s_newSub")) s.newMoviesSub=g("s_newSub").value;
@@ -622,8 +704,7 @@ function saveAllSettings(){
   if(g("s_libTitle")) s.libraryTitle=g("s_libTitle").value;
   if(g("s_libDesc")) s.libraryDesc=g("s_libDesc").value;
   if(g("s_howLabel")) s.howToWatchLabel=g("s_howLabel").value;
-  if(g("s_howEarn2") && g("s_howEarn2").value) s.howToWatchVideo=g("s_howEarn2").value;
-  if(g("s_ticker")) s.tickerText=g("s_ticker").value;
+    if(g("s_ticker")) s.tickerText=g("s_ticker").value;
   if(g("s_cats")) s.categories=g("s_cats").value.split(",").map(x=>x.trim()).filter(Boolean);
 
   if(g("s_unlockCost")) s.unlockCost=Number(g("s_unlockCost").value)||5;
@@ -657,7 +738,7 @@ function saveAllSettings(){
 }
 
 function saveBrand(){A.settings.appName=$('#appName').value.trim()||'Cine Hub4';A.settings.botUsername=$('#botUser').value.trim();save();toast('Brand saved. Refresh user app to see it')}
-function openMovie(id=null){const m=id!=null&&id!==0&&id!==''?A.movies.find(x=>String(x.id)===String(id)):null;const idArg=m?JSON.stringify(String(m.id)):'null';showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="mTitle" value="${(m?.title||'').replace(/"/g,'&quot;')}"></div><div class="field"><label>Year</label><input id="mYear" type="number" value="${m?.year||2026}"></div><div class="field"><label>Category</label><select id="mCat">${A.settings.categories.filter(x=>x!=='All').map(c=>`<option ${m?.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Rating</label><input id="mRating" type="number" step=".1" value="${m?.rating||8}"></div><div class="field"><label>Poster URL</label><input id="mPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="s1" value="${(m?.server1||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="s2" value="${(m?.server2||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="s3" value="${(m?.server3||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Adult?</label><select id="mAdult"><option value="0">No</option><option value="1" ${m?.adult?'selected':''}>Yes</option></select></div></div><button class="btn primary" style="margin-top:15px" onclick="saveMovie(${idArg})">Save Movie</button>`)}
+function openMovie(id=null){const m=id!=null&&id!==0&&id!==''?A.movies.find(x=>String(x.id)===String(id)):null;const idArg=m?JSON.stringify(String(m.id)):'null';showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="mTitle" value="${(m?.title||'').replace(/"/g,'&quot;')}"></div><div class="field"><label>Year</label><input id="mYear" type="number" value="${m?.year||2026}"></div><div class="field"><label>Category</label><select id="mCat">${(function(){var cats=(A.settings.categories||[]).slice(); if(m&&m.category&&cats.indexOf(m.category)<0)cats.unshift(m.category); if(cats.indexOf('All Movies')<0)cats.unshift('All Movies'); return cats.map(function(c){return '<option'+(m&&m.category===c?' selected':'')+'>'+c+'</option>';}).join('');})()}</select></div><div class="field"><label>Rating</label><input id="mRating" type="number" step=".1" value="${m?.rating||8}"></div><div class="field"><label>Poster URL</label><input id="mPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="s1" value="${(m?.server1||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="s2" value="${(m?.server2||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="s3" value="${(m?.server3||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Adult?</label><select id="mAdult"><option value="0">No</option><option value="1" ${m?.adult?'selected':''}>Yes</option></select></div></div><button class="btn primary" style="margin-top:15px" onclick="saveMovie(${idArg})">Save Movie</button>`)}
 function saveMovie(id){
   id=(id===0||id===null||id===undefined||id==='')?null:id;
   const old=id!=null?A.movies.find(m=>String(m.id)===String(id)):null;
@@ -853,27 +934,70 @@ function searchTmdb(){
     return;
   }
   window.CineHubFB.searchTmdb(q.trim()).then(function(list){
+    window.__tmdbSearchCache = list || [];
     if(!box)return;
     if(!list||!list.length){box.innerHTML='<p class="muted">No results</p>';return}
-    box.innerHTML=list.map(function(m){
+    box.innerHTML=list.map(function(m,i){
       const poster=m.poster?'<img src="'+m.poster+'" style="width:42px;height:62px;object-fit:cover;border-radius:6px">':'<div style="width:42px;height:62px;background:#222;border-radius:6px"></div>';
-      return '<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #222"><div>'+poster+'</div><div style="flex:1"><b>'+String(m.title||'').replace(/</g,'')+'</b><div class="muted smalltext">'+(m.year||'')+' · ⭐ '+(m.rating||0)+'</div></div><button class="btn primary" type="button" onclick="importTmdbMovie(\''+String(m.tmdb_id)+'\')">Add</button></div>';
+      return '<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #222"><div>'+poster+'</div><div style="flex:1;min-width:0"><b style="word-break:break-word">'+String(m.title||'').replace(/</g,'')+'</b><div class="muted smalltext">'+(m.year||'')+' · ⭐ '+(m.rating||0)+'</div></div><button class="btn primary" type="button" onclick="importTmdbByIndex('+i+')">Add</button></div>';
     }).join('');
   }).catch(function(e){
     if(box)box.innerHTML='<p style="color:#f88">'+(e&&e.message?e.message:e)+'</p>';
   });
 }
-function importTmdbMovie(tmdbId){
+function importTmdbByIndex(i){
+  const list = window.__tmdbSearchCache || [];
+  const m = list[i];
+  if(!m){toast('Result missing — search again');return}
+  importTmdbMovie(m.tmdb_id, m);
+}
+function importTmdbMovie(tmdbId, cached){
   toast('Importing…');
-  window.CineHubFB.importTmdbMovie(String(tmdbId)).then(function(saved){
+  // Prefer client save with search result data (avoids broken FIREBASE_PRIVATE_KEY on backend)
+  function fromCache(m){
+    return {
+      id: "tmdb_" + String(m.tmdb_id || tmdbId),
+      tmdb_id: String(m.tmdb_id || tmdbId),
+      title: m.title || "Untitled",
+      year: m.year || "",
+      poster: m.poster || "",
+      overview: m.overview || "",
+      rating: Number(m.rating) || 0,
+      category: "All Movies",
+      type: "Movie",
+      adult: false,
+      status: "Published",
+      source: "tmdb",
+      manual_movie: false,
+      server1: "", server2: "", server3: "",
+      clicks: 0, downloads: 0, views: 0,
+      added_time: Date.now()
+    };
+  }
+  function afterSaved(saved){
+    A.movies = A.movies.filter(function(x){return String(x.id)!==String(saved.id)});
     A.movies.unshift(saved);
     save(true);
     closeModal();
     render();
     toast('Imported — add Server links');
-    // Open edit so admin can paste server1/2/3 links immediately
-    setTimeout(function(){ openMovie(saved.id); }, 250);
-  }).catch(function(e){
-    toast('Import failed: '+(e&&e.message?e.message:e));
+    setTimeout(function(){ openMovie(String(saved.id)); }, 250);
+  }
+  if(cached && cached.title){
+    window.CineHubFB.saveMovie(fromCache(cached)).then(afterSaved).catch(function(e){
+      toast('Import failed: '+(e&&e.message?e.message:e));
+    });
+    return;
+  }
+  // fallback API path
+  window.CineHubFB.importTmdbMovie(String(tmdbId)).then(afterSaved).catch(function(e){
+    // last resort: minimal client doc
+    if(window.CineHubFB && window.CineHubFB.saveMovie){
+      window.CineHubFB.saveMovie(fromCache({tmdb_id:tmdbId,title:"TMDB "+tmdbId})).then(afterSaved).catch(function(e2){
+        toast('Import failed: '+(e&&e.message?e.message:e));
+      });
+    } else {
+      toast('Import failed: '+(e&&e.message?e.message:e));
+    }
   });
 }

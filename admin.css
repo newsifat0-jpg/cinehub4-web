@@ -122,7 +122,7 @@ a{color:#5eb8ff}
 .table{width:100%;border-collapse:collapse;table-layout:auto}
 .table th,.table td{
   padding:12px 14px;text-align:left;vertical-align:middle;
-  font-size:13px;color:#e8edf8;border-bottom:1px solid #1a2236;word-break:break-word
+  font-size:13px;color:#e8edf8;border-bottom:1px solid #1a2236;word-break:normal
 }
 .table th{
   color:#8b93a7;font-size:11px;text-transform:uppercase;letter-spacing:.5px;
@@ -133,11 +133,15 @@ a{color:#5eb8ff}
   width:100%;min-width:0;background:#0a0e18;border:1px solid #243049;
   color:#eef1ff;border-radius:8px;padding:8px 10px;font-size:13px
 }
-.movie-row{display:flex;align-items:center;gap:12px}
+.movie-row{display:flex;align-items:center;gap:12px;min-width:140px}
+.movie-meta{min-width:0;flex:1}
+.movie-title{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;font-weight:700}
 .thumb{
   width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#7c5cff);
   display:grid;place-items:center;font-weight:800;color:#fff;flex-shrink:0;font-size:14px
 }
+.table td:first-child{min-width:160px;max-width:200px}
+.table th,.table td{word-break:normal}
 
 .badge{
   display:inline-block;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;

@@ -79,11 +79,10 @@ function telegramShare(text,url){
   nativeShare({text:text,url:url});
 }
 function shareMovie(id){
-  const mid=Number(id);
-  const m=movies.find(x=>x.id===mid||x.id===id);
+  const mid=String(id);
+  const m=movies.find(x=>String(x.id)===mid);
   const title=m?(m.title||"").split("|")[0].trim():"Movie";
   // Deep link: opens Mini App → exact movie detail page
-  // Format: https://t.me/BotUsername/app?startapp=movie_ID
   const link=buildMiniAppLink("movie_"+mid);
   const text=title+" — watch on Cine Hub4\n"+link;
   nativeShare({title:title+" | Cine Hub4", text:text, url:link});
@@ -243,7 +242,8 @@ function card(m,idx){
   const curMode=state.page==="adult"?state.adultMode:state.mode;
   const top=idx===0&&curMode==="trending"?`<span class="movie-top">TOP 1</span>`:"";
   const title=(m.title||"").split("|")[0].trim();
-  return `<article class="movie-card" onclick="detail(${m.id})">
+  const sid=JSON.stringify(String(m.id));
+  return `<article class="movie-card" onclick='detail(${sid})'>
     <div class="poster-wrap">
       <span class="movie-badge">MOVIE</span>${top}
       ${posterHTML(m)}
@@ -252,7 +252,7 @@ function card(m,idx){
     <div class="movie-body">
       <div class="mtitle">${title}</div>
       <div class="mmeta">
-        <button type="button" class="share-btn" onclick="event.stopPropagation();shareMovie(${m.id})">↗ Share</button>
+        <button type="button" class="share-btn" onclick='event.stopPropagation();shareMovie(${sid})'>↗ Share</button>
       </div>
     </div>
   </article>`;
@@ -361,7 +361,7 @@ function filterCat(c){
   showPageTransition(function(){state.category=c;render(true)});
 }
 function listForHome(){let list=movies.filter(m=>!m.adult);if(state.category&&state.category!=="All Movies"&&state.category!=="All"){list=list.filter(m=>(m.category||"").toLowerCase().includes(state.category.toLowerCase().replace(" moves","").replace(" movie hindi",""))|| (m.category||"").toLowerCase()===state.category.toLowerCase())}if(state.mode==="trending")list=list.slice().sort((a,b)=>(b.views||b.clicks||0)-(a.views||a.clicks||0));else list=list.slice().sort((a,b)=>b.id-a.id);return list}
-function moviesPage(){const list=listForHome();return primeHeader()+heroPills()+catRow()+libCard()+ticker()+bannerSlot("movies")+list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No movies found.")}</div>`}
+function moviesPage(){const list=listForHome();return `<div class="home-sticky-top">`+primeHeader()+heroPills()+`</div>`+catRow()+libCard()+ticker()+bannerSlot("movies")+(list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No movies found.")}</div>`)}
 function setAdultMode(m){
   if(state.adultMode===m)return;
   showPageTransition(function(){state.adultMode=m;render(true)});
@@ -403,7 +403,7 @@ function adult(){
     </div>`;
   }
   const list=listForAdult();
-  return menuOnlyHeader(t("Adult"))+heroPillsAdult()+catRowAdult()+libCardAdult()+tickerAdult()+bannerSlot("adult")+list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No adult content yet. Add from Admin Panel.")}</div>`;
+  return `<div class="home-sticky-top">`+menuOnlyHeader(t("Adult"))+heroPillsAdult()+`</div>`+catRowAdult()+libCardAdult()+tickerAdult()+bannerSlot("adult")+list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No adult content yet. Add from Admin Panel.")}</div>`;
 }
 function confirmAdult(){state.adultOK=true;render(true)}
 
@@ -827,7 +827,7 @@ function setUnlockProgress(id,n){
 function serverCount(){return Math.max(1,Math.min(10,Number(cfg.downloadServers)||3))}
 
 function detail(id){
-  const m=movies.find(x=>x.id===id);if(!m)return;
+  const m=movies.find(x=>String(x.id)===String(id));if(!m){console.warn("detail: movie not found",id);return;}
   m.clicks=(m.clicks||0)+1;m.views=(m.views||m.clicks);save();
   if(state.page!=="detail"){
     state.history.push(state.page);
@@ -851,7 +851,7 @@ function detail(id){
 
 function detailView(){
   loadSharedSettings();
-  const m=movies.find(x=>x.id===state.detailId);if(!m)return moviesPage();
+  const m=movies.find(x=>String(x.id)===String(state.detailId));if(!m)return moviesPage();
   const cost=Number(cfg.unlockCost)||5;
   const adsNeed=Number(cfg.adsForUnlock)||cost;
   const hours=Number(cfg.unlockHours)||15;
@@ -862,7 +862,7 @@ function detailView(){
     const n=serverCount();
     let servers="";
     for(let i=1;i<=n;i++){
-      servers+=`<button type="button" class="server-btn" onclick="openServer(${m.id},${i})">
+      servers+=`<button type="button" class="server-btn" onclick='openServer(${JSON.stringify(String(m.id))},${i})'>
         <span class="srv-ico">⬇</span>
         <span class="srv-meta"><b>${t("Server")} ${i}</b><small>${t("Download / Watch")}</small></span>
         <span class="srv-go">›</span>
