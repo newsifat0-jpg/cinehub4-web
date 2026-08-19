@@ -1201,22 +1201,20 @@ function isAdminUser(){
 // Secure admin check: backend verifies Telegram initData. No admin IDs are exposed to the browser.
 function loadAdminIdsApp(){
   try{
-    if(!window.APP_CONFIG || !window.APP_CONFIG.apiBaseUrl){toast("DEBUG: apiBaseUrl missing");return}
+    if(!window.APP_CONFIG || !window.APP_CONFIG.apiBaseUrl) return;
     const initData=window.Telegram?.WebApp?.initData||"";
-    if(!initData){toast("DEBUG: initData empty");return}
-    toast("DEBUG: calling adminCheck...");
+    if(!initData) return;
     fetch(window.APP_CONFIG.apiBaseUrl,{
       method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
       body:JSON.stringify({action:"adminCheck",initData:initData})
     }).then(r=>r.json()).then(function(res){
-      toast("DEBUG: "+JSON.stringify(res));
       if(res&&res.ok&&res.data&&res.data.isAdmin){
         window.__ADMIN_IDS=[String(window.Telegram.WebApp.initDataUnsafe.user.id)];
       }else{
         window.__ADMIN_IDS=[];
       }
       try{setupAdminButton();render(true)}catch(e){}
-    }).catch(function(err){toast("DEBUG error: "+err);window.__ADMIN_IDS=[];try{setupAdminButton()}catch(e){}});
+    }).catch(function(){window.__ADMIN_IDS=[];try{setupAdminButton()}catch(e){}});
   }catch(e){}
 }
 setTimeout(loadAdminIdsApp, 250);
