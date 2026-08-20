@@ -35,11 +35,11 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;min-height:100%;overscroll-behavior:none}
 #app{min-height:100vh;min-height:100dvh;position:relative;margin:0;padding:0}
-#screen{display:block;min-height:70vh;padding:0 14px 96px!important;margin:0!important;position:relative;z-index:1}
+#screen{display:block;min-height:70vh;padding:0 14px 96px!important;margin:0!important;position:relative;z-index:1;opacity:0}
 
 /* Splash — same animated style as the page-transition overlay (orbit rings, pop-in logo, sliding text, progress bar) */
-#appSplash{position:fixed;inset:0;z-index:99999;background:#0a0c14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:1;transition:opacity .16s ease-out,transform .16s ease-out}
-#appSplash.gone{opacity:0;transform:scale(1.03);pointer-events:none}
+#appSplash{position:fixed;inset:0;z-index:99999;background:#0a0c14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:1;transition:opacity .32s ease-out,transform .32s ease-out}
+#appSplash.gone{opacity:0;transform:scale(1.02);pointer-events:none}
 #appSplash::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 40%,#1a2040,#0a0c14 55%);z-index:0}
 #appSplash>*{position:relative;z-index:1}
 .splash-orbit{position:relative;width:96px;height:96px;display:grid;place-items:center}

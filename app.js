@@ -115,7 +115,7 @@ if(!cfg.categories||!cfg.categories.length)cfg.categories=defaults.categories.sl
 if(!cfg.adultCategories||!cfg.adultCategories.length)cfg.adultCategories=defaults.adultCategories.slice();
 let movies=[];
 let userData={points:1,unlocks:{},ads_today:0,ads_day:"",language:"en",refs:0};
-const state={page:localStorage.getItem("cinehub4_page")||"movies",adultOK:false,points:1,query:"",category:"All Movies",mode:"new",adultCategory:"All",adultMode:"new",history:JSON.parse(sessionStorage.getItem("cinehub4_history")||"[]"),unlockProgress:0,buyStep:null,buyOrder:null,moviesLoaded:false,userLoaded:false};
+const state={page:(sessionStorage.getItem("cinehub4_page")||"movies"),adultOK:false,points:1,query:"",category:"All Movies",mode:"new",adultCategory:"All",adultMode:"new",history:JSON.parse(sessionStorage.getItem("cinehub4_history")||"[]"),unlockProgress:0,buyStep:null,buyOrder:null,moviesLoaded:false,userLoaded:false,firstPaint:true};
 function save(){
   // points & unlocks go to Firebase users/{uid}
   if(window.CineHubFB){
@@ -218,7 +218,7 @@ function nav(p,opts={}){
   }
   const go=function(){
     state.page=p;
-    localStorage.setItem("cinehub4_page",p);
+    try{sessionStorage.setItem("cinehub4_page",p);localStorage.setItem("cinehub4_page",p)}catch(e){}
     try{window.Telegram?.WebApp?.HapticFeedback?.selectionChanged()}catch(e){}
     render(true);
     try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){}
@@ -242,7 +242,7 @@ function goBack(){
   if(!prev) prev="movies";
   const go=function(){
     state.page=prev;
-    localStorage.setItem("cinehub4_page",prev);
+    try{sessionStorage.setItem("cinehub4_page",prev);localStorage.setItem("cinehub4_page",prev)}catch(e){}
     render(true);
     try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){}
   };
@@ -862,12 +862,12 @@ function detail(id){
   if(typeof showPageTransition==="function"){
     showPageTransition(function(){
       state.page="detail";
-      localStorage.setItem("cinehub4_page","detail");
+      try{sessionStorage.setItem("cinehub4_page","detail");localStorage.setItem("cinehub4_page","detail")}catch(e){}
       render(false);
     });
   }else{
     state.page="detail";
-    localStorage.setItem("cinehub4_page","detail");
+    try{sessionStorage.setItem("cinehub4_page","detail");localStorage.setItem("cinehub4_page","detail")}catch(e){}
     render(false);
   }
 }
@@ -1583,7 +1583,7 @@ function bindHomeStickyScroll(){
 function render(animate=false){
 /* Skip paints while splash is covering the screen (prevents open-time jerk) */
 if(window.__cinehub_splashUp && !window.__cinehub_forcePaint){ window.__cinehub_needPaint=true; return; }
-try{const views={movies:moviesPage,search:searchPage,series,adult,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===state.page||(state.page==="detail"&&b.dataset.page==="movies")));bindPageBack();bindDrawer();markDrawerActive();setupAdminButton();window.CINEHUB4_LANG?.translateDOM();
+try{const views={movies:moviesPage,search:searchPage,series,adult,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate && !state.firstPaint){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===state.page||(state.page==="detail"&&b.dataset.page==="movies")));bindPageBack();bindDrawer();markDrawerActive();setupAdminButton();window.CINEHUB4_LANG?.translateDOM();
 try{bindHomeStickyScroll()}catch(e){}
 const mic=$("#micBtn");if(mic)mic.onclick=startVoiceSearch;
 const qel=$("#q");if(qel){qel.addEventListener("input",()=>{/* live optional */});}
@@ -1681,21 +1681,32 @@ function killSplash(){
   const s=document.getElementById("appSplash");
   if(!s||s.classList.contains("gone"))return;
   s.classList.add("gone");
-  setTimeout(function(){try{s.style.display="none";s.remove()}catch(e){}},220);
+  setTimeout(function(){try{s.style.display="none";s.remove()}catch(e){}},320);
 }
 (function(){
-  const MIN_HOLD=2400, MAX_WAIT=5000, START=Date.now();
+  const MIN_HOLD=2200, MAX_WAIT=4800, START=Date.now();
+  // Keep #screen invisible until splash lifts (prevents flash/jerk)
+  try{
+    var sc0=document.getElementById("screen");
+    if(sc0){ sc0.style.opacity="0"; sc0.style.transition="opacity .28s ease"; }
+  }catch(e){}
   (function check(){
     const elapsed=Date.now()-START;
     const ready = state.moviesLoaded || elapsed>=MAX_WAIT;
     if(ready && elapsed>=MIN_HOLD){
-      // First real paint happens HERE, under the splash, then splash fades
       window.__cinehub_forcePaint = true;
       try{render(false)}catch(e){console.error(e);var sc=document.getElementById("screen");if(sc)sc.innerHTML="<div style=padding:20px;color:#f88>Boot error: "+(e.message||e)+"</div>"}
       window.__cinehub_forcePaint = false;
       window.__cinehub_splashUp = false;
-      // brief settle so images/layout stabilize before user sees the screen
-      setTimeout(killSplash, 280);
+      state.firstPaint = false;
+      // Fade content in WHILE splash fades out — no hard jump
+      setTimeout(function(){
+        try{
+          var sc=document.getElementById("screen");
+          if(sc){ sc.style.opacity="1"; }
+        }catch(e){}
+        killSplash();
+      }, 60);
       return;
     }
     setTimeout(check,80);
