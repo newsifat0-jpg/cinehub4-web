@@ -218,13 +218,13 @@ function nav(p,opts={}){
   showPageTransition(go);
 }
 function goBack(){
-  // Main tabs + movie detail → leave dialog (no history walk)
+  // Main tabs (with no saved history) → leave dialog
   const mainTabs=["movies","home","series","adult","profile","search"];
-  if(mainTabs.includes(state.page) || state.page==="detail"){
+  if(mainTabs.includes(state.page) && (!state.history || state.history.length===0)){
     showLeaveDialog();
     return;
   }
-  // Sub pages (tasks, points, buy, settings) → previous page
+  // Movie detail + sub pages (tasks, points, buy, settings) → go back to where we came from
   let prev=null;
   try{prev=state.history.pop()}catch(e){}
   try{sessionStorage.setItem("cinehub4_history",JSON.stringify(state.history||[]))}catch(e){}
@@ -1631,9 +1631,10 @@ function killSplash(){
   s.classList.add("gone");
   setTimeout(function(){try{s.style.display="none";s.remove()}catch(e){}},320);
 }
-// Keep solid splash covering UI; hide only after short ready delay (no double jump)
-setTimeout(killSplash, 1100);
-setTimeout(killSplash, 2200);
+// Hide splash exactly once, right after the first real paint — no repeated/duplicate calls.
+requestAnimationFrame(function(){
+  requestAnimationFrame(function(){ killSplash(); });
+});
 
 function showLeaveDialog(){
   if(document.getElementById("leaveOverlay")) return;
