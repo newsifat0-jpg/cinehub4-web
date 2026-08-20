@@ -1631,10 +1631,20 @@ function killSplash(){
   s.classList.add("gone");
   setTimeout(function(){try{s.style.display="none";s.remove()}catch(e){}},320);
 }
-// Hide splash exactly once, right after the first real paint — no repeated/duplicate calls.
-requestAnimationFrame(function(){
-  requestAnimationFrame(function(){ killSplash(); });
-});
+// Hold the splash for a proper brand moment AND until movies have actually
+// loaded, so content never pops/reflows right after the splash disappears.
+// Single timer chain only — no duplicate/competing timeouts.
+(function(){
+  const MIN_HOLD=1700, MAX_WAIT=4000, START=Date.now();
+  (function check(){
+    const elapsed=Date.now()-START;
+    if((state.moviesLoaded && elapsed>=MIN_HOLD) || elapsed>=MAX_WAIT){
+      killSplash();
+      return;
+    }
+    setTimeout(check,100);
+  })();
+})();
 
 function showLeaveDialog(){
   if(document.getElementById("leaveOverlay")) return;
