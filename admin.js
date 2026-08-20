@@ -405,7 +405,38 @@ function dashboard(){
       }).catch(function(){});
     }
   }
-  return `<div class="grid stats"><div class="card stat"><span class="label">Total Users</span><div class="num">${money(A.users)}</div><span class="up">From Firebase</span><span class="ico">♙</span></div><div class="card stat"><span class="label">Movies</span><div class="num">${A.movies.length}</div><span class="up">Live library</span><span class="ico">🎬</span></div><div class="card stat"><span class="label">Points Issued</span><div class="num">${money(A.points)}</div><span class="up">Sum of user points</span><span class="ico">◈</span></div><div class="card stat"><span class="label">Pending Payments</span><div class="num">${(A.payments||[]).filter(p=>(p.status||"pending")==="pending").length}</div><span class="up">Needs review</span><span class="ico">৳</span></div></div><div class="grid section-grid"><div class="card"><h3>Platform Activity</h3><div class="muted smalltext">Clicks, downloads and ad rewards</div><div class="chart">${[38,55,48,72,66,91,76].map(x=>`<div class="bar" style="height:${x}%"></div>`).join('')}</div></div><div class="card"><h3>Quick Controls</h3><div class="quick"><button onclick="openMovie()"><b>＋ Add Movie</b>Publish title</button><button onclick="setSection('ads')"><b>◉ Ad IDs</b>Manage every ad block</button><button onclick="setSection('content')"><b>🔗 Links & Video</b>Telegram + How to Watch</button><button onclick="setSection('categories')"><b>▦ Categories</b>Add / rename / delete</button></div></div></div><div class="card" style="margin-top:14px"><h3>System Status</h3><div class="switch"><span>Movie Library</span><span class="badge green">ONLINE</span></div><div class="switch"><span>Points & 15-hour unlock</span><span class="badge green">ACTIVE</span></div><div class="switch"><span>Adult Library</span><span class="badge ${A.adultEnabled?'green':'red'}">${A.adultEnabled?'ENABLED':'DISABLED'}</span></div></div>`}
+  var pendingPay = (A.payments||[]).filter(function(p){return (p.status||"pending")==="pending"}).length;
+  return `<div class="stats-row">
+  <div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-value">${money(A.users)}</div><div class="stat-sub">From Firebase</div><div class="stat-icon">♙</div></div>
+  <div class="stat-card"><div class="stat-label">Movies</div><div class="stat-value">${A.movies.length}</div><div class="stat-sub">Live library</div><div class="stat-icon">🎬</div></div>
+  <div class="stat-card"><div class="stat-label">Points Issued</div><div class="stat-value">${money(A.points)}</div><div class="stat-sub">Sum of user points</div><div class="stat-icon">◈</div></div>
+  <div class="stat-card"><div class="stat-label">Pending Payments</div><div class="stat-value">${pendingPay}</div><div class="stat-sub">Needs review</div><div class="stat-icon">৳</div></div>
+</div>
+<div class="grid section-grid">
+  <div class="card">
+    <h3>Platform Activity</h3>
+    <div class="muted smalltext" style="margin-bottom:14px">Clicks, downloads and ad rewards overview</div>
+    <div class="chart" style="display:flex;align-items:flex-end;gap:8px;height:100px;padding:8px 0">
+      ${[38,55,48,72,66,91,76].map(function(x){return '<div class="bar" style="flex:1;height:'+x+'%;background:linear-gradient(180deg,#3b82f6,#7c5cff);border-radius:6px 6px 2px 2px;opacity:.85"></div>'}).join('')}
+    </div>
+  </div>
+  <div class="card">
+    <h3>Quick Controls</h3>
+    <div class="quick-list" style="margin-top:10px">
+      <button type="button" onclick="openMovie()"><span style="font-size:18px">＋</span><span><b>Add Movie</b><br><span class="muted smalltext">Publish title to library</span></span></button>
+      <button type="button" onclick="setSection('ads')"><span style="font-size:18px">◉</span><span><b>Ad IDs</b><br><span class="muted smalltext">Manage every ad block</span></span></button>
+      <button type="button" onclick="setSection('content')"><span style="font-size:18px">🔗</span><span><b>Links & Video</b><br><span class="muted smalltext">Telegram + How to Watch</span></span></button>
+      <button type="button" onclick="setSection('categories')"><span style="font-size:18px">▦</span><span><b>Categories</b><br><span class="muted smalltext">Add / rename / delete</span></span></button>
+    </div>
+  </div>
+</div>
+<div class="card" style="margin-top:16px">
+  <h3>System Status</h3>
+  <div class="switch"><span>Movie Library</span><span class="badge green">ONLINE</span></div>
+  <div class="switch"><span>Points & Unlock Engine</span><span class="badge green">ACTIVE</span></div>
+  <div class="switch"><span>Adult Library</span><span class="badge ${A.adultEnabled?'green':'red'}">${A.adultEnabled?'ENABLED':'DISABLED'}</span></div>
+  <div class="switch"><span>Firebase Sync</span><span class="badge green">LIVE</span></div>
+</div>`}
 function movies(){const list=(A.movies||[]).filter(m=>!m.adult);return `<div class="toolbar"><div class="left"><button class="btn primary" onclick="openMovie()">＋ Add Movie</button><button class="btn" onclick="openTmdbImport()">Import TMDB</button></div><input class="search" id="movieSearch" placeholder="Search movie..." oninput="filterMovies()"></div><div class="card table-wrap"><table class="table"><thead><tr><th>Movie</th><th>Category</th><th>Rating</th><th>Clicks</th><th>Downloads</th><th>Status</th><th>Action</th></tr></thead><tbody id="movieBody">${movieRows(list)}</tbody></table></div>`}
 function movieRows(ms){return (ms||[]).map(function(m,idx){
   var id=String(m.id!=null?m.id:("idx_"+idx));

@@ -1,8 +1,83 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090b12"><title>Cine Hub4 • Admin</title><link rel="stylesheet" href="admin.css?v=20260818adsgram2"><script src="language.js?v=20260818adsgram2"></script>
-</head><body><div id="adminGate"><div class="gate-card"><div class="gate-logo">C4</div><h1>Cine Hub4</h1><p>Admin Control Center</p><p class="muted smalltext" id="adminGateStatus" style="margin:8px 0 14px">শুধু Script Properties → ADMIN_IDS-এ থাকা Telegram ID দিয়ে ঢোকা যাবে।</p><button class="btn primary" onclick="adminLogin()">Enter Admin Panel</button><small>Open from Telegram Mini App. Server checks ADMIN_IDS.</small></div></div><div id="adminApp" class="hidden"><div id="sideBackdrop" class="side-backdrop hidden"></div><aside class="sidebar"><div class="admin-brand"><div class="logo">C4</div><div><b>CINE HUB4</b><small>CONTROL CENTER</small></div></div><div class="admin-user"><div class="avatar">✓</div><div><b>Super Admin</b><small>Telegram verified</small></div></div><nav id="sideNav"><button data-section="dashboard" class="active">⌂ <span>Dashboard</span></button><button data-section="movies">🎬 <span>Movies</span></button><button data-section="categories">▦ <span>Categories</span></button><button data-section="users">♙ <span>Users</span></button><button data-section="points">◈ <span>Points & Unlocks</span></button><button data-section="ads">◉ <span>Ads & Ad IDs</span></button><button data-section="tasks">✓ <span>Daily Tasks</span></button><button data-section="payments">৳ <span>Payments</span><em>3</em></button><button data-section="adult">18+ <span>Adult Library</span></button><button data-section="requests">✉ <span>Movie Requests</span><em>7</em></button><button data-section="content">🔗 <span>Links & Videos</span></button><button data-section="broadcast">↗ <span>Broadcast</span></button><button data-section="settings">⚙ <span>Settings</span></button></nav><div class="side-bottom"><button id="openUser">↗ Open User App</button><button id="logout">⇥ Sign out</button></div></aside><main class="main"><header class="top"><button id="mobileMenu" class="hamb">☰</button><div><span class="eyebrow">CINE HUB4 • ADMIN</span><h1 id="pageTitle">Dashboard</h1></div><div class="top-actions"><span class="live"><i></i> Live</span><button class="icon">⌕</button><button class="avatar small">A</button></div></header><section id="content"></section></main></div><div id="modal" class="modal hidden"></div><div id="toast" class="toast"></div><script src="https://telegram.org/js/telegram-web-app.js?v=20260818adsgram2"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-<script src="config.js?v=20260820adminonly"></script>
-<script src="firebase-helper.js?v=20260820adminonly"></script>
-<script src="admin.js?v=20260820authfix"></script>
-</body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#070a12">
+  <title>Cine Hub4 • Admin Control Center</title>
+  <link rel="stylesheet" href="admin.css?v=20260820pro">
+  <script src="language.js?v=20260820pro"></script>
+</head>
+<body>
+  <!-- Gate -->
+  <div id="adminGate">
+    <div class="gate-card">
+      <div class="gate-logo">C4</div>
+      <h1>Cine Hub4</h1>
+      <p>Admin Control Center</p>
+      <p class="muted smalltext" id="adminGateStatus" style="margin:10px 0 16px">
+        শুধু Script Properties → ADMIN_IDS-এ থাকা Telegram ID দিয়ে ঢোকা যাবে।
+      </p>
+      <button class="btn primary" style="width:100%;padding:14px;font-size:15px" onclick="adminLogin()">
+        Enter Admin Panel
+      </button>
+      <small>Open from Telegram Mini App · Server verifies ADMIN_IDS · Firebase synced</small>
+    </div>
+  </div>
+
+  <!-- App shell -->
+  <div id="adminApp" class="hidden">
+    <div id="sideBackdrop" class="side-backdrop hidden"></div>
+    <aside class="sidebar">
+      <div class="admin-brand">
+        <div class="logo">C4</div>
+        <div><b>CINE HUB4</b><small>CONTROL CENTER</small></div>
+      </div>
+      <div class="admin-user">
+        <div class="avatar">✓</div>
+        <div><b>Super Admin</b><small>Telegram verified</small></div>
+      </div>
+      <nav id="sideNav">
+        <button data-section="dashboard" class="active">⌂ <span>Dashboard</span></button>
+        <button data-section="movies">🎬 <span>Movies</span></button>
+        <button data-section="categories">▦ <span>Categories</span></button>
+        <button data-section="users">♙ <span>Users</span></button>
+        <button data-section="points">◈ <span>Points & Unlocks</span></button>
+        <button data-section="ads">◉ <span>Ads & Ad IDs</span></button>
+        <button data-section="tasks">✓ <span>Daily Tasks</span></button>
+        <button data-section="payments">৳ <span>Payments</span><em id="payBadge" style="display:none">0</em></button>
+        <button data-section="adult">18+ <span>Adult Library</span></button>
+        <button data-section="requests">✉ <span>Movie Requests</span><em id="reqBadge" style="display:none">0</em></button>
+        <button data-section="content">🔗 <span>Links & Videos</span></button>
+        <button data-section="broadcast">↗ <span>Broadcast</span></button>
+        <button data-section="settings">⚙ <span>Settings</span></button>
+      </nav>
+      <div class="side-bottom">
+        <button id="openUser">↗ Open User App</button>
+        <button id="logout">⇥ Sign out</button>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="top">
+        <button id="mobileMenu" class="hamb" type="button">☰</button>
+        <div>
+          <span class="eyebrow">CINE HUB4 · ADMIN</span>
+          <h1 id="pageTitle">Dashboard</h1>
+        </div>
+        <div class="top-actions">
+          <span class="live"><i></i> Live</span>
+          <button class="avatar small" type="button" title="Admin">A</button>
+        </div>
+      </header>
+      <section id="content"></section>
+    </main>
+  </div>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="config.js?v=20260820pro"></script>
+  <script src="firebase-helper.js?v=20260820pro"></script>
+  <script src="admin.js?v=20260820pro"></script>
+</body>
+</html>
