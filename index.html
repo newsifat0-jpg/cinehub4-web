@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0a0c14">
 <title>Cine Hub4</title>
+<style>html,body{background:#0a0c14!important;margin:0}</style>
 <link rel="stylesheet" href="style.css?v=20260818adsgram2">
 <script src="language.js?v=20260818adsgram2"></script>
 <script src="https://sad.adsgram.ai/js/sad.min.js" async></script>
 </head>
-<body>
+<body style="background:#0a0c14">
 <div id="appSplash"><div class="splash-logo">C4</div><div class="splash-name">CINE <span>HUB4</span></div><div class="splash-line"></div></div>
 <div id="app">
 <main id="screen"></main>
@@ -63,17 +64,19 @@
 <script src="firebase-helper.js?v=20260818fb1"></script>
 <script src="app.js?v=20260818fb1"></script>
 <script>
-/* safety boot */
+/* last-resort safety net only — app.js owns the normal splash removal.
+   This never fires unless app.js itself failed to boot, so it can't
+   race or double-fire with the real removal. */
 (function(){
-  function kill(){var s=document.getElementById("appSplash");if(s){s.className="gone";s.style.display="none";}}
-  setTimeout(kill,300);setTimeout(kill,1000);setTimeout(kill,2000);
   setTimeout(function(){
+    var s=document.getElementById("appSplash");
+    if(s && !s.classList.contains("gone")){ s.className="gone"; s.style.display="none"; }
     var sc=document.getElementById("screen");
     if(sc && sc.innerHTML.indexOf("Loading Cine Hub4")>=0){
       sc.innerHTML='<div style="padding:24px;color:#f88;text-align:center"><b>App script did not load</b><br><small>Upload app.js + style.css again</small></div>';
     }
-  },3500);
+  },4000);
 })();
 </script>
 </body>
-</html>
+                                                                                </html>
