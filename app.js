@@ -1735,7 +1735,6 @@ function killSplash(){
     setTimeout(check, 50);
   })();
 })();
-})();
 
 function showLeaveDialog(){
   if(document.getElementById("leaveOverlay")) return;
