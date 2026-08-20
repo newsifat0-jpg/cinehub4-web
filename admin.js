@@ -213,21 +213,38 @@ function setGateStatus(msg, isError){
     if(gate){
       el=document.createElement("div");
       el.id="adminGateStatus";
-      el.style.cssText="margin-top:12px;font-size:12px;line-height:1.45;color:"+(isError?"#f87171":"#9aa8c7")+";word-break:break-word";
+      el.style.cssText="margin-top:12px;font-size:12px;line-height:1.5;word-break:break-word;max-width:100%";
       gate.appendChild(el);
     }
   }
   if(el){
-    el.style.color=isError?"#f87171":"#9aa8c7";
+    el.style.color=isError?"#f87171":"#86efac";
     el.innerHTML=msg||"";
   }
+  try{console.log("[gate]", msg)}catch(e){}
 }
 function adminLogin(){
-  // Always re-check with server — do not trust local list only
   var btn=document.querySelector("#adminGate .btn.primary");
   if(btn){btn.disabled=true;btn.textContent="Checking…";}
-  setGateStatus("Server-এ Admin চেক হচ্ছে…", false);
-  loadAdminIdsFromFB(true).finally(function(){
+  setGateStatus("⏳ Server চেক হচ্ছে…", false);
+  toast("Checking admin…");
+  var done=false;
+  var tmo=setTimeout(function(){
+    if(done)return;
+    done=true;
+    if(btn){btn.disabled=false;btn.textContent="Enter Admin Panel";}
+    setGateStatus("❌ টাইমআউট — apiBaseUrl / Deploy চেক করুন। Code.gs New version Deploy করেছেন?", true);
+    toast("Timeout — redeploy Code.gs");
+  }, 18000);
+  loadAdminIdsFromFB(true).then(function(){
+    if(done)return;
+    done=true;
+    clearTimeout(tmo);
+    if(btn){btn.disabled=false;btn.textContent="Enter Admin Panel";}
+  }).catch(function(){
+    if(done)return;
+    done=true;
+    clearTimeout(tmo);
     if(btn){btn.disabled=false;btn.textContent="Enter Admin Panel";}
   });
 }
@@ -236,61 +253,68 @@ function loadAdminIdsFromFB(fromButton){
     try{window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand()}catch(e){}
     var tgId=getTelegramUserId();
     var inp=document.getElementById("adminIdInput");
-    if(inp && tgId && !inp.value) inp.value=tgId;
+    if(inp && tgId) inp.value=tgId;
 
     const initData=window.Telegram?.WebApp?.initData||"";
     const api=window.APP_CONFIG&&window.APP_CONFIG.apiBaseUrl;
     if(!api){
-      setGateStatus("config.js এ apiBaseUrl নেই", true);
-      return Promise.resolve();
+      setGateStatus("❌ config.js এ apiBaseUrl নেই", true);
+      return Promise.resolve(false);
     }
     if(!initData){
-      setGateStatus("Telegram initData নেই। অ্যাপটি <b>বটের মিনি অ্যাপ বাটন</b> দিয়ে খুলুন (ব্রাউজার/আউটসাইড নয়)। আপনার ID: "+(tgId||"—"), true);
-      return Promise.resolve();
+      setGateStatus("❌ Telegram initData নেই। বট থেকে মিনি অ্যাপ খুলুন। ID: "+(tgId||"—"), true);
+      if(fromButton) toast("Open from bot Mini App");
+      return Promise.resolve(false);
     }
-    return fetch(api,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"adminCheck",initData:initData}),redirect:"follow"})
-      .then(function(r){return r.text().then(function(t){try{return JSON.parse(t)}catch(e){throw new Error("Bad API: "+String(t).slice(0,120))}})})
-      .then(function(res){
-        var d=(res&&res.data)||{};
-        console.log("[adminCheck]", d);
-        if(res&&res.ok&&d.isAdmin){
-          var id=String(d.debugId||tgId||"");
-          window.__ADMIN_IDS=id?[id]:[];
-          window.__IS_ADMIN=true;
-          try{sessionStorage.setItem("cinehub4_is_admin","1")}catch(e){}
-          setGateStatus("✓ Admin verified", false);
-          openAdmin();
-        }else{
-          window.__ADMIN_IDS=[];
-          window.__IS_ADMIN=false;
-          try{sessionStorage.removeItem("cinehub4_is_admin")}catch(e){}
-          const gate=document.getElementById("adminGate");
-          const app=document.getElementById("adminApp");
-          if(gate)gate.classList.remove("hidden");
-          if(app)app.classList.add("hidden");
-          var reason=d.debugReason||"not admin";
-          var raw=String(d.debugAdminIdsRaw||"");
-          var shown=raw?raw.replace(/(\d{4})\d+/g,"$1****"):"(empty — Script Properties এ ADMIN_IDS বসান)";
-          setGateStatus(
-            "❌ Admin access নেই<br>"+
-            "আপনার Telegram ID: <b>"+(d.debugId||tgId||"—")+"</b><br>"+
-            "কারণ: <b>"+reason+"</b><br>"+
-            "Server ADMIN_IDS: "+shown+"<br>"+
-            "hash: "+(d.debugHashMatch===true?"OK":d.debugHashMatch===false?"FAIL (BOT_TOKEN ভুল?)":"—")+"<br>"+
-            "verified: "+(d.debugVerified?"yes":"no")+
-            (fromButton?"<br><small>Properties-এ এই ID যোগ করে Script Save করুন। BOT_TOKEN সঠিক বটের হতে হবে।</small>":""),
-            true
-          );
-          if(fromButton) toast("Admin access নেই — নিচের মেসেজ দেখুন");
-        }
-      }).catch(function(e){
-        console.error("adminCheck",e);
-        setGateStatus("❌ API error: "+(e&&e.message?e.message:e)+"<br>Code.gs Deploy ও apiBaseUrl চেক করুন", true);
+    return fetch(api,{
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify({action:"adminCheck",initData:initData}),
+      redirect:"follow"
+    }).then(function(r){
+      return r.text().then(function(t){
+        try{return JSON.parse(t)}
+        catch(e){throw new Error("Bad API response: "+String(t).slice(0,80))}
       });
+    }).then(function(res){
+      var d=(res&&res.data)||{};
+      console.log("[adminCheck]", JSON.stringify(d));
+      if(res&&res.ok&&d.isAdmin){
+        var id=String(d.debugId||tgId||"");
+        window.__ADMIN_IDS=id?[id]:[];
+        window.__IS_ADMIN=true;
+        try{sessionStorage.setItem("cinehub4_is_admin","1")}catch(e){}
+        try{localStorage.setItem("cinehub4_admin_session","1")}catch(e){}
+        setGateStatus("✓ Admin verified — opening…", false);
+        toast("Welcome Admin");
+        openAdmin();
+        return true;
+      }
+      window.__ADMIN_IDS=[];
+      window.__IS_ADMIN=false;
+      try{sessionStorage.removeItem("cinehub4_is_admin")}catch(e){}
+      var reason=d.debugReason||"not admin";
+      var raw=String(d.debugAdminIdsRaw||"");
+      setGateStatus(
+        "❌ Admin নয়<br>"+
+        "আপনার ID: <b>"+(d.debugId||tgId||"—")+"</b><br>"+
+        "কারণ: <b>"+reason+"</b><br>"+
+        "ADMIN_IDS: <b>"+(raw||"(খালি)")+"</b><br>"+
+        "hash: <b>"+(d.debugHashMatch===true?"OK":d.debugHashMatch===false?"FAIL":"—")+"</b><br>"+
+        "token ends: <b>"+(d.debugTokenPreview||"—")+"</b>",
+        true
+      );
+      if(fromButton) toast("Access denied — see red text");
+      return false;
+    }).catch(function(e){
+      console.error(e);
+      setGateStatus("❌ API: "+(e&&e.message?e.message:e), true);
+      if(fromButton) toast("API error");
+      return false;
+    });
   }catch(e){
-    console.error("adminCheck",e);
     setGateStatus("Error: "+e, true);
-    return Promise.resolve();
+    return Promise.resolve(false);
   }
 }
 function boot(){
@@ -298,12 +322,9 @@ function boot(){
   var tgId=getTelegramUserId();
   var inp=document.getElementById("adminIdInput");
   if(inp && tgId) inp.value=tgId;
-  // Clear fake session — always verify via server
-  try{sessionStorage.removeItem("cinehub4_is_admin")}catch(e){}
-  try{localStorage.removeItem("cinehub4_admin_session")}catch(e){}
-  setGateStatus("Telegram Admin যাচাই হচ্ছে…", false);
+  setGateStatus("Telegram যাচাই… Enter চাপুন", false);
+  // Auto-try once
   loadAdminIdsFromFB(false);
-  setTimeout(function(){ if(!window.__IS_ADMIN) loadAdminIdsFromFB(false); }, 1500);
 }
 function sectionTitle(s){const map={dashboard:'Dashboard',movies:'Movies',categories:'Categories',users:'Users',points:'Points & Unlocks',ads:'Ads & Ad IDs',tasks:'Daily Tasks',payments:'Payments',adult:'Adult Library',requests:'Movie Requests',content:'Links & Videos',broadcast:'Broadcast',settings:'Settings'};return map[s]||s}
 function closeSidebar(){const sb=document.querySelector('.sidebar');if(sb)sb.classList.remove('open');const bd=document.getElementById('sideBackdrop');if(bd)bd.classList.add('hidden')}
