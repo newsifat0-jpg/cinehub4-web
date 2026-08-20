@@ -266,6 +266,10 @@ function adminLogin(){
         }
         var d=(res&&res.data)||{};
         console.log("[adminCheck]", d);
+        // TEMP DEBUG - unmissable
+        try{
+          alert("DEBUG adminCheck result\nok: "+(res&&res.ok)+"\nisAdmin: "+d.isAdmin+"\ndebugId: "+d.debugId+"\nreason: "+d.debugReason+"\nADMIN_IDS: "+d.debugAdminIdsRaw+"\nhashMatch: "+d.debugHashMatch+"\nsoft: "+d.soft+"\nauthDate: "+d.debugAuthDate+"\ndiffSec: "+d.debugDateDiffSec);
+        }catch(eDbg2){}
         if(res&&res.ok&&d.isAdmin){
           setGateStatus("✓ Verified"+(d.soft?" (soft)":""), false);
           finishBtn();
@@ -285,6 +289,7 @@ function adminLogin(){
       }).catch(function(err){
         clearTimeout(ctrl);
         setGateStatus("❌ Network: "+(err&&err.message?err.message:err), true);
+        try{ alert("DEBUG network error: "+(err&&err.message?err.message:err)); }catch(x){}
         finishBtn();
         // 3) Last-resort: if Telegram user id present and matches typed, open once with warning
         if(tgId && (!typed || typed===tgId) && (localStorage.getItem("cinehub4_admin_session")==="1"||sessionStorage.getItem("cinehub4_is_admin")==="1")){
@@ -303,6 +308,7 @@ function adminLogin(){
       return;
     }
     setGateStatus("❌ initData/api নেই। বট থেকে মিনি অ্যাপ খুলুন। ID: "+(tgId||typed||"—"), true);
+    try{ alert("DEBUG: no initData or no api\ninitData present: "+!!initData+"\napi present: "+!!api); }catch(x){}
     finishBtn();
   }catch(e){
     setGateStatus("Error: "+e, true);
@@ -335,6 +341,10 @@ function boot(){
   var inp=document.getElementById("adminIdInput");
   if(inp&&tgId) inp.value=tgId;
   setGateStatus("ID: "+(tgId||"—")+" — Enter চাপুন", false);
+  // TEMP DEBUG - unmissable, remove after fixing
+  try{
+    alert("DEBUG boot()\nadmin.js version: DEBUG-BUILD-1\ntgId: "+(tgId||"EMPTY")+"\nAPP_CONFIG present: "+!!window.APP_CONFIG+"\napiBaseUrl: "+((window.APP_CONFIG&&window.APP_CONFIG.apiBaseUrl)||"MISSING")+"\ninitData length: "+((window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData)||"").length);
+  }catch(eDbg){ try{alert("DEBUG boot() crashed: "+eDbg);}catch(x){} }
   // Auto enter if already verified this session
   try{
     if(sessionStorage.getItem("cinehub4_is_admin")==="1"){ openGateNow(); return; }
