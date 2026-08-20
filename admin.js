@@ -78,7 +78,7 @@ const DEFAULT={
   themePink:"#ec4899",
   themeBg:"#0a0c14"
 };
-const A={section:"dashboard",settings:{...DEFAULT,...JSON.parse(localStorage.getItem("cinehub4_settings")||"{}")},movies:[],users:12480,points:156240,adultEnabled:true,moviesLoaded:false};
+const A={section:"dashboard",settings:{...DEFAULT,...JSON.parse(localStorage.getItem("cinehub4_settings")||"{}")},movies:[],users:0,points:0,adultEnabled:true,moviesLoaded:false,payments:[],requests:[],userList:[],statsLoaded:false};
 /* Load movies from Firebase */
 function loadAdminMovies(){
   if(!window.CineHubFB){A.moviesLoaded=true;try{render()}catch(e){}return}
@@ -103,17 +103,21 @@ function save(silent){
     }
   }catch(e){}
   localStorage.setItem("cinehub4_settings",JSON.stringify(A.settings));
-  // Always push to Firebase when possible — backend verifies admin via initData
+  // Push to Firebase — this is what ALL users receive via loadPublicConfig
   try{
     if(window.CineHubFB){
       window.CineHubFB.saveConfig(A.settings).then(function(){
-        if(!silent) toast("Saved to Firebase");
+        if(!silent) toast("✓ Saved — all users will get this update");
       }).catch(function(e){
         console.error(e);
-        toast("Save failed: "+(e&&e.message?e.message:e));
+        toast("⚠ Save failed (only this device): "+(e&&e.message?e.message:e));
       });
+    } else if(!silent){
+      toast("⚠ Offline — saved only on this device");
     }
-  }catch(e){}
+  }catch(e){
+    if(!silent) toast("Save error: "+e);
+  }
 }
 function toast(msg){const te=el('toast')||toastEl;if(!te)return;te.textContent=msg;te.classList.add('show');setTimeout(()=>te.classList.remove('show'),1700)}
 function money(n){return Number(n).toLocaleString()}
@@ -225,7 +229,26 @@ function wireAdminNav(){
 }
 wireAdminNav();
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSidebar()});
-function dashboard(){return `<div class="grid stats"><div class="card stat"><span class="label">Total Users</span><div class="num">${money(A.users)}</div><span class="up">↑ 8.4%</span><span class="ico">♙</span></div><div class="card stat"><span class="label">Movies</span><div class="num">${A.movies.length}</div><span class="up">Live library</span><span class="ico">🎬</span></div><div class="card stat"><span class="label">Points Issued</span><div class="num">${money(A.points)}</div><span class="up">Economy active</span><span class="ico">◈</span></div><div class="card stat"><span class="label">Pending Payments</span><div class="num">${(A.payments||[]).filter(p=>(p.status||"pending")==="pending").length}</div><span class="up">Needs review</span><span class="ico">৳</span></div></div><div class="grid section-grid"><div class="card"><h3>Platform Activity</h3><div class="muted smalltext">Clicks, downloads and ad rewards</div><div class="chart">${[38,55,48,72,66,91,76].map(x=>`<div class="bar" style="height:${x}%"></div>`).join('')}</div></div><div class="card"><h3>Quick Controls</h3><div class="quick"><button onclick="openMovie()"><b>＋ Add Movie</b>Publish title</button><button onclick="setSection('ads')"><b>◉ Ad IDs</b>Manage every ad block</button><button onclick="setSection('content')"><b>🔗 Links & Video</b>Telegram + How to Watch</button><button onclick="setSection('categories')"><b>▦ Categories</b>Add / rename / delete</button></div></div></div><div class="card" style="margin-top:14px"><h3>System Status</h3><div class="switch"><span>Movie Library</span><span class="badge green">ONLINE</span></div><div class="switch"><span>Points & 15-hour unlock</span><span class="badge green">ACTIVE</span></div><div class="switch"><span>Adult Library</span><span class="badge ${A.adultEnabled?'green':'red'}">${A.adultEnabled?'ENABLED':'DISABLED'}</span></div></div>`}
+function dashboard(){
+  if (!A.statsLoaded && window.CineHubFB) {
+    A.statsLoaded = true;
+    if (window.CineHubFB.listUsers) {
+      window.CineHubFB.listUsers().then(function(list){
+        A.userList = Array.isArray(list)?list:[];
+        A.users = A.userList.length;
+        var pts=0; A.userList.forEach(function(u){pts+=Number(u.points||0);});
+        A.points = pts;
+        if (A.section==="dashboard") render();
+      }).catch(function(){});
+    }
+    if (window.CineHubFB.listPayments) {
+      window.CineHubFB.listPayments().then(function(list){
+        A.payments = Array.isArray(list)?list:[];
+        if (A.section==="dashboard") render();
+      }).catch(function(){});
+    }
+  }
+  return `<div class="grid stats"><div class="card stat"><span class="label">Total Users</span><div class="num">${money(A.users)}</div><span class="up">From Firebase</span><span class="ico">♙</span></div><div class="card stat"><span class="label">Movies</span><div class="num">${A.movies.length}</div><span class="up">Live library</span><span class="ico">🎬</span></div><div class="card stat"><span class="label">Points Issued</span><div class="num">${money(A.points)}</div><span class="up">Sum of user points</span><span class="ico">◈</span></div><div class="card stat"><span class="label">Pending Payments</span><div class="num">${(A.payments||[]).filter(p=>(p.status||"pending")==="pending").length}</div><span class="up">Needs review</span><span class="ico">৳</span></div></div><div class="grid section-grid"><div class="card"><h3>Platform Activity</h3><div class="muted smalltext">Clicks, downloads and ad rewards</div><div class="chart">${[38,55,48,72,66,91,76].map(x=>`<div class="bar" style="height:${x}%"></div>`).join('')}</div></div><div class="card"><h3>Quick Controls</h3><div class="quick"><button onclick="openMovie()"><b>＋ Add Movie</b>Publish title</button><button onclick="setSection('ads')"><b>◉ Ad IDs</b>Manage every ad block</button><button onclick="setSection('content')"><b>🔗 Links & Video</b>Telegram + How to Watch</button><button onclick="setSection('categories')"><b>▦ Categories</b>Add / rename / delete</button></div></div></div><div class="card" style="margin-top:14px"><h3>System Status</h3><div class="switch"><span>Movie Library</span><span class="badge green">ONLINE</span></div><div class="switch"><span>Points & 15-hour unlock</span><span class="badge green">ACTIVE</span></div><div class="switch"><span>Adult Library</span><span class="badge ${A.adultEnabled?'green':'red'}">${A.adultEnabled?'ENABLED':'DISABLED'}</span></div></div>`}
 function movies(){return `<div class="toolbar"><div class="left"><button class="btn primary" onclick="openMovie()">＋ Add Movie</button><button class="btn" onclick="openTmdbImport()">Import TMDB</button></div><input class="search" id="movieSearch" placeholder="Search movie..." oninput="filterMovies()"></div><div class="card table-wrap"><table class="table"><thead><tr><th>Movie</th><th>Category</th><th>Rating</th><th>Clicks</th><th>Downloads</th><th>Status</th><th>Action</th></tr></thead><tbody id="movieBody">${movieRows(A.movies)}</tbody></table></div>`}
 function movieRows(ms){return (ms||[]).map(function(m,idx){
   var id=String(m.id!=null?m.id:("idx_"+idx));
@@ -283,47 +306,54 @@ document.addEventListener('click',function(e){
 function filterMovies(){const q=$("#movieSearch").value.toLowerCase();$("#movieBody").innerHTML=movieRows(A.movies.filter(m=>m.title.toLowerCase().includes(q)))}
 function categories(){return `<div class="card"><div class="toolbar"><div><h3 style="margin:0">Movie Categories</h3><div class="muted smalltext">User app category tabs are controlled from here.</div></div><button class="btn primary" onclick="openCategory()">＋ Add Category</button></div><div class="tag-list">${A.settings.categories.map((c,i)=>`<div class="tag-item"><span>${c}</span><div><button class="btn" onclick="editCategory(${i})">Edit</button> <button class="btn danger" onclick="deleteCategory(${i})">Delete</button></div></div>`).join('')}</div></div>`}
 function users(){
-  let list=JSON.parse(localStorage.getItem("cinehub4_users")||"null");
-  if(!list){
-    list=[
-      {id:"demo1",name:"Demo User",points:1240,unlocks:18,ads:7,status:"Active"},
-      {id:"demo2",name:"Movie Lover",points:530,unlocks:6,ads:19,status:"Active"}
-    ];
-    localStorage.setItem("cinehub4_users",JSON.stringify(list));
+  if (!window.__usersLoaded) {
+    window.__usersLoaded = true;
+    if (window.CineHubFB && window.CineHubFB.listUsers) {
+      window.CineHubFB.listUsers().then(function(list){
+        A.userList = Array.isArray(list) ? list : [];
+        A.users = A.userList.length;
+        var pts = 0;
+        A.userList.forEach(function(u){ pts += Number(u.points||0); });
+        A.points = pts;
+        try { localStorage.setItem("cinehub4_users", JSON.stringify(A.userList)); } catch(e){}
+        if (A.section === "users" || A.section === "dashboard") render();
+      }).catch(function(e){
+        console.warn(e);
+        toast("Users load failed: " + (e && e.message ? e.message : e));
+      });
+    }
   }
-  return `<div class="toolbar"><div class="left"><button class="btn" onclick="toast('Export ready')">Export CSV</button></div>
-  <input class="search" id="userSearch" placeholder="Search user..." oninput="render()"></div>
-  <div class="card table-wrap"><table class="table"><thead><tr>
-    <th>User</th><th>Points</th><th>Unlocks</th><th>Ads Today</th><th>Status</th><th>Adjust Points</th>
-  </tr></thead><tbody>
-  ${list.map((u,idx)=>`<tr>
-    <td>${u.name||u.id}</td>
-    <td><b>${u.points||0}</b></td>
-    <td>${u.unlocks||0}</td>
-    <td>${u.ads||0}</td>
-    <td><span class="badge ${u.status==='Blocked'?'red':'green'}">${u.status||'Active'}</span></td>
-    <td style="white-space:nowrap">
-      <button class="btn" onclick="adjUserPts(${idx},10)">+10</button>
-      <button class="btn" onclick="adjUserPts(${idx},50)">+50</button>
-      <button class="btn danger" onclick="adjUserPts(${idx},-10)">-10</button>
-      <button class="btn danger" onclick="adjUserPts(${idx},-50)">-50</button>
-    </td>
-  </tr>`).join("")}
-  </tbody></table></div>`;
-}
-function adjUserPts(idx,delta){
-  const list=JSON.parse(localStorage.getItem("cinehub4_users")||"[]");
-  if(!list[idx])return;
-  list[idx].points=Math.max(0,(list[idx].points||0)+delta);
-  localStorage.setItem("cinehub4_users",JSON.stringify(list));
-  // if adjusting "current" demo user also bump live points
-  if(idx===0){
-    const cur=Number(localStorage.getItem("cinehub4_points")||0);
-    localStorage.setItem("cinehub4_points",String(Math.max(0,cur+delta)));
+  var list = A.userList && A.userList.length ? A.userList : [];
+  if (!list.length) {
+    try { list = JSON.parse(localStorage.getItem("cinehub4_users")||"[]"); } catch(e){ list = []; }
   }
-  render();toast((delta>0?"+":"")+delta+" points");
+  var q = "";
+  try { q = String((document.getElementById("userSearch")||{}).value||"").toLowerCase(); } catch(e){}
+  if (q) list = list.filter(function(u){
+    return String(u.id||"").toLowerCase().indexOf(q)>=0 || String(u.name||u.username||"").toLowerCase().indexOf(q)>=0;
+  });
+  var rows = list.length ? list.map(function(u){
+    var id = String(u.id||"");
+    var name = String(u.name || u.username || ("User "+id)).replace(/</g,"");
+    var unlocks = u.unlocks ? Object.keys(u.unlocks).length : 0;
+    var ads = u.ads_today || u.ads || 0;
+    var st = u.blocked ? "Blocked" : "Active";
+    return '<tr>'+
+      '<td><b>'+name+'</b><div class="muted smalltext">ID: '+id+'</div></td>'+
+      '<td><b>'+(u.points||0)+'</b></td>'+
+      '<td>'+unlocks+'</td>'+
+      '<td>'+ads+'</td>'+
+      '<td><span class="badge '+(st==="Blocked"?"red":"green")+'">'+st+'</span></td>'+
+      '<td class="muted smalltext">Firebase live</td></tr>';
+  }).join("") : '<tr><td colspan="6" class="muted">No users yet — they appear after first open of the mini app</td></tr>';
+  return '<div class="toolbar"><div class="left"><span class="muted">Total: '+(A.users||list.length)+' users from Firebase</span></div>'+
+    '<input class="search" id="userSearch" placeholder="Search user ID / name..." oninput="render()"></div>'+
+    '<div class="card table-wrap"><table class="table"><thead><tr>'+
+    '<th>User</th><th>Points</th><th>Unlocks</th><th>Ads Today</th><th>Status</th><th>Source</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
+function adjUserPts(idx,delta){ toast('Use Firebase users — adjust via bot if needed'); }
 function points(){return `<div class="toolbar"><div><h2 style="margin:0;font-size:18px">Points & Unlock Control</h2><p class="muted smalltext" style="margin:4px 0 0">Download lock · ads · points · daily limits — one place</p></div></div>
 <div class="grid section-grid">
   <div class="card"><h3>🔓 Movie Unlock Rules</h3>
@@ -603,13 +633,15 @@ function payments(){
   });
   const rows = list.length ? list.map(function(p){
     const uid = p.userId || p.user_id || p.uid || "—";
+    const uname = p.user || p.username || "";
+    const when = p.date || (p.created_at||p.ts ? new Date(Number(p.created_at||p.ts)).toLocaleString() : "—");
     const pts = p.points || p.amount || 0;
     const method = p.method || p.gateway || "—";
     const trx = p.trxId || p.trx || p.transaction_id || "—";
     const st = p.status || "pending";
     const idAttr = String(p.id || p._i);
     return '<tr>'+
-      '<td><b>'+String(uid).replace(/</g,"")+'</b></td>'+
+      '<td><b>'+String(uname||uid).replace(/</g,"")+'</b><div class="muted smalltext">'+String(uid).replace(/</g,"")+'</div><div class="muted smalltext">'+String(when).replace(/</g,"")+'</div></td>'+
       '<td>'+pts+'</td>'+
       '<td>'+String(method).replace(/</g,"")+'</td>'+
       '<td class="muted">'+String(trx).replace(/</g,"")+'</td>'+
@@ -632,17 +664,32 @@ function payFindById(id){
   return list.find(function(x){ return String(x.id)===String(id); }) || list[Number(id)];
 }
 function payView(id){
-  const p = payFindById(id);
+  var list = A.payments || [];
+  if (!list.length) {
+    try { list = JSON.parse(localStorage.getItem("cinehub4_payments")||"[]"); } catch(e){ list=[]; }
+  }
+  var p = list.find(function(x){ return String(x.id)===String(id); });
   if (!p) { toast("Not found"); return; }
-  const img = p.proof || p.image || p.screenshot || "";
-  const isUrl = img && /^https?:\/\//i.test(img);
+  var img = p.proofData || p.proof || p.image || p.screenshot || "";
+  var isImg = img && (String(img).indexOf("data:image")===0 || /^https?:\/\//i.test(img));
+  var when = p.date || p.created || "";
+  if (!when && (p.created_at || p.ts)) {
+    try { when = new Date(Number(p.created_at || p.ts)).toLocaleString(); } catch(e){ when = String(p.created_at||p.ts); }
+  }
+  var uname = p.user || p.username || p.name || "—";
+  var uid = p.userId || p.uid || "—";
   showModal('<div class="modal-head"><h2>Payment Request</h2><button class="btn" onclick="closeModal()">×</button></div>'+
-    '<div class="pay-meta-row"><span>User</span><b>'+String(p.userId||p.uid||"—")+'</b></div>'+
+    '<div class="pay-meta-row"><span>Name</span><b>'+String(uname).replace(/</g,"")+'</b></div>'+
+    '<div class="pay-meta-row"><span>Telegram ID</span><b>'+String(uid).replace(/</g,"")+'</b></div>'+
+    '<div class="pay-meta-row"><span>Package</span><b>'+String(p.pkg||p.package||"—").replace(/</g,"")+'</b></div>'+
+    '<div class="pay-meta-row"><span>USDT</span><b>'+String(p.usdt||p.amount_usdt||"—")+'</b></div>'+
     '<div class="pay-meta-row"><span>Points</span><b>'+(p.points||p.amount||0)+'</b></div>'+
-    '<div class="pay-meta-row"><span>Method</span><b>'+String(p.method||"—")+'</b></div>'+
-    '<div class="pay-meta-row"><span>Trx</span><b>'+String(p.trxId||p.trx||"—")+'</b></div>'+
+    '<div class="pay-meta-row"><span>Wallet</span><b>'+String(p.wallet||"—").replace(/</g,"")+' / '+String(p.network||"").replace(/</g,"")+'</b></div>'+
+    '<div class="pay-meta-row"><span>TxID</span><b style="word-break:break-all">'+String(p.txid||p.trxId||p.trx||"—").replace(/</g,"")+'</b></div>'+
+    '<div class="pay-meta-row"><span>Time</span><b>'+String(when).replace(/</g,"")+'</b></div>'+
     '<div class="pay-meta-row"><span>Status</span><b class="badge">'+(p.status||"pending")+'</b></div>'+
-    (isUrl?'<div class="pay-proof-frame"><img src="'+img+'" alt="proof" style="max-width:100%;border-radius:8px"></div>':'')+
+    (isImg ? '<div class="pay-proof-frame" style="margin-top:10px"><img src="'+String(img).replace(/"/g,"&quot;")+'" alt="proof" style="max-width:100%;border-radius:8px"></div>' :
+      (p.proof ? '<div class="muted" style="margin-top:8px">Proof file: '+String(p.proof).replace(/</g,"")+'</div>' : '<div class="muted" style="margin-top:8px">No screenshot attached</div>'))+
     '<div style="margin-top:12px;display:flex;gap:8px">'+
     ((p.status||"pending")==="pending"?
       '<button class="btn primary" onclick="closeModal();payActionId(\''+String(p.id).replace(/'/g,"\\'")+'\',\'approved\')">✓ Accept</button>'+
@@ -720,7 +767,7 @@ function saveCategoryAdult(i){const n=$('#catNameAdult').value.trim();if(!n)retu
 function deleteCategoryAdult(i){if(A.settings.adultCategories[i]==='All'){toast('All category cannot be deleted');return}if(confirm('Delete this adult category?')){A.settings.adultCategories.splice(i,1);save();render();toast('Adult category deleted')}}
 function saveAdultTexts(){A.settings.adultLibraryBadge=$('#aLibBadge').value.trim();A.settings.adultLibraryTitle=$('#aLibTitle').value.trim();A.settings.adultLibraryDesc=$('#aLibDesc').value.trim();A.settings.adultTickerText=$('#aTicker').value.trim();A.settings.adultNewLabel=$('#aNewLabel').value.trim();A.settings.adultNewSub=$('#aNewSub').value.trim();A.settings.adultTrendingLabel=$('#aTrendLabel').value.trim();A.settings.adultTrendingSub=$('#aTrendSub').value.trim();save();toast('Adult page text saved')}
 function adultMovieRows(ms){return ms.length?ms.map(m=>`<tr><td><div class="movie-row"><div class="thumb">${(m.title||'?').slice(0,1)}</div><div><b>${m.title}</b><div class="muted">${m.year}</div></div></div></td><td>${m.category||'Adult'}</td><td>⭐ ${m.rating}</td><td>${money(m.clicks||0)}</td><td>${money(m.downloads||0)}</td><td><span class="badge ${m.status==='Published'?'green':''}">${m.status}</span></td><td class="action-cell"><button type="button" class="btn dots-btn" data-mid="${m.id}" aria-label="Actions">⋮</button><div class="dots-menu hidden" id="dm-${m.id}"><button type="button" onclick="editAdultMovie(${JSON.stringify(String(m.id))});closeAllDots()">Edit</button><button type="button" class="danger" onclick="deleteMovie(${JSON.stringify(String(m.id))});closeAllDots()">Delete</button></div></td></tr>`).join(''):`<tr><td colspan="7" class="muted">No adult movies yet. Use “＋ Add Adult Movie” above.</td></tr>`}
-function requests(){return `<div class="card table-wrap"><table class="table"><thead><tr><th>User</th><th>Requested Title</th><th>Date</th><th>Priority</th><th>Status</th><th>Action</th></tr></thead><tbody>${[['@demo_user_1','Avengers: Secret Wars','Today','High','Pending'],['@moviefan','Interstellar','Yesterday','Normal','Pending'],['@sifat_demo','Dune: Part Three','Yesterday','Normal','Searching']].map(r=>`<tr><td>${r[0]}</td><td><b>${r[1]}</b></td><td>${r[2]}</td><td>${r[3]}</td><td><span class="badge">${r[4]}</span></td><td><button class="btn" onclick="toast('Request manager opened')">Manage</button></td></tr>`).join('')}</tbody></table></div>`}
+
 function contentPage(){const s=A.settings;return `<div class="toolbar"><div><h2 style="margin:0;font-size:18px">Links & Videos</h2><p class="muted smalltext" style="margin:4px 0 0">Each link is independent — change only what you need</p></div></div>
 <div class="grid section-grid">
   <div class="card"><h3>▶ How to Watch (Movies)</h3>
@@ -908,6 +955,7 @@ function saveAllSettings(){
 function saveBrand(){A.settings.appName=$('#appName').value.trim()||'Cine Hub4';A.settings.botUsername=$('#botUser').value.trim();save();toast('Brand saved. Refresh user app to see it')}
 function openMovie(id=null){const m=id!=null&&id!==0&&id!==''?A.movies.find(x=>String(x.id)===String(id)):null;const idArg=m?JSON.stringify(String(m.id)):'null';showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="mTitle" value="${(m?.title||'').replace(/"/g,'&quot;')}"></div><div class="field"><label>Year</label><input id="mYear" type="number" value="${m?.year||2026}"></div><div class="field"><label>Category</label><select id="mCat">${(function(){var cats=(A.settings.categories||[]).slice(); if(m&&m.category&&cats.indexOf(m.category)<0)cats.unshift(m.category); if(cats.indexOf('All Movies')<0)cats.unshift('All Movies'); return cats.map(function(c){return '<option'+(m&&m.category===c?' selected':'')+'>'+c+'</option>';}).join('');})()}</select></div><div class="field"><label>Rating</label><input id="mRating" type="number" step=".1" value="${m?.rating||8}"></div><div class="field"><label>Poster URL</label><input id="mPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="s1" value="${(m?.server1||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="s2" value="${(m?.server2||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="s3" value="${(m?.server3||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Adult?</label><select id="mAdult"><option value="0">No</option><option value="1" ${m?.adult?'selected':''}>Yes</option></select></div></div><button class="btn primary" style="margin-top:15px" onclick="saveMovie(${idArg})">Save Movie</button>`)}
 function saveMovie(id){
+  if(window.__savingMovie){toast('Already saving…');return;}
   id=(id===0||id===null||id===undefined||id==='')?null:id;
   const old=id!=null?A.movies.find(m=>String(m.id)===String(id)):null;
   const isAdult=$('#mAdult').value==='1';
@@ -943,13 +991,14 @@ function saveMovie(id){
     return;
   }
   const tmo=setTimeout(function(){toast('Still saving… check network / Deploy');},8000);
+  window.__savingMovie=true;
   window.CineHubFB.saveMovie(x).then(function(saved){
-    clearTimeout(tmo);
+    window.__savingMovie=false; clearTimeout(tmo);
     if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);else A.movies.unshift(saved);
     save(true);closeModal();render();
     toast(isAdult?'Saved as Adult (Adult tab)':'Movie saved to Firebase');
   }).catch(function(e){
-    clearTimeout(tmo);
+    window.__savingMovie=false; clearTimeout(tmo);
     console.error(e);
     toast('Save failed: '+(e&&e.message?e.message:String(e)));
   });

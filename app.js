@@ -658,20 +658,29 @@ function submitPayment(){
     const user=tg?((tg.first_name||"")+(tg.last_name?" "+tg.last_name:"")):("User "+(localStorage.getItem("cinehub4_uid")||""));
     const uid=String(tg?.id||localStorage.getItem("cinehub4_uid")||"");
     const now=new Date();
+    // Keep screenshot under ~400KB to avoid Firebase/GAS limits
+    if(proofData && proofData.length > 450000){
+      proofData = "";
+      proofName = (proofName||"screenshot") + " (too large — re-send smaller image)";
+    }
     const paymentObj={
       user:user,
       userId:uid,
       uid:uid,
+      username:user,
       pkg:order.name,
       usdt:order.price,
       points:order.points,
       txid:txid,
+      trxId:txid,
       proof:proofName||"(screenshot)",
       proofData:proofData,
       wallet:(state.selectedWallet&&state.selectedWallet.name)||"",
       network:(state.selectedWallet&&state.selectedWallet.network)||"",
+      method:"USDT",
       status:"pending",
       ts:now.getTime(),
+      created_at:now.getTime(),
       date:now.toLocaleString(),
       created:now.toISOString()
     };
@@ -1195,8 +1204,10 @@ function playAdsgram(blockId, onDone){
 }
 
 function playMonetag(zoneId, onDone){
-  const id = String(zoneId||"").trim();
-  if(!id){ toast(t("Admin has not configured this Ad Block ID")); return; }
+  // Accept "31613452" or "show_31613452" from Monetag dashboard
+  var raw = String(zoneId||"").trim();
+  if(!raw){ toast(t("Admin has not configured this Ad Block ID")); return; }
+  var id = raw.replace(/^show_/i,"");
   const fnName = "show_"+id;
   function tryShow(){
     if(typeof window[fnName]==="function"){
@@ -1466,28 +1477,40 @@ function loadAdminIdsApp(){
 setTimeout(loadAdminIdsApp, 200);
 setTimeout(loadAdminIdsApp, 1500);
 
-function loadPublicAppConfig(){
+function loadPublicAppConfig(forceRender){
   try{
     if(!window.CineHubFB) return;
     window.CineHubFB.loadConfig().then(function(c){
-      if(!c) return;
+      if(!c || typeof c !== "object") return;
       try{ Object.assign(window.APP_CONFIG,c); }catch(e){}
-      // Apply live admin settings into runtime cfg (Firebase is source of truth)
+      // Firebase config/main is source of truth for ALL users
       try{
         Object.keys(c).forEach(function(k){
-          if(c[k]!==undefined&&c[k]!==null) cfg[k]=c[k];
+          if(c[k]!==undefined && c[k]!==null) cfg[k]=c[k];
         });
         if(c.adBlocks) cfg.adBlocks=Object.assign({},cfg.adBlocks||{},c.adBlocks);
         if(c.adSlots) cfg.adSlots=Object.assign({},cfg.adSlots||{},c.adSlots);
         if(c.adLinkSeconds!=null) cfg.adLinkSeconds=c.adLinkSeconds;
-        localStorage.setItem("cinehub4_settings",JSON.stringify(Object.assign({},JSON.parse(localStorage.getItem("cinehub4_settings")||"{}"),c)));
+        // Overwrite local cache with server so admin changes reach everyone
+        localStorage.setItem("cinehub4_settings", JSON.stringify(c));
       }catch(e){}
       try{ applyTheme(); }catch(e){}
-      try{ render(true); }catch(e){}
-    }).catch(function(){});
+      if(forceRender !== false){
+        try{ render(true); }catch(e){}
+      }
+    }).catch(function(err){ console.warn("config load", err); });
   }catch(e){}
 }
-setTimeout(loadPublicAppConfig, 500);
+// Load ASAP + retry + periodic refresh so admin changes reach all users
+setTimeout(function(){ loadPublicAppConfig(true); }, 300);
+setTimeout(function(){ loadPublicAppConfig(false); }, 2000);
+setTimeout(function(){ loadPublicAppConfig(false); }, 8000);
+setInterval(function(){ loadPublicAppConfig(false); }, 60000);
+try{
+  document.addEventListener("visibilitychange", function(){
+    if(document.visibilityState==="visible") loadPublicAppConfig(false);
+  });
+}catch(e){}
 function setupAdminButton(){
   try{
     const btn=document.getElementById("adminPanelBtn");

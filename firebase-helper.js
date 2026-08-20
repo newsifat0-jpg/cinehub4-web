@@ -150,6 +150,7 @@
     setUnlock:function(uid,movieId,hours){return api("setUnlock",{uid:String(uid||getUid()),movieId:String(movieId),hours:Number(hours)||15});},
     loadPayments:function(uid){return api("loadPayments",{uid:String(uid||getUid())});},
     addPayment:function(payment){return api("addPayment",{payment:payment});},
+    listUsers:function(){return api("listUsers",{});},
     listPayments:function(){return api("listPayments",{});},
     updatePayment:function(id,fields){return api("updatePayment",{id:String(id||""),fields:fields||{}});},
     listRequests:function(){return api("listRequests",{});},
