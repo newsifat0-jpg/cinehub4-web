@@ -135,11 +135,11 @@ function save(){
 window.__cinehub_splashUp = true;
 window.__cinehub_needPaint = false;
 function safeRender(animate){
-  if(window.__cinehub_splashUp){
+  if(window.__cinehub_splashUp || window.__cinehub_bootFreeze){
     window.__cinehub_needPaint = true;
     return;
   }
-  try{render(!!animate)}catch(e){console.error(e)}
+  try{render(false)}catch(e){console.error(e)}
 }
 function loadMoviesFromFB(){
   if(!window.CineHubFB){state.moviesLoaded=true;safeRender(false);return}
@@ -437,7 +437,7 @@ function profile(){
   <div class="pf-card">
     <div class="pf-avatar">${avatar}</div>
     <div class="pf-meta">
-      <div class="pf-name">${name} <span class="pf-seed">SEED</span></div>
+      <div class="pf-name">${name}</div>
       <div class="pf-user">${uname}</div>
       <div class="pf-verified">✓ ${t("Verified User")}</div>
     </div>
@@ -1476,7 +1476,7 @@ function loadAdminIdsApp(){
         window.__IS_ADMIN=false;
         try{ sessionStorage.removeItem("cinehub4_is_admin"); }catch(e){}
       }
-      try{setupAdminButton();render(true)}catch(e){}
+      try{setupAdminButton()}catch(e){}
     }).catch(function(err){
       console.warn("[admin] fetch error", err);
       // retry once after 1.2s (slow network / cold start)
@@ -1490,7 +1490,7 @@ function loadAdminIdsApp(){
             window.__ADMIN_IDS=uid?[uid]:["1"];
             window.__IS_ADMIN=true;
             try{ sessionStorage.setItem("cinehub4_is_admin","1"); }catch(e){}
-            try{setupAdminButton();render(true)}catch(e){}
+            try{setupAdminButton()}catch(e){}
           }
         }).catch(function(){});
       },1200);
@@ -1518,14 +1518,17 @@ function loadPublicAppConfig(forceRender){
         localStorage.setItem("cinehub4_settings", JSON.stringify(c));
       }catch(e){}
       try{ applyTheme(); }catch(e){}
-      if(forceRender !== false){
-        try{ render(true); }catch(e){}
+      // Background config — queue if UI frozen/splash
+      if(forceRender !== false && !window.__cinehub_splashUp && !window.__cinehub_bootFreeze){
+        try{ render(false); }catch(e){}
+      } else if(window.__cinehub_splashUp || window.__cinehub_bootFreeze){
+        window.__cinehub_needPaint = true;
       }
     }).catch(function(err){ console.warn("config load", err); });
   }catch(e){}
 }
 // Load ASAP + retry + periodic refresh so admin changes reach all users
-setTimeout(function(){ loadPublicAppConfig(true); }, 300);
+setTimeout(function(){ loadPublicAppConfig(false); }, 400);
 setTimeout(function(){ loadPublicAppConfig(false); }, 2000);
 setTimeout(function(){ loadPublicAppConfig(false); }, 8000);
 setInterval(function(){ loadPublicAppConfig(false); }, 60000);
@@ -1583,7 +1586,7 @@ function bindHomeStickyScroll(){
 function render(animate=false){
 /* Skip paints while splash is covering the screen (prevents open-time jerk) */
 if(window.__cinehub_splashUp && !window.__cinehub_forcePaint){ window.__cinehub_needPaint=true; return; }
-try{const views={movies:moviesPage,search:searchPage,series,adult,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate && !state.firstPaint){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===state.page||(state.page==="detail"&&b.dataset.page==="movies")));bindPageBack();bindDrawer();markDrawerActive();setupAdminButton();window.CINEHUB4_LANG?.translateDOM();
+try{const views={movies:moviesPage,search:searchPage,series,adult,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate && !state.firstPaint && !window.__cinehub_noAnim){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===state.page||(state.page==="detail"&&b.dataset.page==="movies")));bindPageBack();bindDrawer();markDrawerActive();setupAdminButton();window.CINEHUB4_LANG?.translateDOM();
 try{bindHomeStickyScroll()}catch(e){}
 const mic=$("#micBtn");if(mic)mic.onclick=startVoiceSearch;
 const qel=$("#q");if(qel){qel.addEventListener("input",()=>{/* live optional */});}
@@ -1681,36 +1684,57 @@ function killSplash(){
   const s=document.getElementById("appSplash");
   if(!s||s.classList.contains("gone"))return;
   s.classList.add("gone");
-  setTimeout(function(){try{s.style.display="none";s.remove()}catch(e){}},320);
+  setTimeout(function(){try{s.style.display="none";s.remove()}catch(e){}},400);
 }
 (function(){
-  const MIN_HOLD=2200, MAX_WAIT=4800, START=Date.now();
-  // Keep #screen invisible until splash lifts (prevents flash/jerk)
-  try{
-    var sc0=document.getElementById("screen");
-    if(sc0){ sc0.style.opacity="0"; sc0.style.transition="opacity .28s ease"; }
-  }catch(e){}
+  /* Anti-jerk: paint FULL UI under opaque splash, then only fade splash away.
+     Screen stays visible under splash the whole time — no hide/show, no second paint. */
+  const MIN_HOLD=1800, MAX_WAIT=4200, START=Date.now();
+  window.__cinehub_noAnim = true;
+  window.__cinehub_bootFreeze = true;
   (function check(){
     const elapsed=Date.now()-START;
     const ready = state.moviesLoaded || elapsed>=MAX_WAIT;
     if(ready && elapsed>=MIN_HOLD){
+      // One paint under splash
       window.__cinehub_forcePaint = true;
-      try{render(false)}catch(e){console.error(e);var sc=document.getElementById("screen");if(sc)sc.innerHTML="<div style=padding:20px;color:#f88>Boot error: "+(e.message||e)+"</div>"}
+      try{render(false)}catch(e){
+        console.error(e);
+        var sc=document.getElementById("screen");
+        if(sc)sc.innerHTML="<div style=padding:20px;color:#f88>Boot error: "+(e.message||e)+"</div>";
+      }
       window.__cinehub_forcePaint = false;
-      window.__cinehub_splashUp = false;
-      state.firstPaint = false;
-      // Fade content in WHILE splash fades out — no hard jump
-      setTimeout(function(){
-        try{
-          var sc=document.getElementById("screen");
-          if(sc){ sc.style.opacity="1"; }
-        }catch(e){}
-        killSplash();
-      }, 60);
+      // Ensure screen is fully shown UNDER splash (splash z-index covers it)
+      try{
+        var sc=document.getElementById("screen");
+        if(sc){
+          sc.style.transition="none";
+          sc.style.opacity="1";
+          sc.style.visibility="visible";
+        }
+      }catch(e){}
+      // Wait 2 frames so browser paints content under splash
+      requestAnimationFrame(function(){
+        requestAnimationFrame(function(){
+          window.__cinehub_splashUp = false;
+          state.firstPaint = false;
+          // Only remove cover — content already there, zero layout change
+          killSplash();
+          setTimeout(function(){
+            window.__cinehub_noAnim = false;
+            window.__cinehub_bootFreeze = false;
+            if(window.__cinehub_needPaint){
+              window.__cinehub_needPaint = false;
+              try{render(false)}catch(e){}
+            }
+          }, 2600);
+        });
+      });
       return;
     }
-    setTimeout(check,80);
+    setTimeout(check, 50);
   })();
+})();
 })();
 
 function showLeaveDialog(){
