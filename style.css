@@ -33,9 +33,9 @@
 }
 /* Cine Hub4 — clean UI */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;min-height:100%}
-#app{min-height:100vh;position:relative}
-#screen{display:block;min-height:70vh;padding:6px 14px 96px;position:relative;z-index:1}
+html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;min-height:100%;overscroll-behavior:none}
+#app{min-height:100vh;min-height:100dvh;position:relative;margin:0;padding:0}
+#screen{display:block;min-height:70vh;padding:0 14px 96px!important;margin:0!important;position:relative;z-index:1}
 
 /* Splash — same animated style as the page-transition overlay (orbit rings, pop-in logo, sliding text, progress bar) */
 #appSplash{position:fixed;inset:0;z-index:99999;background:#0a0c14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:1;transition:opacity .16s ease-out,transform .16s ease-out}
@@ -55,12 +55,12 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
 .splash-bar{width:0;height:3px;border-radius:99px;background:linear-gradient(90deg,#6d4aff,#22d3ee);animation:bar .45s ease .4s forwards}
 
 /* Header row */
-.prime-row{display:flex;align-items:center;gap:10px;padding:2px 0 8px;min-height:0}
+.prime-row{display:flex;align-items:center;gap:10px;padding:0 0 6px;min-height:0;margin:0}
 .home-sticky-top{
   position:sticky;top:0;z-index:40;
-  background:rgba(7,9,15,.92);
+  background:rgba(7,9,15,.98);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  padding:2px 0 0;margin:0 -14px;padding-left:14px;padding-right:14px;
+  padding:0 0 0;margin:0 -14px;padding-left:14px;padding-right:14px;
   transition:background .25s ease,box-shadow .25s ease;
 }
 .home-sticky-top.is-scrolled{
@@ -362,7 +362,7 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
 .ticker span{display:inline-block;padding-left:100%;animation:tick 22s linear infinite}
 @keyframes tick{to{transform:translateX(-100%)}}
 
-.page-back-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.page-back-bar{display:flex;align-items:center;gap:6px;padding:0 0 6px;margin:0;min-height:0}
 .page-back-btn{width:40px;height:40px;border:0;border-radius:12px;background:#161b2c;color:#eef1ff;font-size:26px;line-height:1;cursor:pointer;display:grid;place-items:center;flex-shrink:0}
 .page-back-btn:active{transform:scale(.94);background:#1e2538}
 .page-back-title{font-size:16px;font-weight:800}

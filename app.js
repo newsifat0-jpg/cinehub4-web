@@ -284,6 +284,7 @@ function ticker(){
 }
 /** Banner under scrolling ticker — Adsgram Task or image (admin controlled) */
 function bannerSlot(zone){
+  return ""; /* home banner ads removed — stop layout jerk */
   loadSharedSettings();
   const isAdult = zone==="adult";
   const show = isAdult ? (cfg.showAdultBanner!==false) : (cfg.showMovieBanner!==false);
@@ -374,7 +375,7 @@ function filterCat(c){
   showPageTransition(function(){state.category=c;render(true)});
 }
 function listForHome(){let list=movies.filter(m=>!m.adult);if(state.category&&state.category!=="All Movies"&&state.category!=="All"){list=list.filter(m=>(m.category||"").toLowerCase().includes(state.category.toLowerCase().replace(" moves","").replace(" movie hindi",""))|| (m.category||"").toLowerCase()===state.category.toLowerCase())}if(state.mode==="trending")list=list.slice().sort((a,b)=>(b.views||b.clicks||0)-(a.views||a.clicks||0));else list=list.slice().sort((a,b)=>b.id-a.id);return list}
-function moviesPage(){const list=listForHome();return `<div class="home-sticky-top">`+primeHeader()+heroPills()+`</div>`+catRow()+libCard()+ticker()+bannerSlot("movies")+(list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No movies found.")}</div>`)}
+function moviesPage(){const list=listForHome();return `<div class="home-sticky-top" id="homeSticky">`+primeHeader()+heroPills()+`<div class="home-sticky-line"></div></div>`+catRow()+libCard()+ticker()+(list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No movies found.")}</div>`)}
 function setAdultMode(m){
   if(state.adultMode===m)return;
   showPageTransition(function(){state.adultMode=m;render(true)});
@@ -416,7 +417,7 @@ function adult(){
     </div>`;
   }
   const list=listForAdult();
-  return `<div class="home-sticky-top" id="homeSticky">`+menuOnlyHeader(t("Adult"))+heroPillsAdult()+`<div class="home-sticky-line"></div></div>`+catRowAdult()+libCardAdult()+tickerAdult()+bannerSlot("adult")+list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No adult content yet. Add from Admin Panel.")}</div>`;
+  return `<div class="home-sticky-top" id="homeSticky">`+menuOnlyHeader(t("Adult"))+heroPillsAdult()+`<div class="home-sticky-line"></div></div>`+catRowAdult()+libCardAdult()+tickerAdult()+list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No adult content yet. Add from Admin Panel.")}</div>`;
 }
 function confirmAdult(){state.adultOK=true;render(true)}
 
@@ -1577,7 +1578,17 @@ const mic=$("#micBtn");if(mic)mic.onclick=startVoiceSearch;
 const qel=$("#q");if(qel){qel.addEventListener("input",()=>{/* live optional */});}
 }catch(err){console.error("render",err);const screen=$("#screen");if(screen)screen.innerHTML="<div style=\"padding:20px;color:#f88\">Render failed: "+String(err.message||err)+"</div>"}
 }
-try{window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand()}catch(e){}
+try{
+  const tg=window.Telegram&&window.Telegram.WebApp;
+  if(tg){
+    tg.ready();
+    tg.expand();
+    try{tg.setHeaderColor&&tg.setHeaderColor("#07090f")}catch(e){}
+    try{tg.setBackgroundColor&&tg.setBackgroundColor("#07090f")}catch(e){}
+    try{tg.setBottomBarColor&&tg.setBottomBarColor("#0c101c")}catch(e){}
+    try{if(tg.disableVerticalSwipes)tg.disableVerticalSwipes()}catch(e){}
+  }
+}catch(e){}
 if($("#backBtn"))$("#backBtn").onclick=()=>goBack();
 $$(".nav-item").forEach(b=>b.onclick=()=>nav(b.dataset.page));
 setupAdminButton();setTimeout(setupAdminButton,250);setTimeout(setupAdminButton,1000);
@@ -1662,7 +1673,7 @@ function killSplash(){
   setTimeout(function(){try{s.style.display="none";s.remove()}catch(e){}},220);
 }
 (function(){
-  const MIN_HOLD=2000, MAX_WAIT=4500, START=Date.now();
+  const MIN_HOLD=2400, MAX_WAIT=5000, START=Date.now();
   (function check(){
     const elapsed=Date.now()-START;
     const ready = state.moviesLoaded || elapsed>=MAX_WAIT;
@@ -1673,7 +1684,7 @@ function killSplash(){
       window.__cinehub_forcePaint = false;
       window.__cinehub_splashUp = false;
       // brief settle so images/layout stabilize before user sees the screen
-      setTimeout(killSplash, 180);
+      setTimeout(killSplash, 280);
       return;
     }
     setTimeout(check,80);

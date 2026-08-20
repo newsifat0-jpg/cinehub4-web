@@ -428,20 +428,6 @@ function ads(){
     </label>
   </div>
 
-  <div class="card" style="border:1px solid #f59e0b;margin-bottom:12px">
-    <h3>🖼 মেইন ব্যানার (মুভি হোম · অ্যাডাল্ট হোম)</h3>
-    <p class="muted smalltext">ব্যানার/ক্লিক অ্যাডের জন্য Network + ID বা ইমেজ URL</p>
-    <div class="form-grid" style="margin-top:10px">
-      <div class="field"><label>Network</label>${netSel("mainBanNet", net("banner"))}</div>
-      <div class="field"><label>Block ID / Zone / URL</label>
-        <input id="mainBanId" value="${val("banner")}" placeholder="Adsgram task ID বা zone বা https://...">
-      </div>
-    </div>
-    <label class="switch" style="margin-top:12px;display:flex;gap:10px;align-items:center">
-      <input type="checkbox" id="applyBanAll" checked>
-      <span>অ্যাডাল্ট ব্যানারেও একই ID ব্যবহার করো</span>
-    </label>
-  </div>
 
   <div class="card" style="margin-bottom:12px">
     <h3>⏱ Non-SDK কাউন্টডাউন</h3>
@@ -469,31 +455,12 @@ function ads(){
   </details>
 
   <div class="grid section-grid">
-    <div class="card"><h3>🖼 Movie tab — কাস্টম ইমেজ ব্যানার</h3>
-      <p class="muted smalltext">নেটওয়ার্ক ব্যানারের বদলে নিজের ইমেজ চাইলে</p>
-      <div class="switch" style="margin:10px 0">
-        <span>Show movie banner</span>
-        <span class="toggle ${s.showMovieBanner!==false?'on':''}" id="togMovieBan" onclick="this.classList.toggle('on')"><i></i></span>
-      </div>
-      <div class="field"><label>Image URL</label><input id="movieBanImg" value="${(s.movieBannerImg||'').replace(/"/g,'&quot;')}" placeholder="https://...jpg"></div>
-      <div class="field" style="margin-top:8px"><label>Click link</label><input id="movieBanLink" value="${(s.movieBannerLink||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
-    </div>
-    <div class="card"><h3>🖼 Adult tab — কাস্টম ইমেজ</h3>
-      <div class="switch" style="margin:10px 0">
-        <span>Show adult banner</span>
-        <span class="toggle ${s.showAdultBanner!==false?'on':''}" id="togAdultBan" onclick="this.classList.toggle('on')"><i></i></span>
-      </div>
-      <div class="field"><label>Image URL</label><input id="adultBanImg" value="${(s.adultBannerImg||'').replace(/"/g,'&quot;')}" placeholder="https://...jpg"></div>
-      <div class="field" style="margin-top:8px"><label>Click link</label><input id="adultBanLink" value="${(s.adultBannerLink||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
-    </div>
-  </div>
-
-  <button class="btn primary" style="margin-top:14px;width:100%;padding:14px" onclick="saveAds()">💾 Save Ad Settings</button>
+    <button class="btn primary" style="margin-top:14px;width:100%;padding:14px" onclick="saveAds()">💾 Save Ad Settings</button>
   <div class="card" style="margin-top:14px">
     <h3>সাপোর্টেড নেটওয়ার্ক</h3>
     <p class="muted smalltext">
       <b>Adsgram</b> · <b>Monetag</b> · RichAds · OnClicka · TADS · AdSonar · PropellerAds · Adexium · AADS · Hilltop · Custom URL<br>
-      মুভি বট: রিওয়ার্ডেড → পয়েন্ট/আনলক/টাস্ক · ব্যানার → হোম স্ক্রিন
+      মুভি বট: রিওয়ার্ডেড → পয়েন্ট/আনলক/টাস্ক (হোম ব্যানার সরানো হয়েছে)
     </p>
   </div>`;
 }
@@ -505,7 +472,7 @@ function saveAds(){
   const mainRewNet = (document.getElementById("mainRewNet")||{}).value || "adsgram";
   const mainRewId = String((document.getElementById("mainRewId")||{}).value || "").trim();
   const mainBanNet = (document.getElementById("mainBanNet")||{}).value || "adsgram";
-  const mainBanId = String((document.getElementById("mainBanId")||{}).value || "").trim();
+  const mainBanId = String((document.getElementById("mainBanId")||{}).value || (A.settings.adBlocks&&A.settings.adBlocks.banner) || "").trim();
   const applyRew = (document.getElementById("applyRewAll")||{}).checked !== false;
   const applyBan = (document.getElementById("applyBanAll")||{}).checked !== false;
 
