@@ -160,7 +160,7 @@ function loadUserFromFB(){
     userData = u || userData;
     state.points = Number(userData.points) || 1;
     state.userLoaded = true;
-    try{render(true)}catch(e){}
+    try{render(false)}catch(e){}
   });
 }
 setTimeout(function(){loadMoviesFromFB();loadUserFromFB()},150);

@@ -37,15 +37,22 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
 #app{min-height:100vh;position:relative}
 #screen{display:block;min-height:70vh;padding:12px 14px 96px;position:relative;z-index:1}
 
-/* Splash */
-#appSplash{position:fixed;inset:0;z-index:99999;background:#0a0c14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;opacity:1;transition:opacity .3s ease}
+/* Splash — same animated style as the page-transition overlay (orbit rings, pop-in logo, sliding text, progress bar) */
+#appSplash{position:fixed;inset:0;z-index:99999;background:#0a0c14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:1;transition:opacity .3s ease}
 #appSplash.gone{opacity:0;pointer-events:none}
 #appSplash::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 40%,#1a2040,#0a0c14 55%);z-index:0}
 #appSplash>*{position:relative;z-index:1}
-.splash-logo{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font-size:28px;font-weight:950;color:#fff;background:linear-gradient(145deg,#6d4aff,#22d3ee);box-shadow:0 0 40px #6d4aff66}
-.splash-name{font-size:17px;font-weight:950;letter-spacing:2px}
-.splash-name span{color:#00d4ff}
-.splash-line{width:72px;height:3px;border-radius:99px;background:linear-gradient(90deg,#6d4aff,#22d3ee)}
+.splash-orbit{position:relative;width:96px;height:96px;display:grid;place-items:center}
+.splash-ring{position:absolute;inset:0;border-radius:50%;border:2px dotted #22d3ee}
+.splash-ring-a{animation:spin 1.2s linear infinite}
+.splash-ring-b{inset:12px;border-color:#6d4aff;animation:spinR 1.5s linear infinite}
+.splash-logo{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font-size:28px;font-weight:950;color:#fff;background:linear-gradient(145deg,#6d4aff,#22d3ee);box-shadow:0 0 40px #6d4aff66;opacity:0;transform:scale(.55);animation:pop .4s cubic-bezier(.2,.9,.2,1) forwards}
+.splash-name{font-size:17px;font-weight:950;letter-spacing:2px;display:flex;gap:6px}
+.splash-word{opacity:0;transform:translateY(12px);display:inline-block}
+.splash-word:nth-child(1){animation:up .35s ease .18s forwards}
+.splash-word:nth-child(2){animation:up .35s ease .32s forwards}
+.splash-accent{color:#00d4ff}
+.splash-bar{width:0;height:3px;border-radius:99px;background:linear-gradient(90deg,#6d4aff,#22d3ee);animation:bar .45s ease .4s forwards}
 
 /* Header row */
 .prime-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
