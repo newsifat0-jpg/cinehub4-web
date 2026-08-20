@@ -35,11 +35,11 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;min-height:100%}
 #app{min-height:100vh;position:relative}
-#screen{display:block;min-height:70vh;padding:12px 14px 96px;position:relative;z-index:1}
+#screen{display:block;min-height:70vh;padding:6px 14px 96px;position:relative;z-index:1}
 
 /* Splash — same animated style as the page-transition overlay (orbit rings, pop-in logo, sliding text, progress bar) */
-#appSplash{position:fixed;inset:0;z-index:99999;background:#0a0c14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:1;transition:opacity .3s ease}
-#appSplash.gone{opacity:0;pointer-events:none}
+#appSplash{position:fixed;inset:0;z-index:99999;background:#0a0c14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:1;transition:opacity .16s ease-out,transform .16s ease-out}
+#appSplash.gone{opacity:0;transform:scale(1.03);pointer-events:none}
 #appSplash::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 40%,#1a2040,#0a0c14 55%);z-index:0}
 #appSplash>*{position:relative;z-index:1}
 .splash-orbit{position:relative;width:96px;height:96px;display:grid;place-items:center}
@@ -55,10 +55,28 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
 .splash-bar{width:0;height:3px;border-radius:99px;background:linear-gradient(90deg,#6d4aff,#22d3ee);animation:bar .45s ease .4s forwards}
 
 /* Header row */
-.prime-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.home-sticky-top{position:sticky;top:0;z-index:40;background:var(--bg,#07090f);padding:4px 0 8px;margin:0 -2px;box-shadow:0 8px 16px rgba(7,9,15,.65)}
-.home-sticky-top .hero-pills-sticky{position:static;background:transparent;padding:0;pointer-events:auto}
+.prime-row{display:flex;align-items:center;gap:10px;padding:2px 0 8px;min-height:0}
+.home-sticky-top{
+  position:sticky;top:0;z-index:40;
+  background:rgba(7,9,15,.92);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  padding:2px 0 0;margin:0 -14px;padding-left:14px;padding-right:14px;
+  transition:background .25s ease,box-shadow .25s ease;
+}
+.home-sticky-top.is-scrolled{
+  background:rgba(7,9,15,.72);
+  box-shadow:0 10px 28px rgba(0,0,0,.35);
+}
+.home-sticky-top .hero-pills-sticky{position:static;background:transparent;padding:0 0 10px;pointer-events:auto}
 .home-sticky-top .hero-pills{pointer-events:auto}
+/* light glow line under New/Trending bar */
+.home-sticky-line{
+  height:2px;width:100%;margin:0 0 2px;
+  border-radius:99px;
+  background:linear-gradient(90deg,transparent 0%,#6d4aff66 15%,#22d3ee88 50%,#6d4aff66 85%,transparent 100%);
+  box-shadow:0 0 12px #6d4aff55,0 0 4px #22d3ee44;
+  opacity:.9;
+}
 .menu-ham{width:38px;height:38px;border:0;border-radius:12px;background:#161b2c;color:#c8d0e8;font-size:18px;cursor:pointer}
 .prime-title{font-size:16px;font-weight:900;flex:1}
 .scene-pill{background:linear-gradient(90deg,#7b5cff,#00b4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -92,13 +110,18 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
 @keyframes spinA{to{--a:360deg}}
 
 /* Categories */
-.cat-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;scrollbar-width:none}
+.cat-row{display:flex;gap:8px;overflow-x:auto;padding:10px 0 10px;margin-bottom:8px;scrollbar-width:none}
 .cat-row::-webkit-scrollbar{display:none}
 .cat-chip{flex:0 0 auto;border:1px solid #2a334d;background:#12182a;color:#c8d0e8;border-radius:999px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer}
 .cat-chip.active{background:linear-gradient(135deg,#5b4cff,#3b82f6);border-color:transparent;color:#fff}
 
 /* Library card */
-.lib-card{background:linear-gradient(135deg,#141a2e,#0f1424);border:1px solid #2a334d;border-radius:18px;padding:16px;margin-bottom:12px}
+.lib-card{
+  background:linear-gradient(145deg,#161c32,#0e1324 60%,#12182a);
+  border:1px solid #3b4a7a;
+  border-radius:22px;padding:16px;margin-bottom:14px;
+  box-shadow:0 0 0 1px #6d4aff22,0 0 18px #6d4aff22,0 8px 24px rgba(0,0,0,.25);
+}
 .lib-card h2{margin:6px 0;font-size:20px}
 .lib-card p{margin:0 0 12px;font-size:12px;color:#9aa3b8;line-height:1.45}
 .lib-top{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#8b93a7;font-weight:700}
@@ -107,7 +130,18 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
 .btn-how{width:100%;border:0;border-radius:14px;padding:12px;font-weight:800;color:#fff;background:linear-gradient(90deg,#00c6ff,#22d3ee);cursor:pointer}
 
 /* Movie cards */
-.movie-card{background:#12172a;border:1px solid #222a42;border-radius:16px;overflow:hidden;margin-bottom:12px;cursor:pointer}
+.movie-card{
+  background:#12172a;
+  border:1px solid #2f3b63;
+  border-radius:18px;overflow:hidden;margin-bottom:14px;cursor:pointer;
+  box-shadow:0 0 0 1px #22d3ee18,0 0 16px #5b4cff18,0 6px 18px rgba(0,0,0,.28);
+  transition:transform .2s ease,box-shadow .25s ease,border-color .25s ease;
+}
+.movie-card:active{
+  transform:scale(.985);
+  border-color:#6d4aff88;
+  box-shadow:0 0 0 1px #6d4aff44,0 0 22px #6d4aff33;
+}
 .movie-card img,.movie-poster{width:100%;aspect-ratio:16/9;object-fit:cover;background:#0d1120;display:block}
 .movie-body{padding:10px 12px}
 .movie-body h3{margin:0 0 4px;font-size:15px}
@@ -550,8 +584,8 @@ body{background:radial-gradient(1200px 600px at 50% -10%,#152038 0%,#070b14 55%,
 
 /* Home / Adult banner under ticker */
 .home-banner{
-  position:relative;margin:0 0 14px;border-radius:14px;overflow:hidden;
-  border:1px solid #243049;background:#0c101c;min-height:70px
+  margin:10px 0 4px;border-radius:14px;overflow:hidden;position:relative;
+  border:1px solid #243049;background:#0c101c;min-height:88px
 }
 .home-banner img{display:block;width:100%;height:auto;max-height:120px;object-fit:cover}
 .home-banner-link{display:block;position:relative}

@@ -131,14 +131,24 @@ function save(){
     localStorage.setItem("cinehub4_points",state.points);
   }
 }
+/* Boot flag: while splash is up, queue one paint only — no intermediate jerks */
+window.__cinehub_splashUp = true;
+window.__cinehub_needPaint = false;
+function safeRender(animate){
+  if(window.__cinehub_splashUp){
+    window.__cinehub_needPaint = true;
+    return;
+  }
+  try{render(!!animate)}catch(e){console.error(e)}
+}
 function loadMoviesFromFB(){
-  if(!window.CineHubFB){state.moviesLoaded=true;try{render(false)}catch(e){}return}
+  if(!window.CineHubFB){state.moviesLoaded=true;safeRender(false);return}
   var got=false;
   window.CineHubFB.listenMovies(function(list){
     got=true;
     movies=list||[];
     state.moviesLoaded=true;
-    try{render(false)}catch(e){console.error(e)}
+    safeRender(false);
   });
   // Fallback: if client Firestore returns empty (rules/index), pull via backend API
   setTimeout(function(){
@@ -148,7 +158,7 @@ function loadMoviesFromFB(){
         if(list&&list.length){
           movies=list;
           state.moviesLoaded=true;
-          try{render(false)}catch(e){}
+          safeRender(false);
         }
       }).catch(function(){});
     }
@@ -160,7 +170,8 @@ function loadUserFromFB(){
     userData = u || userData;
     state.points = Number(userData.points) || 1;
     state.userLoaded = true;
-    try{render(false)}catch(e){}
+    // points change only — soft update, no full page jerk if still on splash
+    safeRender(false);
   });
 }
 setTimeout(function(){loadMoviesFromFB();loadUserFromFB()},150);
@@ -405,7 +416,7 @@ function adult(){
     </div>`;
   }
   const list=listForAdult();
-  return `<div class="home-sticky-top">`+menuOnlyHeader(t("Adult"))+heroPillsAdult()+`</div>`+catRowAdult()+libCardAdult()+tickerAdult()+bannerSlot("adult")+list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No adult content yet. Add from Admin Panel.")}</div>`;
+  return `<div class="home-sticky-top" id="homeSticky">`+menuOnlyHeader(t("Adult"))+heroPillsAdult()+`<div class="home-sticky-line"></div></div>`+catRowAdult()+libCardAdult()+tickerAdult()+bannerSlot("adult")+list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No adult content yet. Add from Admin Panel.")}</div>`;
 }
 function confirmAdult(){state.adultOK=true;render(true)}
 
@@ -1542,7 +1553,26 @@ function bindLangButtons(){
   });
 }
 
-function render(animate=false){try{const views={movies:moviesPage,search:searchPage,series,adult,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===state.page||(state.page==="detail"&&b.dataset.page==="movies")));bindPageBack();bindDrawer();setupAdminButton();window.CINEHUB4_LANG?.translateDOM();
+
+function bindHomeStickyScroll(){
+  const bar=document.getElementById("homeSticky");
+  if(!bar) return;
+  const onScroll=function(){
+    const y=window.scrollY||document.documentElement.scrollTop||0;
+    if(y>8) bar.classList.add("is-scrolled");
+    else bar.classList.remove("is-scrolled");
+  };
+  window.removeEventListener("scroll", window.__cinehubStickyScroll);
+  window.__cinehubStickyScroll = onScroll;
+  window.addEventListener("scroll", onScroll, {passive:true});
+  onScroll();
+}
+
+function render(animate=false){
+/* Skip paints while splash is covering the screen (prevents open-time jerk) */
+if(window.__cinehub_splashUp && !window.__cinehub_forcePaint){ window.__cinehub_needPaint=true; return; }
+try{const views={movies:moviesPage,search:searchPage,series,adult,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===state.page||(state.page==="detail"&&b.dataset.page==="movies")));bindPageBack();bindDrawer();setupAdminButton();window.CINEHUB4_LANG?.translateDOM();
+try{bindHomeStickyScroll()}catch(e){}
 const mic=$("#micBtn");if(mic)mic.onclick=startVoiceSearch;
 const qel=$("#q");if(qel){qel.addEventListener("input",()=>{/* live optional */});}
 }catch(err){console.error("render",err);const screen=$("#screen");if(screen)screen.innerHTML="<div style=\"padding:20px;color:#f88\">Render failed: "+String(err.message||err)+"</div>"}
@@ -1624,25 +1654,29 @@ setTimeout(function(){
 },1200);
 bindLeaveGuard();
 
-try{render(false)}catch(e){console.error(e);var s=document.getElementById("screen");if(s)s.innerHTML="<div style=padding:20px;color:#f88>Boot error: "+e.message+"</div>"}
+// Do NOT paint UI under the splash — paint once, then lift splash (no double flash)
 function killSplash(){
   const s=document.getElementById("appSplash");
   if(!s||s.classList.contains("gone"))return;
   s.classList.add("gone");
-  setTimeout(function(){try{s.style.display="none";s.remove()}catch(e){}},320);
+  setTimeout(function(){try{s.style.display="none";s.remove()}catch(e){}},220);
 }
-// Hold the splash for a proper brand moment AND until movies have actually
-// loaded, so content never pops/reflows right after the splash disappears.
-// Single timer chain only — no duplicate/competing timeouts.
 (function(){
-  const MIN_HOLD=1700, MAX_WAIT=4000, START=Date.now();
+  const MIN_HOLD=2000, MAX_WAIT=4500, START=Date.now();
   (function check(){
     const elapsed=Date.now()-START;
-    if((state.moviesLoaded && elapsed>=MIN_HOLD) || elapsed>=MAX_WAIT){
-      killSplash();
+    const ready = state.moviesLoaded || elapsed>=MAX_WAIT;
+    if(ready && elapsed>=MIN_HOLD){
+      // First real paint happens HERE, under the splash, then splash fades
+      window.__cinehub_forcePaint = true;
+      try{render(false)}catch(e){console.error(e);var sc=document.getElementById("screen");if(sc)sc.innerHTML="<div style=padding:20px;color:#f88>Boot error: "+(e.message||e)+"</div>"}
+      window.__cinehub_forcePaint = false;
+      window.__cinehub_splashUp = false;
+      // brief settle so images/layout stabilize before user sees the screen
+      setTimeout(killSplash, 180);
       return;
     }
-    setTimeout(check,100);
+    setTimeout(check,80);
   })();
 })();
 
