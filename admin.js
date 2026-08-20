@@ -102,8 +102,26 @@ else if(A.settings.adultEnabled===true)A.adultEnabled=true;
 ensureAdSlots();A.settings.categories=A.settings.categories||DEFAULT.categories;A.settings.adultCategories=A.settings.adultCategories&&A.settings.adultCategories.length?A.settings.adultCategories:DEFAULT.adultCategories;
 
 /* —— Bilingual helpers (EN + BN) —— */
-function catEn(c){ if(c==null)return ""; if(typeof c==="string")return c; return String(c.en||c.name||""); }
-function catBn(c){ if(c==null)return ""; if(typeof c==="string")return ""; return String(c.bn||""); }
+function catEn(c){
+  if(c==null) return "";
+  if(typeof c==="string") return c;
+  if(typeof c==="object"){
+    var v = c.en!=null ? c.en : (c.name!=null ? c.name : (c.title!=null ? c.title : ""));
+    if(typeof v==="object" && v) v = v.en||v.name||"";
+    return String(v||"");
+  }
+  return String(c);
+}
+function catBn(c){
+  if(c==null) return "";
+  if(typeof c==="string") return "";
+  if(typeof c==="object"){
+    var v = c.bn!=null ? c.bn : (c.nameBn!=null ? c.nameBn : "");
+    if(typeof v==="object" && v) v = v.bn||"";
+    return String(v||"");
+  }
+  return "";
+}
 function catLabelAdmin(c){ var e=catEn(c), b=catBn(c); return b? (e+" · "+b) : e; }
 function normalizeCategories(list){
   if(!Array.isArray(list)) return [];
@@ -151,13 +169,13 @@ function save(silent){
   try{
     if(window.CineHubFB){
       window.CineHubFB.saveConfig(A.settings).then(function(){
-        if(!silent) toast("✓ Saved — all users will get this update");
+        if(!silent) toast("✓ Firebase-এ সেভ হয়েছে — সব ইউজার পাবে");
       }).catch(function(e){
         console.error(e);
-        toast("⚠ Save failed (only this device): "+(e&&e.message?e.message:e));
+        toast("⚠ Firebase সেভ ব্যর্থ: "+(e&&e.message?e.message:e));
       });
     } else if(!silent){
-      toast("⚠ Offline — saved only on this device");
+      toast("⚠ API নেই — Code.gs Deploy করো");
     }
   }catch(e){
     if(!silent) toast("Save error: "+e);
@@ -436,8 +454,41 @@ function dashboard(){
   <div class="switch"><span>Points & Unlock Engine</span><span class="badge green">ACTIVE</span></div>
   <div class="switch"><span>Adult Library</span><span class="badge ${A.adultEnabled?'green':'red'}">${A.adultEnabled?'ENABLED':'DISABLED'}</span></div>
   <div class="switch"><span>Firebase Sync</span><span class="badge green">LIVE</span></div>
+</div>
+<div class="card" style="margin-top:16px">
+  <h3>A → Z Control Map</h3>
+  <div class="muted smalltext" style="margin-bottom:10px">ইউজার অ্যাপের প্রতিটি অংশ কোন Admin সেকশন দিয়ে কন্ট্রোল হয়</div>
+  <div class="control-map">
+    <div class="cm-row"><b>Watch Ad Now</b><span>Points & Unlocks → Reward / Daily limit</span></div>
+    <div class="cm-row"><b>MORE EARNING</b><span>Daily Tasks → Start cards</span></div>
+    <div class="cm-row"><b>Movies list</b><span>Movies → Add / Edit / Delete</span></div>
+    <div class="cm-row"><b>Category tabs</b><span>Categories → EN + বাংলা</span></div>
+    <div class="cm-row"><b>18+ zone</b><span>Adult Library</span></div>
+    <div class="cm-row"><b>Buy Points</b><span>Payments + Settings packages</span></div>
+    <div class="cm-row"><b>Links / Tutorial</b><span>Links & Videos</span></div>
+    <div class="cm-row"><b>UI texts</b><span>Settings → UI texts</span></div>
+  </div>
 </div>`}
-function movies(){const list=(A.movies||[]).filter(m=>!m.adult);return `<div class="toolbar"><div class="left"><button class="btn primary" onclick="openMovie()">＋ Add Movie</button><button class="btn" onclick="openTmdbImport()">Import TMDB</button></div><input class="search" id="movieSearch" placeholder="Search movie..." oninput="filterMovies()"></div><div class="card table-wrap"><table class="table"><thead><tr><th>Movie</th><th>Category</th><th>Rating</th><th>Clicks</th><th>Downloads</th><th>Status</th><th>Action</th></tr></thead><tbody id="movieBody">${movieRows(list)}</tbody></table></div>`}
+function movies(){
+  const list=(A.movies||[]).filter(function(m){return !m.adult;});
+  return `<div class="toolbar">
+    <div class="toolbar-actions">
+      <button type="button" class="btn primary" onclick="openMovie()">＋ Add Movie</button>
+      <button type="button" class="btn" onclick="openTmdbImport()">Import TMDB</button>
+    </div>
+    <input class="search" id="movieSearch" placeholder="Search movie..." oninput="filterMovies()">
+  </div>
+  <div class="card table-wrap">
+    <table class="table movies-table">
+      <thead><tr>
+        <th>Movie</th><th>Category</th><th>Rating</th><th>Clicks</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody id="movieBody">${movieRows(list)}</tbody>
+    </table>
+  </div>
+  <div class="movie-cards" id="movieCards">${movieCards(list)}</div>`;
+}
+
 function movieRows(ms){return (ms||[]).map(function(m,idx){
   var id=String(m.id!=null?m.id:("idx_"+idx));
   var title=String(m.title||"Untitled").replace(/</g,"&lt;").replace(/"/g,"&quot;");
@@ -457,6 +508,25 @@ function movieRows(ms){return (ms||[]).map(function(m,idx){
     '<button type="button" class="dots-edit">Edit</button>'+
     '<button type="button" class="danger dots-del">Delete</button></div></td></tr>';
 }).join("")}
+function movieCards(ms){
+  return (ms||[]).map(function(m,idx){
+    var id=String(m.id!=null?m.id:("idx_"+idx));
+    var title=String(m.title||"Untitled").replace(/</g,"&lt;");
+    var year=String(m.year||"");
+    var cat=String(m.category||m.type||"Movie").replace(/</g,"&lt;");
+    var st=String(m.status||"Published");
+    var idAttr=id.replace(/"/g,"&quot;");
+    return '<div class="m-card" data-mid="'+idAttr+'">'+
+      '<div class="m-card-top"><div class="thumb">'+(title.slice(0,1)||"?")+'</div>'+
+      '<div class="movie-meta"><b>'+title+'</b><div class="muted">'+year+' · '+cat+'</div>'+
+      '<div style="margin-top:6px"><span class="badge '+(st==="Published"?"green":"")+'">'+st+'</span> · ⭐ '+(m.rating||0)+' · 👁 '+(m.clicks||0)+'</div></div></div>'+
+      '<div class="m-card-actions">'+
+      '<button type="button" class="btn" onclick="openMovie(\''+idAttr.replace(/'/g,"\\'")+'\')">Edit</button> '+
+      '<button type="button" class="btn danger" onclick="deleteMovie(\''+idAttr.replace(/'/g,"\\'")+'\')">Delete</button>'+
+      '</div></div>';
+  }).join("")||'<div class="muted" style="padding:16px">No movies yet</div>';
+}
+
 function closeAllDots(){document.querySelectorAll('.dots-menu').forEach(el=>el.classList.add('hidden'))}
 function toggleDots(id,btn){
   const menu=btn.parentElement&&btn.parentElement.querySelector('.dots-menu');
@@ -493,20 +563,44 @@ document.addEventListener('click',function(e){
   if(btn){e.stopPropagation();toggleDots(btn.dataset.mid,btn);return}
   if(!e.target.closest('.dots-menu'))closeAllDots();
 });
-function filterMovies(){const q=$("#movieSearch").value.toLowerCase();$("#movieBody").innerHTML=movieRows(A.movies.filter(m=>m.title.toLowerCase().includes(q)))}
+function filterMovies(){
+  var q=($("#movieSearch")&&$("#movieSearch").value||"").toLowerCase();
+  var list=(A.movies||[]).filter(function(m){
+    if(m.adult) return false;
+    return !q || String(m.title||"").toLowerCase().indexOf(q)>=0;
+  });
+  if($("#movieBody")) $("#movieBody").innerHTML=movieRows(list);
+  if($("#movieCards")) $("#movieCards").innerHTML=movieCards(list);
+}
 function categories(){
   ensureBilingualSettings();
-  const rows=(A.settings.categories||[]).map((c,i)=>{
-    const e=catEn(c).replace(/</g,"&lt;"), b=catBn(c).replace(/</g,"&lt;");
-    return `<div class="tag-item"><span><b>${e||"—"}</b>${b?` <span class="muted">/ ${b}</span>`:""}</span><div><button class="btn" onclick="editCategory(${i})">Edit</button> <button class="btn danger" onclick="deleteCategory(${i})">Delete</button></div></div>`;
-  }).join("");
-  const arows=(A.settings.adultCategories||[]).map((c,i)=>{
-    const e=catEn(c).replace(/</g,"&lt;"), b=catBn(c).replace(/</g,"&lt;");
-    return `<div class="tag-item"><span><b>${e||"—"}</b>${b?` <span class="muted">/ ${b}</span>`:""}</span><div><button class="btn" onclick="editAdultCategory(${i})">Edit</button> <button class="btn danger" onclick="deleteAdultCategory(${i})">Delete</button></div></div>`;
-  }).join("");
-  return `<div class="card"><div class="toolbar"><div><h3 style="margin:0">Movie Categories</h3><div class="muted smalltext">Add in <b>English + বাংলা</b> — user sees the language they selected.</div></div><button class="btn primary" onclick="openCategory()">＋ Add Category</button></div><div class="tag-list">${rows||'<div class="muted">No categories</div>'}</div></div>
-  <div class="card" style="margin-top:14px"><div class="toolbar"><div><h3 style="margin:0">Adult Categories</h3><div class="muted smalltext">Same bilingual system for 18+ tabs.</div></div><button class="btn primary" onclick="openAdultCategory()">＋ Add Adult Category</button></div><div class="tag-list">${arows||'<div class="muted">No adult categories</div>'}</div></div>`;
+  function rowHtml(c, i, isAdult){
+    var e = catEn(c).replace(/</g,"&lt;").replace(/"/g,"&quot;");
+    var b = catBn(c).replace(/</g,"&lt;").replace(/"/g,"&quot;");
+    if(!e) e = "—";
+    var editFn = isAdult ? ("editAdultCategory("+i+")") : ("editCategory("+i+")");
+    var delFn = isAdult ? ("deleteAdultCategory("+i+")") : ("deleteCategory("+i+")");
+    return '<div class="tag-item">'+
+      '<div class="tag-name"><b>'+e+'</b>'+(b ? ' <span class="muted">/ '+b+'</span>' : '')+'</div>'+
+      '<div class="tag-actions">'+
+        '<button type="button" class="btn" onclick="'+editFn+'">Edit</button> '+
+        '<button type="button" class="btn danger" onclick="'+delFn+'">Delete</button>'+
+      '</div></div>';
+  }
+  var rows = (A.settings.categories||[]).map(function(c,i){ return rowHtml(c,i,false); }).join("");
+  var arows = (A.settings.adultCategories||[]).map(function(c,i){ return rowHtml(c,i,true); }).join("");
+  return '<div class="card">'+
+    '<div class="toolbar"><div><h3 style="margin:0">Movie Categories</h3>'+
+    '<div class="muted smalltext">English + বাংলা — user sees selected language. Matches movie.category field.</div></div>'+
+    '<button type="button" class="btn primary" onclick="openCategory()">＋ Add Category</button></div>'+
+    '<div class="tag-list">'+(rows||'<div class="muted">No categories yet</div>')+'</div></div>'+
+    '<div class="card" style="margin-top:14px">'+
+    '<div class="toolbar"><div><h3 style="margin:0">Adult Categories</h3>'+
+    '<div class="muted smalltext">18+ tab categories (bilingual).</div></div>'+
+    '<button type="button" class="btn primary" onclick="openAdultCategory()">＋ Add Adult Category</button></div>'+
+    '<div class="tag-list">'+(arows||'<div class="muted">No adult categories</div>')+'</div></div>';
 }
+
 function users(){
   if (!window.__usersLoaded) {
     window.__usersLoaded = true;
@@ -543,30 +637,34 @@ function users(){
   if (q) list = list.filter(function(u){
     return String(u.id||"").toLowerCase().indexOf(q)>=0 || String(u.name||u.username||"").toLowerCase().indexOf(q)>=0;
   });
-  var rows = list.length ? list.map(function(u){
+  var cards = list.length ? list.map(function(u){
     var id = String(u.id||"");
     var name = String(u.name || u.username || ("User "+id)).replace(/</g,"");
     var unlocks = u.unlocks ? Object.keys(u.unlocks).length : 0;
     var ads = u.ads_today || u.ads || 0;
     var st = u.blocked ? "Blocked" : "Active";
-    return '<tr>'+
-      '<td><b>'+name+'</b><div class="muted smalltext">ID: '+id+'</div></td>'+
-      '<td><b>'+(u.points||0)+'</b></td>'+
-      '<td>'+unlocks+'</td>'+
-      '<td>'+ads+'</td>'+
-      '<td><span class="badge '+(st==="Blocked"?"red":"green")+'">'+st+'</span></td>'+
-      '<td style="white-space:nowrap">'+
-        '<button class="btn" type="button" onclick="openUserDetail(\''+id.replace(/'/g,"\\'")+'\')">Details</button> '+
-        '<button class="btn" type="button" onclick="openSetPoints(\''+id.replace(/'/g,"\\'")+'\')">Points</button> '+
-        '<button class="btn" type="button" onclick="toggleBlockUser(\''+id.replace(/'/g,"\\'")+'\')">'+(u.blocked?"Unblock":"Block")+'</button> '+
-        '<button class="btn danger" type="button" onclick="adminDeleteUser(\''+id.replace(/'/g,"\\'")+'\')">Delete</button>'+
-      '</td></tr>';
-  }).join("") : '<tr><td colspan="6" class="muted">No users yet — they appear after opening the mini app</td></tr>';
-  return '<div class="toolbar"><div class="left"><span class="muted">Total: '+(list.length)+' users</span> <button class="btn" type="button" onclick="window.__usersLoaded=false;render()">↻ Refresh</button></div>'+
-    '<input class="search" id="userSearch" placeholder="Search user ID / name..." oninput="render()"></div>'+
-    '<div class="card table-wrap"><table class="table"><thead><tr>'+
-    '<th>User</th><th>Points</th><th>Unlocks</th><th>Ads Today</th><th>Status</th><th>Actions</th>'+
-    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+    var idJs = id.replace(/'/g,"\\'");
+    return '<div class="user-card">'+
+      '<div class="pay-card-head">'+
+        '<div><b>'+name+'</b><div class="muted smalltext">ID: '+id+'</div></div>'+
+        '<span class="badge '+(st==="Blocked"?"red":"green")+'">'+st+'</span>'+
+      '</div>'+
+      '<div class="pay-meta">'+
+        '<div><span class="muted">Points</span><b>'+(u.points||0)+'</b></div>'+
+        '<div><span class="muted">Unlocks</span><b>'+unlocks+'</b></div>'+
+        '<div><span class="muted">Ads today</span><b>'+ads+'</b></div>'+
+      '</div>'+
+      '<div class="pay-actions">'+
+        '<button type="button" class="btn" onclick="openUserDetail(\''+idJs+'\')">Details</button>'+
+        '<button type="button" class="btn" onclick="openSetPoints(\''+idJs+'\')">Points</button>'+
+        '<button type="button" class="btn" onclick="toggleBlockUser(\''+idJs+'\')">'+(u.blocked?"Unblock":"Block")+'</button>'+
+        '<button type="button" class="btn danger" onclick="adminDeleteUser(\''+idJs+'\')">Delete</button>'+
+      '</div></div>';
+  }).join("") : '<div class="muted" style="padding:20px;text-align:center">No users yet — mini app খুললে এখানে আসবে</div>';
+  return '<div class="toolbar"><div><h2 style="margin:0">Users</h2><div class="muted smalltext">Total: '+list.length+' · Firebase users collection</div></div>'+
+    '<button type="button" class="btn" onclick="window.__usersLoaded=false;render()">↻ Refresh</button></div>'+
+    '<input class="search" id="userSearch" placeholder="Search user ID / name..." oninput="render()" style="width:100%;max-width:100%;margin-bottom:12px">'+
+    '<div class="pay-list">'+cards+'</div>';
 }
 function openUserDetail(uid){
   var u = (A.userList||[]).find(function(x){ return String(x.id)===String(uid); }) || {};
@@ -595,28 +693,28 @@ function openSetPoints(uid){
 function saveAdminPoints(uid){
   var pts = Number((document.getElementById("adminPts")||{}).value||0);
   if(!window.CineHubFB||!window.CineHubFB.adminUpdateUser){ toast("API missing — redeploy Code.gs"); return; }
-  toast("Saving…");
+  toast("সেভ হচ্ছে…");
   window.CineHubFB.adminUpdateUser(uid,{points:pts}).then(function(){
     (A.userList||[]).forEach(function(u){ if(String(u.id)===String(uid)) u.points=pts; });
-    closeModal(); render(); toast("Points updated");
-  }).catch(function(e){ toast("Failed: "+(e&&e.message?e.message:e)); });
+    closeModal(); render(); toast("✓ পয়েন্ট Firebase-এ আপডেট");
+  }).catch(function(e){ toast("⚠ ব্যর্থ: "+(e&&e.message?e.message:e)); });
 }
 function toggleBlockUser(uid){
   var u = (A.userList||[]).find(function(x){ return String(x.id)===String(uid); }) || {};
   var blocked = !u.blocked;
   if(!window.CineHubFB||!window.CineHubFB.adminUpdateUser){ toast("API missing — redeploy Code.gs"); return; }
   window.CineHubFB.adminUpdateUser(uid,{blocked:blocked}).then(function(){
-    u.blocked = blocked; render(); toast(blocked?"User blocked":"User unblocked");
-  }).catch(function(e){ toast("Failed: "+(e&&e.message?e.message:e)); });
+    u.blocked = blocked; render(); toast(blocked?"✓ ইউজার ব্লক (Firebase)":"✓ ইউজার আনব্লক (Firebase)");
+  }).catch(function(e){ toast("⚠ ব্যর্থ: "+(e&&e.message?e.message:e)); });
 }
 function adminDeleteUser(uid){
-  if(!confirm("Delete user "+uid+" permanently?")) return;
+  if(!confirm("Firebase থেকে ইউজার "+uid+" স্থায়ীভাবে ডিলিট?")) return;
   if(!window.CineHubFB||!window.CineHubFB.deleteUser){ toast("API missing — redeploy Code.gs"); return; }
   window.CineHubFB.deleteUser(uid).then(function(){
     A.userList = (A.userList||[]).filter(function(u){ return String(u.id)!==String(uid); });
     A.users = A.userList.length;
-    render(); toast("User deleted");
-  }).catch(function(e){ toast("Failed: "+(e&&e.message?e.message:e)); });
+    render(); toast("✓ ইউজার Firebase থেকে ডিলিট");
+  }).catch(function(e){ toast("⚠ ব্যর্থ: "+(e&&e.message?e.message:e)); });
 }
 function points(){return `<div class="toolbar"><div><h2 style="margin:0;font-size:18px">Points & Unlock Control</h2><p class="muted smalltext" style="margin:4px 0 0">Controls the <b>Watch Ad Now</b> block on user Profile (Reward / Daily limit / Remaining). Task list buttons are managed under <b>Daily Tasks</b>.</p></div></div>
 <div class="card" style="margin-bottom:14px;border:1px solid #3b82f655;background:linear-gradient(135deg,#0f172a,#1e3a5f22)">
@@ -871,56 +969,65 @@ function tasks(){
 }
 
 function payments(){
-  // Trigger async load once
   if (!window.__payLoaded) {
     window.__payLoaded = true;
     if (window.CineHubFB && window.CineHubFB.listPayments) {
       window.CineHubFB.listPayments().then(function(list){
         A.payments = Array.isArray(list) ? list : [];
-        try { localStorage.setItem("cinehub4_payments", JSON.stringify(A.payments)); } catch(e){}
         if (A.section === "payments") render();
       }).catch(function(e){
         console.warn("listPayments", e);
-        toast("Payments load failed: " + (e && e.message ? e.message : e));
+        toast("⚠ Payments load failed (Firebase): " + (e && e.message ? e.message : e));
       });
     }
   }
-  let list = A.payments;
-  if (!list || !list.length) {
-    try { list = JSON.parse(localStorage.getItem("cinehub4_payments")||"[]"); } catch(e){ list = []; }
-  }
-  list = (list || []).map(function(p,i){ p._i = i; return p; });
+  var list = (A.payments || []).slice();
   list.sort(function(a,b){
-    const rank = function(s){ return (s==="pending"||!s)?0:1; };
-    const ra = rank(a.status), rb = rank(b.status);
+    var rank = function(s){ return (s==="pending"||!s)?0:1; };
+    var ra = rank(a.status), rb = rank(b.status);
     if (ra !== rb) return ra - rb;
-    return (Number(a.created_at||a.time||0) - Number(b.created_at||b.time||0));
+    return Number(b.created_at||b.time||0) - Number(a.created_at||a.time||0);
   });
-  const rows = list.length ? list.map(function(p){
-    const uid = p.userId || p.user_id || p.uid || "—";
-    const uname = p.user || p.username || "";
-    const when = p.date || (p.created_at||p.ts ? new Date(Number(p.created_at||p.ts)).toLocaleString() : "—");
-    const pts = p.points || p.amount || 0;
-    const method = p.method || p.gateway || "—";
-    const trx = p.trxId || p.trx || p.transaction_id || "—";
-    const st = p.status || "pending";
-    const idAttr = String(p.id || p._i);
-    return '<tr>'+
-      '<td><b>'+String(uname||uid).replace(/</g,"")+'</b><div class="muted smalltext">'+String(uid).replace(/</g,"")+'</div><div class="muted smalltext">'+String(when).replace(/</g,"")+'</div></td>'+
-      '<td>'+pts+'</td>'+
-      '<td>'+String(method).replace(/</g,"")+'</td>'+
-      '<td class="muted">'+String(trx).replace(/</g,"")+'</td>'+
-      '<td><span class="badge '+(st==="approved"?"green":st==="rejected"?"red":"yellow")+'">'+st+'</span></td>'+
-      '<td><button class="btn" onclick="payView(\''+idAttr.replace(/'/g,"\\'")+'\')">View</button></td>'+
-      '<td>'+((!st||st==="pending")?
-        '<button class="btn primary" onclick="payActionId(\''+idAttr.replace(/'/g,"\\'")+'\',\'approved\')">Accept</button> '+
-        '<button class="btn danger" onclick="payActionId(\''+idAttr.replace(/'/g,"\\'")+'\',\'rejected\')">Reject</button>':
-        '<button class="btn danger" onclick="payDeleteId(\''+idAttr.replace(/'/g,"\\'")+'\')">Delete</button>')+
-      '</td></tr>';
-  }).join("") : '<tr><td colspan="7" class="muted">No payment requests yet (from Firebase)</td></tr>';
-  return '<div class="card table-wrap"><table class="table"><thead><tr><th>User</th><th>Points</th><th>Method</th><th>Trx</th><th>Status</th><th>Proof</th><th>Action</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
-    '<p class="muted smalltext" style="margin-top:10px">Payments load from Firebase <code>payments</code> collection via admin API. User submits from Profile → Buy Points.</p>';
+  function esc(s){ return String(s==null?"":s).replace(/</g,"&lt;").replace(/"/g,"&quot;"); }
+  function payCard(p){
+    var uid = p.userId || p.user_id || p.uid || "—";
+    var uname = p.user || p.username || "";
+    var when = p.date || (p.created_at||p.ts ? new Date(Number(p.created_at||p.ts)).toLocaleString() : "—");
+    var pts = p.points || p.amount || 0;
+    var method = p.method || p.gateway || "—";
+    var trx = p.trxId || p.trx || p.transaction_id || "—";
+    var st = p.status || "pending";
+    var idAttr = String(p.id || "");
+    var badge = st==="approved"?"green":st==="rejected"?"red":st==="deleted"?"red":"orange";
+    var actions = "";
+    if (!st || st==="pending") {
+      actions =
+        '<button type="button" class="btn primary" onclick="payActionId(\''+idAttr.replace(/'/g,"\\'")+'\',\'approved\')">Accept</button>'+
+        '<button type="button" class="btn danger" onclick="payActionId(\''+idAttr.replace(/'/g,"\\'")+'\',\'rejected\')">Reject</button>';
+    }
+    actions += '<button type="button" class="btn danger" onclick="payDeleteId(\''+idAttr.replace(/'/g,"\\'")+'\')">Delete</button>';
+    actions += '<button type="button" class="btn" onclick="payView(\''+idAttr.replace(/'/g,"\\'")+'\')">View</button>';
+    return '<div class="pay-card">'+
+      '<div class="pay-card-head">'+
+        '<div><b>'+esc(uname||uid)+'</b><div class="muted smalltext">ID: '+esc(uid)+'</div></div>'+
+        '<span class="badge '+badge+'">'+esc(st)+'</span>'+
+      '</div>'+
+      '<div class="pay-meta">'+
+        '<div><span class="muted">Points</span><b>'+esc(pts)+'</b></div>'+
+        '<div><span class="muted">Method</span><b>'+esc(method)+'</b></div>'+
+        '<div><span class="muted">Trx</span><b>'+esc(trx)+'</b></div>'+
+        '<div><span class="muted">When</span><b>'+esc(when)+'</b></div>'+
+      '</div>'+
+      '<div class="pay-actions">'+actions+'</div>'+
+    '</div>';
+  }
+  var cards = list.length ? list.map(payCard).join("") : '<div class="muted" style="padding:20px;text-align:center">No payment requests yet</div>';
+  return '<div class="toolbar"><div><h2 style="margin:0">Payment Requests</h2>'+
+    '<div class="muted smalltext">Firebase → payments collection · User submits from Profile → Buy Points</div></div>'+
+    '<button type="button" class="btn" onclick="window.__payLoaded=false;render()">↻ Refresh</button></div>'+
+    '<div class="pay-list">'+cards+'</div>';
 }
+
 function payFindById(id){
   var list = A.payments || [];
   var p = list.find(function(x){ return String(x.id)===String(id); });
@@ -965,7 +1072,7 @@ function payActionId(id, st){
   if (!window.CineHubFB || !window.CineHubFB.updatePayment) {
     toast("API missing — redeploy Code.gs"); return;
   }
-  toast(st==="approved"?"Accepting & adding points…":"Updating…");
+  toast(st==="approved"?"Accept হচ্ছে · পয়েন্ট যোগ…":"আপডেট হচ্ছে…");
   window.CineHubFB.updatePayment(id, {status: st, reviewed_at: Date.now()}).then(function(res){
     window.__payLoaded = false;
     if (A.payments) {
@@ -979,25 +1086,25 @@ function payActionId(id, st){
     render();
     if (st==="approved") {
       var pts = (res && res.credited_points) || "";
-      toast(pts ? ("Accepted · +"+pts+" points to user") : "Accepted · points credited");
+      toast(pts ? ("✓ Accept · +"+pts+" পয়েন্ট Firebase-এ") : "✓ Accept হয়েছে (Firebase)");
     } else if (st==="rejected") {
-      toast("Rejected · no points added");
+      toast("✓ Reject হয়েছে · পয়েন্ট যোগ হয়নি");
     } else {
-      toast("Updated");
+      toast("✓ Firebase-এ আপডেট");
     }
-  }).catch(function(e){ toast("Failed: "+(e&&e.message?e.message:e)); });
+  }).catch(function(e){ toast("⚠ ব্যর্থ: "+(e&&e.message?e.message:e)); });
 }
 function payDeleteId(id){
-  if (!confirm("Delete this payment request from Firebase? User points will NOT be removed.")) return;
+  if (!confirm("Firebase থেকে এই পেমেন্ট রিকোয়েস্ট ডিলিট করবে? ইউজার পয়েন্ট কাটা হবে না।")) return;
   if (!window.CineHubFB || !window.CineHubFB.deletePayment) {
     toast("API missing — redeploy Code.gs"); return;
   }
-  toast("Deleting…");
+  toast("ডিলিট হচ্ছে…");
   window.CineHubFB.deletePayment(id).then(function(){
     A.payments = (A.payments||[]).filter(function(p){ return String(p.id)!==String(id); });
     window.__payLoaded = false;
     render();
-    toast("Payment deleted from Firebase");
+    toast("✓ Firebase থেকে পেমেন্ট ডিলিট হয়েছে");
   }).catch(function(e){ toast("Delete failed: "+(e&&e.message?e.message:e)); });
 }
 
@@ -1032,7 +1139,7 @@ function reqManage(id){
   const st = prompt("Status (Pending / Searching / Done / Rejected):", r.status||"Pending");
   if (st==null) return;
   window.CineHubFB.updateRequest(id, {status: st}).then(function(){
-    r.status = st; render(); toast("Updated");
+    r.status = st; render(); toast("✓ Firebase-এ আপডেট");
   }).catch(function(e){ toast(e&&e.message?e.message:e); });
 }
 function reqDelete(id){
@@ -1065,8 +1172,8 @@ function adult(){const adultList=(A.movies||[]).filter(m=>m.adult);return `<div 
 <div class="card" style="margin-top:14px"><h3>Adult Page Text</h3><div class="muted smalltext">Edit labels shown on the Adult page. Colors and layout stay the same as Movies.</div><div class="form-grid" style="margin-top:12px"><div class="field"><label>Badge</label><input id="aLibBadge" value="${A.settings.adultLibraryBadge||''}"></div><div class="field"><label>Title</label><input id="aLibTitle" value="${A.settings.adultLibraryTitle||''}"></div><div class="field"><label>Description</label><input id="aLibDesc" value="${A.settings.adultLibraryDesc||''}"></div><div class="field"><label>Ticker Text</label><input id="aTicker" value="${A.settings.adultTickerText||''}"></div><div class="field"><label>New Label</label><input id="aNewLabel" value="${A.settings.adultNewLabel||''}"></div><div class="field"><label>New Sub</label><input id="aNewSub" value="${A.settings.adultNewSub||''}"></div><div class="field"><label>Trending Label</label><input id="aTrendLabel" value="${A.settings.adultTrendingLabel||''}"></div><div class="field"><label>Trending Sub</label><input id="aTrendSub" value="${A.settings.adultTrendingSub||''}"></div></div><button class="btn primary" style="margin-top:14px" onclick="saveAdultTexts()">Save Adult Page Text</button></div>`}
 function openCategoryAdult(index=null){openAdultCategory(index)}
 function editCategoryAdult(i){openAdultCategory(i)}
-function saveCategoryAdult(i){const n=$('#catNameAdult').value.trim();if(!n)return;if(i<0)A.settings.adultCategories.push(n);else A.settings.adultCategories[i]=n;save();closeModal();render();toast('Adult category saved')}
-function deleteCategoryAdult(i){if(A.settings.adultCategories[i]==='All'){toast('All category cannot be deleted');return}if(confirm('Delete this adult category?')){A.settings.adultCategories.splice(i,1);save();render();toast('Adult category deleted')}}
+function saveCategoryAdult(i){const n=($('#catNameAdult')||{}).value;const e=String(n||"").trim();if(!e)return;const obj={en:e,bn:""};if(i<0)A.settings.adultCategories.push(obj);else A.settings.adultCategories[i]=obj;ensureBilingualSettings();save();closeModal();render();toast('Adult category saved')}
+function deleteCategoryAdult(i){var e=catEn(A.settings.adultCategories[i]);if(e==='All'||e==='All Movies'){toast('All category cannot be deleted');return}if(confirm('Delete this adult category?')){A.settings.adultCategories.splice(i,1);ensureBilingualSettings();save();render();toast('Adult category deleted')}}
 function saveAdultTexts(){A.settings.adultLibraryBadge=$('#aLibBadge').value.trim();A.settings.adultLibraryTitle=$('#aLibTitle').value.trim();A.settings.adultLibraryDesc=$('#aLibDesc').value.trim();A.settings.adultTickerText=$('#aTicker').value.trim();A.settings.adultNewLabel=$('#aNewLabel').value.trim();A.settings.adultNewSub=$('#aNewSub').value.trim();A.settings.adultTrendingLabel=$('#aTrendLabel').value.trim();A.settings.adultTrendingSub=$('#aTrendSub').value.trim();save();toast('Adult page text saved')}
 
 function adultMovieRows(ms){
@@ -1404,13 +1511,13 @@ function editMovie(id){openMovie(id)}
 function deleteMovie(id){
   id=String(id||"");
   if(!id){toast("No movie id");return;}
-  if(!confirm("Delete this movie from Firebase permanently?")) return;
-  toast("Deleting…");
+  if(!confirm("Firebase থেকে এই মুভি স্থায়ীভাবে ডিলিট করবে?")) return;
+  toast("ডিলিট হচ্ছে…");
   if(window.CineHubFB && window.CineHubFB.deleteMovie){
     window.CineHubFB.deleteMovie(id).then(function(){
       A.movies=(A.movies||[]).filter(function(m){return String(m.id)!==id;});
       save(true); render();
-      toast("Movie deleted from Firebase");
+      toast("✓ Firebase থেকে মুভি ডিলিট হয়েছে");
     }).catch(function(e){
       console.error(e);
       toast("Delete failed: "+(e&&e.message?e.message:e)+" — open Admin as Telegram admin & redeploy Code.gs");
@@ -1436,12 +1543,12 @@ function saveCategory(i){
   const e=String(en||"").trim(); if(!e){toast("English name required");return;}
   const obj={en:e, bn:String(bn||"").trim()};
   if(i<0) A.settings.categories.push(obj); else A.settings.categories[i]=obj;
-  ensureBilingualSettings(); save(); closeModal(); render(); toast("Category saved");
+  ensureBilingualSettings(); save(); closeModal(); render(); toast("✓ ক্যাটাগরি Firebase-এ সেভ");
 }
 function deleteCategory(i){
   const e=catEn(A.settings.categories[i]);
   if(e==="All"||e==="All Movies"){toast("Default All category should stay");}
-  if(confirm("Delete this category?")){A.settings.categories.splice(i,1);ensureBilingualSettings();save();render();toast("Category deleted")}
+  if(confirm("Delete this category?")){A.settings.categories.splice(i,1);ensureBilingualSettings();save();render();toast("✓ ক্যাটাগরি Firebase থেকে ডিলিট")}
 }
 function openAdultCategory(index=null){
   ensureBilingualSettings();
@@ -1457,7 +1564,7 @@ function saveAdultCategory(i){
   const e=String((($('#acatNameEn')||{}).value)||"").trim(); if(!e){toast("English name required");return;}
   const obj={en:e, bn:String((($('#acatNameBn')||{}).value)||"").trim()};
   if(i<0) A.settings.adultCategories.push(obj); else A.settings.adultCategories[i]=obj;
-  ensureBilingualSettings(); save(); closeModal(); render(); toast("Adult category saved");
+  ensureBilingualSettings(); save(); closeModal(); render(); toast("✓ Adult ক্যাটাগরি Firebase-এ সেভ");
 }
 function deleteAdultCategory(i){
   if(confirm("Delete this adult category?")){A.settings.adultCategories.splice(i,1);ensureBilingualSettings();save();render();toast("Deleted")}

@@ -361,3 +361,78 @@ input.search:focus,input:focus,select:focus,textarea:focus{
 .section-grid .card{min-height:0}
 #adminApp.hidden,#adminGate.hidden{display:none!important}
 #adminApp{min-height:100vh}
+
+/* ---- Category tags ---- */
+.tag-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.tag-item{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 14px;background:var(--bg2);border:1px solid var(--line);
+  border-radius:12px;flex-wrap:wrap;
+}
+.tag-name{font-size:13px;color:var(--text);flex:1;min-width:120px}
+.tag-name b{font-weight:700}
+.tag-actions{display:flex;gap:6px;flex-shrink:0}
+
+/* ---- Movie mobile cards ---- */
+.movie-cards{display:none;flex-direction:column;gap:10px;margin-top:12px}
+.m-card{
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;
+}
+.m-card-top{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.m-card-actions{display:flex;gap:8px}
+.m-card-actions .btn{flex:1}
+
+@media(max-width:700px){
+  .movies-table{display:none}
+  .movie-cards{display:flex}
+  .table-wrap:has(.movies-table){border:0;padding:0;background:transparent;box-shadow:none}
+}
+
+/* ---- Save feedback bar ---- */
+.save-bar{
+  position:sticky;bottom:12px;z-index:20;margin-top:16px;
+  display:flex;gap:10px;align-items:center;justify-content:center;
+  padding:12px;background:rgba(15,20,32,.95);border:1px solid var(--line);
+  border-radius:14px;backdrop-filter:blur(12px);
+}
+.save-bar .btn{min-width:160px}
+
+/* ---- Better section spacing ---- */
+#content .card + .card{margin-top:14px}
+.toolbar h2,.toolbar h3{font-size:16px;font-weight:800;color:#fff}
+
+/* ---- Payment / User cards (mobile-first) ---- */
+.pay-list{display:flex;flex-direction:column;gap:12px}
+.pay-card,.user-card{
+  background:linear-gradient(165deg,var(--panel),var(--bg2));
+  border:1px solid var(--line);border-radius:14px;padding:14px 16px;
+}
+.pay-card-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;
+}
+.pay-card-head b{font-size:14px;color:#fff}
+.pay-meta{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;
+}
+.pay-meta > div{background:var(--bg2);border-radius:10px;padding:10px 12px;border:1px solid var(--line)}
+.pay-meta .muted{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.pay-meta b{font-size:13px;color:#fff;word-break:break-all}
+.pay-actions{
+  display:flex;flex-wrap:wrap;gap:8px;
+}
+.pay-actions .btn{flex:1;min-width:calc(50% - 8px);padding:11px 10px;font-size:12px}
+.pay-meta-row{
+  display:flex;justify-content:space-between;gap:12px;padding:10px 0;
+  border-bottom:1px solid var(--line);font-size:13px;
+}
+.pay-meta-row span{color:var(--muted)}
+.pay-meta-row b{color:#fff;text-align:right;word-break:break-all}
+
+/* Control map */
+.control-map{display:grid;gap:8px;margin-top:10px}
+.control-map .cm-row{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;
+  background:var(--bg2);border:1px solid var(--line);border-radius:12px;font-size:12px;
+}
+.control-map .cm-row b{color:#fff;min-width:110px}
+.control-map .cm-row span{color:var(--muted);flex:1}
