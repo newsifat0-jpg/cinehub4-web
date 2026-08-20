@@ -11,7 +11,7 @@ function applyTheme(){
   }catch(e){}
 }
 function t(k){try{return (window.CINEHUB4_LANG&&window.CINEHUB4_LANG.t)?window.CINEHUB4_LANG.t(k):k}catch(e){return k}}
-window.__cinehub_rerender=function(){try{render(false)}catch(e){}};
+window.__cinehub_rerender=function(){if(window.__cinehub_langSwitching)return;try{render(false)}catch(e){}};
 
 function howToEarn(){const u=cfg.howToWatchVideo||cfg.telegramBotLink;if(u)openLink(u);else toast(t("How to Watch link not set"));}
 
@@ -134,8 +134,10 @@ function save(){
 /* Boot flag: while splash is up, queue one paint only — no intermediate jerks */
 window.__cinehub_splashUp = true;
 window.__cinehub_needPaint = false;
+window.__cinehub_bootFreeze = false;
 function safeRender(animate){
-  if(window.__cinehub_splashUp || window.__cinehub_bootFreeze){
+  // During splash: queue, but still allow force paints from boot
+  if(window.__cinehub_splashUp && !window.__cinehub_forcePaint){
     window.__cinehub_needPaint = true;
     return;
   }
@@ -1391,13 +1393,20 @@ function bindLangSwitch(){
     b.onclick=function(e){
       e.preventDefault();e.stopPropagation();
       const lang=this.getAttribute("data-lang")||"en";
+      const cur=(window.CINEHUB4_LANG&&window.CINEHUB4_LANG.get&&window.CINEHUB4_LANG.get())||localStorage.getItem("cinehub4_language")||"en";
+      if(lang===cur) return;
+      // Flag so language.js event does not double-render
+      window.__cinehub_langSwitching = true;
       try{
         if(window.CINEHUB4_LANG&&window.CINEHUB4_LANG.set) window.CINEHUB4_LANG.set(lang);
         else localStorage.setItem("cinehub4_language",lang);
       }catch(err){localStorage.setItem("cinehub4_language",lang)}
-      syncLangButtons();
+      // One silent re-render — no page-enter animation (that caused the jump)
+      try{render(false)}catch(err){}
       try{window.CINEHUB4_LANG&&window.CINEHUB4_LANG.translateDOM&&window.CINEHUB4_LANG.translateDOM()}catch(e){}
-      render(true);
+      syncLangButtons();
+      window.__cinehub_langSwitching = false;
+      // Soft toast only (no layout shift)
       toast(lang==="bn"?"ভাষা: বাংলা":"Language: English");
     };
   });
@@ -1557,6 +1566,7 @@ function bindLangButtons(){
     btn.onclick=function(e){
       e.preventDefault();e.stopPropagation();
       var lang=btn.getAttribute("data-lang");
+      window.__cinehub_langSwitching = true;
       if(window.CINEHUB4_LANG&&window.CINEHUB4_LANG.set){
         window.CINEHUB4_LANG.set(lang);
       }else{
@@ -1564,6 +1574,7 @@ function bindLangButtons(){
       }
       try{render(false)}catch(err){}
       try{window.CINEHUB4_LANG&&window.CINEHUB4_LANG.translateDOM()}catch(err){}
+      window.__cinehub_langSwitching = false;
     };
   });
 }
@@ -1679,60 +1690,85 @@ setTimeout(function(){
 },1200);
 bindLeaveGuard();
 
-// Do NOT paint UI under the splash — paint once, then lift splash (no double flash)
 function killSplash(){
   const s=document.getElementById("appSplash");
   if(!s||s.classList.contains("gone"))return;
   s.classList.add("gone");
-  setTimeout(function(){try{s.style.display="none";s.remove()}catch(e){}},400);
+  setTimeout(function(){try{s.style.display="none";s.remove()}catch(e){}},450);
 }
+
+/* SIMPLE RELIABLE BOOT
+   1) Wait min 1.5s (show logo)
+   2) Paint UI under splash (force)
+   3) Fade splash
+   4) Paint again after splash gone (safety)
+*/
 (function(){
-  /* Anti-jerk: paint FULL UI under opaque splash, then only fade splash away.
-     Screen stays visible under splash the whole time — no hide/show, no second paint. */
-  const MIN_HOLD=1800, MAX_WAIT=4200, START=Date.now();
   window.__cinehub_noAnim = true;
-  window.__cinehub_bootFreeze = true;
-  (function check(){
-    const elapsed=Date.now()-START;
-    const ready = state.moviesLoaded || elapsed>=MAX_WAIT;
-    if(ready && elapsed>=MIN_HOLD){
-      // One paint under splash
-      window.__cinehub_forcePaint = true;
-      try{render(false)}catch(e){
-        console.error(e);
-        var sc=document.getElementById("screen");
-        if(sc)sc.innerHTML="<div style=padding:20px;color:#f88>Boot error: "+(e.message||e)+"</div>";
+  window.__cinehub_forcePaint = false;
+  window.__cinehub_splashUp = true;
+  const START = Date.now();
+  const MIN = 1500;
+  const MAX = 5000;
+
+  function paintNow(){
+    window.__cinehub_forcePaint = true;
+    try{
+      // Always land on movies on cold open
+      if(!sessionStorage.getItem("cinehub4_booted")){
+        state.page = "movies";
+        sessionStorage.setItem("cinehub4_booted","1");
       }
-      window.__cinehub_forcePaint = false;
-      // Ensure screen is fully shown UNDER splash (splash z-index covers it)
-      try{
-        var sc=document.getElementById("screen");
-        if(sc){
-          sc.style.transition="none";
-          sc.style.opacity="1";
-          sc.style.visibility="visible";
-        }
-      }catch(e){}
-      // Wait 2 frames so browser paints content under splash
+      render(false);
+    }catch(e){
+      console.error("boot paint", e);
+      var sc = document.getElementById("screen");
+      if(sc) sc.innerHTML = '<div style="padding:24px;color:#f88;text-align:center"><b>Boot error</b><br><small>'+String(e.message||e)+'</small></div>';
+    }
+    window.__cinehub_forcePaint = false;
+    try{
+      var sc = document.getElementById("screen");
+      if(sc){
+        sc.style.opacity = "1";
+        sc.style.visibility = "visible";
+      }
+    }catch(e){}
+  }
+
+  function finish(){
+    paintNow();
+    // 2 frames then lift splash
+    requestAnimationFrame(function(){
       requestAnimationFrame(function(){
-        requestAnimationFrame(function(){
-          window.__cinehub_splashUp = false;
-          state.firstPaint = false;
-          // Only remove cover — content already there, zero layout change
-          killSplash();
+        window.__cinehub_splashUp = false;
+        state.firstPaint = false;
+        killSplash();
+        // Safety re-paint after splash fully gone
+        setTimeout(function(){
+          window.__cinehub_noAnim = false;
+          window.__cinehub_needPaint = false;
+          try{ render(false); }catch(e){}
+          // If still empty, show diagnostic
           setTimeout(function(){
-            window.__cinehub_noAnim = false;
-            window.__cinehub_bootFreeze = false;
-            if(window.__cinehub_needPaint){
-              window.__cinehub_needPaint = false;
-              try{render(false)}catch(e){}
+            var sc = document.getElementById("screen");
+            if(sc && (!sc.innerHTML || sc.innerHTML.trim().length < 20)){
+              sc.innerHTML = '<div style="padding:24px;color:#9ab;text-align:center"><b>Cine Hub4</b><br><small>Loading content…</small><br><button type="button" onclick="location.reload()" style="margin-top:12px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff">Reload</button></div>';
+              try{ render(false); }catch(e){}
             }
-          }, 2600);
-        });
+          }, 800);
+        }, 500);
       });
+    });
+  }
+
+  (function tick(){
+    var elapsed = Date.now() - START;
+    var ready = state.moviesLoaded || elapsed >= MAX;
+    if(ready && elapsed >= MIN){
+      finish();
       return;
     }
-    setTimeout(check, 50);
+    setTimeout(tick, 60);
   })();
 })();
 

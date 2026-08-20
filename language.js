@@ -329,13 +329,12 @@ window.CINEHUB4_LANG = (() => {
   }
 
   window.addEventListener("cinehub4:language", () => {
-    setTimeout(() => {
-      translateDOM();
-      // full re-render so template strings pick up t()
-      if (typeof window.__cinehub_rerender === "function") {
-        try { window.__cinehub_rerender(); } catch (e) {}
-      }
-    }, 0);
+    try { translateDOM(); } catch (e) {}
+    // Skip full re-render if app already did it (prevents double paint / jump)
+    if (window.__cinehub_langSwitching) return;
+    if (typeof window.__cinehub_rerender === "function") {
+      try { window.__cinehub_rerender(); } catch (e) {}
+    }
   });
 
   document.addEventListener("DOMContentLoaded", () => {
