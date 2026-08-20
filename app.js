@@ -575,8 +575,10 @@ function getTasks(){
 /** Task progress: supports limit > 1. Shows Done only after required completions.
  *  Permanent tasks stay done forever. Others reset after tk.resetHours (default 24). */
 function taskStableId(tk,i){
-  const base=String((tk&&(tk.id||tk.name||tk.type))||("t"+i)).toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,40);
-  return base+"_"+(tk&&tk.type?tk.type:"x");
+  // Always include index so two tasks never share the same progress key
+  const name=String((tk&&(tk.id||tk.name))||("task")).toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,28);
+  const typ=String((tk&&tk.type)||"x").toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,12);
+  return "t"+String(i)+"_"+name+"_"+typ;
 }
 function taskResetInfo(i,tk){
   const sid=taskStableId(tk,i);
@@ -1874,6 +1876,9 @@ try{const views={movies:moviesPage,search:searchPage,series,adult,profile,points
   if(b.dataset.page==="adult"){
     const off = (cfg.adultEnabled===false || cfg.adultLibraryEnabled===false);
     b.style.display = off ? "none" : "";
+    b.classList.toggle("nav-hidden", !!off);
+    const bn = document.getElementById("bottomNav");
+    if(bn) bn.classList.toggle("adult-off", !!off);
     if(off && state.page==="adult"){ state.page="movies"; }
   }
 });bindPageBack();bindDrawer();markDrawerActive();setupAdminButton();window.CINEHUB4_LANG?.translateDOM();

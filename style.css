@@ -773,3 +773,10 @@ body{background:radial-gradient(1200px 600px at 50% -10%,#152038 0%,#070b14 55%,
   background:linear-gradient(135deg,#00c6ff,#3b82f6)!important;
   color:#fff!important;
 }
+
+
+/* Adult tab hidden — keep remaining nav evenly spaced */
+.bottom-nav.adult-off .nav-item{flex:1 1 0}
+.bottom-nav.adult-off .nav-item.nav-hidden{display:none !important}
+.bottom-nav{display:flex;align-items:stretch;justify-content:space-around;gap:0}
+.bottom-nav .nav-item{flex:1 1 0;min-width:0}

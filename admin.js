@@ -181,7 +181,19 @@ function save(silent){
     if(!silent) toast("Save error: "+e);
   }
 }
-function toast(msg){const te=el('toast')||toastEl;if(!te)return;te.textContent=msg;te.classList.add('show');setTimeout(()=>te.classList.remove('show'),1700)}
+function toast(msg){
+  var te = document.getElementById('toast');
+  if(!te){
+    te = document.createElement('div');
+    te.id = 'toast';
+    te.className = 'toast';
+    document.body.appendChild(te);
+  }
+  te.textContent = String(msg||'');
+  te.classList.add('show');
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(function(){ te.classList.remove('show'); }, 2800);
+}
 function money(n){return Number(n).toLocaleString()}
 function getTelegramUserId(){try{return window.Telegram?.WebApp?.initDataUnsafe?.user?.id?String(window.Telegram.WebApp.initDataUnsafe.user.id):''}catch(e){return ''}}
 // Admin IDs loaded from Firestore config/main (not in public source)
@@ -747,8 +759,20 @@ function points(){return `<div class="toolbar"><div><h2 style="margin:0;font-siz
       </div>
       <div class="field"><label>Reset after hours (if hours mode)</label><input id="dailyAdResetHours" type="number" value="${A.settings.dailyAdResetHours||24}"></div>
       <div class="field"><label>Daily ad earning limit</label><input id="dailyLimitP" type="number" value="${A.settings.dailyAdLimit}"></div>
-      <div class="field"><label>Join bonus (new user)</label><input id="bonus" type="number" value="${A.settings.joinBonus||A.settings.newUserBonus||10}"></div>
-      <div class="field"><label>Referral reward</label><input id="ref" type="number" value="${A.settings.referralReward||20}"></div>
+    </div>
+  </div>
+  <div class="card" style="border:1px solid #22c55e44">
+    <h3>🎁 Join Bonus (নতুন ইউজার)</h3>
+    <div class="muted smalltext" style="margin-bottom:10px">অ্যাপ প্রথম খুললে একবার — Earn Points / Tasks থেকে আলাদা</div>
+    <div class="form-grid">
+      <div class="field"><label>Join bonus points</label><input id="bonus" type="number" value="${A.settings.joinBonus||A.settings.newUserBonus||10}"></div>
+    </div>
+  </div>
+  <div class="card" style="border:1px solid #a78bfa44">
+    <h3>👥 Referral Bonus (রেফার)</h3>
+    <div class="muted smalltext" style="margin-bottom:10px">বন্ধু রেফার করলে রেফারার পায় — Tasks-এর Refer task থেকে আলাদা কন্ট্রোল</div>
+    <div class="form-grid">
+      <div class="field"><label>Referral reward points</label><input id="ref" type="number" value="${A.settings.referralReward||20}"></div>
     </div>
   </div>
   <div class="card"><h3>Rules (live)</h3>
@@ -1037,37 +1061,43 @@ function payFindById(id){
 }
 function payView(id){
   var list = A.payments || [];
-  if (!list.length) {
-    try { list = JSON.parse(localStorage.getItem("cinehub4_payments")||"[]"); } catch(e){ list=[]; }
-  }
   var p = list.find(function(x){ return String(x.id)===String(id); });
-  if (!p) { toast("Not found"); return; }
-  var img = p.proofData || p.proof || p.image || p.screenshot || "";
-  var isImg = img && (String(img).indexOf("data:image")===0 || /^https?:\/\//i.test(img));
+  if (!p) { toast("পেমেন্ট পাওয়া যায়নি"); return; }
+  var img = p.proofData || p.proof || p.image || p.screenshot || p.proof_url || p.photo || "";
+  var isImg = img && (String(img).indexOf("data:image")===0 || /^https?:\/\//i.test(String(img)) || String(img).indexOf("blob:")===0);
   var when = p.date || p.created || "";
   if (!when && (p.created_at || p.ts)) {
     try { when = new Date(Number(p.created_at || p.ts)).toLocaleString(); } catch(e){ when = String(p.created_at||p.ts); }
   }
+  function esc(s){ return String(s==null?"—":s).replace(/</g,"&lt;"); }
   var uname = p.user || p.username || p.name || "—";
-  var uid = p.userId || p.uid || "—";
+  var uid = p.userId || p.uid || p.user_id || "—";
+  var pts = p.points || p.amount || 0;
+  var method = p.method || p.gateway || "—";
+  var trx = p.trxId || p.trx || p.transaction_id || "—";
+  var st = p.status || "pending";
+  var imgHtml = isImg
+    ? ('<div style="margin-top:12px"><div class="muted smalltext" style="margin-bottom:6px">Screenshot / Proof</div><img src="'+String(img).replace(/"/g,"&quot;")+'" alt="proof" style="max-width:100%;border-radius:12px;border:1px solid var(--line);background:#000" onclick="window.open(this.src)"></div>')
+    : (img ? '<div class="muted" style="margin-top:10px;word-break:break-all">Proof: '+esc(img)+'</div>' : '<div class="muted" style="margin-top:10px">No screenshot attached</div>');
+  var idJs = String(id).replace(/'/g,"\\'");
+  var actions = '';
+  if (!st || st==="pending") {
+    actions = '<button type="button" class="btn primary" style="flex:1" onclick="closeModal();payActionId(\''+idJs+'\',\'approved\')">Accept + Points</button>'+
+              '<button type="button" class="btn danger" style="flex:1" onclick="closeModal();payActionId(\''+idJs+'\',\'rejected\')">Reject</button>';
+  }
+  actions += '<button type="button" class="btn danger" style="flex:1" onclick="closeModal();payDeleteId(\''+idJs+'\')">Delete</button>';
   showModal('<div class="modal-head"><h2>Payment Request</h2><button class="btn" onclick="closeModal()">×</button></div>'+
-    '<div class="pay-meta-row"><span>Name</span><b>'+String(uname).replace(/</g,"")+'</b></div>'+
-    '<div class="pay-meta-row"><span>Telegram ID</span><b>'+String(uid).replace(/</g,"")+'</b></div>'+
-    '<div class="pay-meta-row"><span>Package</span><b>'+String(p.pkg||p.package||"—").replace(/</g,"")+'</b></div>'+
-    '<div class="pay-meta-row"><span>USDT</span><b>'+String(p.usdt||p.amount_usdt||"—")+'</b></div>'+
-    '<div class="pay-meta-row"><span>Points</span><b>'+(p.points||p.amount||0)+'</b></div>'+
-    '<div class="pay-meta-row"><span>Wallet</span><b>'+String(p.wallet||"—").replace(/</g,"")+' / '+String(p.network||"").replace(/</g,"")+'</b></div>'+
-    '<div class="pay-meta-row"><span>TxID</span><b style="word-break:break-all">'+String(p.txid||p.trxId||p.trx||"—").replace(/</g,"")+'</b></div>'+
-    '<div class="pay-meta-row"><span>Time</span><b>'+String(when).replace(/</g,"")+'</b></div>'+
-    '<div class="pay-meta-row"><span>Status</span><b class="badge">'+(p.status||"pending")+'</b></div>'+
-    (isImg ? '<div class="pay-proof-frame" style="margin-top:10px"><img src="'+String(img).replace(/"/g,"&quot;")+'" alt="proof" style="max-width:100%;border-radius:8px"></div>' :
-      (p.proof ? '<div class="muted" style="margin-top:8px">Proof file: '+String(p.proof).replace(/</g,"")+'</div>' : '<div class="muted" style="margin-top:8px">No screenshot attached</div>'))+
-    '<div style="margin-top:12px;display:flex;gap:8px">'+
-    ((p.status||"pending")==="pending"?
-      '<button class="btn primary" onclick="closeModal();payActionId(\''+String(p.id).replace(/'/g,"\\'")+'\',\'approved\')">✓ Accept</button>'+
-      '<button class="btn danger" onclick="closeModal();payActionId(\''+String(p.id).replace(/'/g,"\\'")+'\',\'rejected\')">Reject</button>':'')+
-    '</div>');
+    '<div class="pay-meta-row"><span>User</span><b>'+esc(uname)+'</b></div>'+
+    '<div class="pay-meta-row"><span>Telegram ID</span><b>'+esc(uid)+'</b></div>'+
+    '<div class="pay-meta-row"><span>Points</span><b>'+esc(pts)+'</b></div>'+
+    '<div class="pay-meta-row"><span>Method</span><b>'+esc(method)+'</b></div>'+
+    '<div class="pay-meta-row"><span>Trx ID</span><b>'+esc(trx)+'</b></div>'+
+    '<div class="pay-meta-row"><span>Status</span><b>'+esc(st)+'</b></div>'+
+    '<div class="pay-meta-row"><span>When</span><b>'+esc(when)+'</b></div>'+
+    imgHtml+
+    '<div class="pay-actions" style="margin-top:14px">'+actions+'</div>');
 }
+
 function payActionId(id, st){
   if (!window.CineHubFB || !window.CineHubFB.updatePayment) {
     toast("API missing — redeploy Code.gs"); return;
@@ -1154,27 +1184,55 @@ function reqDelete(id){
   }).catch(function(e){ toast(e&&e.message?e.message:e); });
 }
 
-function adult(){const adultList=(A.movies||[]).filter(m=>m.adult);return `<div class="grid section-grid">
+function adult(){
+  const adultList=(A.movies||[]).filter(m=>m.adult);
+  const cards = adultList.length ? adultList.map(function(m){
+    var id=String(m.id||"");
+    var title=String(m.title||"Untitled").replace(/</g,"&lt;");
+    var idJs=id.replace(/'/g,"\\'");
+    return '<div class="m-card">'+
+      '<div class="m-card-top"><div class="thumb">'+(title.slice(0,1)||"?")+'</div>'+
+      '<div class="m-card-info"><b>'+title+'</b>'+
+      '<div class="muted smalltext">'+(m.year||"")+' · '+String(m.category||"Adult").replace(/</g,"")+'</div>'+
+      '<div class="muted smalltext">⭐ '+(m.rating||0)+' · clicks '+(m.clicks||0)+'</div></div></div>'+
+      '<div class="m-card-actions">'+
+        '<button type="button" class="btn" onclick="openAdultMovie(\''+idJs+'\')">Edit</button>'+
+        '<button type="button" class="btn danger" onclick="deleteMovie(\''+idJs+'\')">Delete</button>'+
+      '</div></div>';
+  }).join("") : '<div class="muted" style="padding:20px;text-align:center">No adult movies yet</div>';
+  return `<div class="grid section-grid">
 <div class="card"><h3>Adult Library</h3>
-  <div class="switch"><span>Enable adult section (user 18+ tab)</span><span class="toggle ${A.adultEnabled?'on':''}" onclick="A.adultEnabled=!A.adultEnabled;A.settings.adultEnabled=A.adultEnabled;A.settings.adultLibraryEnabled=A.adultEnabled;save();render()"><i></i></span></div>
+  <div class="switch"><span>Enable adult section (user 18+ tab)</span><span class="toggle ${A.adultEnabled?'on':''}" onclick="A.adultEnabled=!A.adultEnabled;A.settings.adultEnabled=A.adultEnabled;A.settings.adultLibraryEnabled=A.adultEnabled;save();render();toast(A.adultEnabled?'✓ Adult ON — Firebase':'✓ Adult OFF — Firebase')"><i></i></span></div>
   <div class="switch"><span>Adult movies in DB</span><span class="badge green">${adultList.length}</span></div>
   <div class="switch"><span>18+ confirmation</span><span class="badge green">REQUIRED</span></div>
-  <button class="btn primary" style="margin-top:15px" onclick="openAdultMovie()">＋ Add Adult Movie</button>
+  <button class="btn primary" style="margin-top:15px;width:100%" onclick="openAdultMovie()">＋ Add Adult Movie</button>
 </div>
 <div class="card"><h3>Adult Ad Rule</h3><div class="muted smalltext">Adult ads use their own Block ID (Ads section).</div>
-  <button class="btn" style="margin-top:12px" onclick="setSection('ads')">Configure Adult Ad</button>
-  <button class="btn" style="margin-top:8px" onclick="setSection('categories')">Adult Categories (EN+BN)</button>
+  <button class="btn" style="margin-top:12px;width:100%" onclick="setSection('ads')">Configure Adult Ad</button>
+  <button class="btn" style="margin-top:8px;width:100%" onclick="setSection('categories')">Adult Categories (EN+BN)</button>
 </div>
 </div>
-<div class="card table-wrap" style="margin-top:14px"><div class="toolbar"><h3 style="margin:0">Adult Movies</h3><span class="muted">${adultList.length} items</span></div>
-<table class="table"><thead><tr><th>Movie</th><th>Category</th><th>Rating</th><th>Clicks</th><th>Downloads</th><th>Status</th><th>Action</th></tr></thead>
-<tbody>${adultMovieRows(adultList)}</tbody></table></div>
-<div class="card" style="margin-top:14px"><h3>Adult Page Text</h3><div class="muted smalltext">Edit labels shown on the Adult page. Colors and layout stay the same as Movies.</div><div class="form-grid" style="margin-top:12px"><div class="field"><label>Badge</label><input id="aLibBadge" value="${A.settings.adultLibraryBadge||''}"></div><div class="field"><label>Title</label><input id="aLibTitle" value="${A.settings.adultLibraryTitle||''}"></div><div class="field"><label>Description</label><input id="aLibDesc" value="${A.settings.adultLibraryDesc||''}"></div><div class="field"><label>Ticker Text</label><input id="aTicker" value="${A.settings.adultTickerText||''}"></div><div class="field"><label>New Label</label><input id="aNewLabel" value="${A.settings.adultNewLabel||''}"></div><div class="field"><label>New Sub</label><input id="aNewSub" value="${A.settings.adultNewSub||''}"></div><div class="field"><label>Trending Label</label><input id="aTrendLabel" value="${A.settings.adultTrendingLabel||''}"></div><div class="field"><label>Trending Sub</label><input id="aTrendSub" value="${A.settings.adultTrendingSub||''}"></div></div><button class="btn primary" style="margin-top:14px" onclick="saveAdultTexts()">Save Adult Page Text</button></div>`}
-function openCategoryAdult(index=null){openAdultCategory(index)}
-function editCategoryAdult(i){openAdultCategory(i)}
-function saveCategoryAdult(i){const n=($('#catNameAdult')||{}).value;const e=String(n||"").trim();if(!e)return;const obj={en:e,bn:""};if(i<0)A.settings.adultCategories.push(obj);else A.settings.adultCategories[i]=obj;ensureBilingualSettings();save();closeModal();render();toast('Adult category saved')}
-function deleteCategoryAdult(i){var e=catEn(A.settings.adultCategories[i]);if(e==='All'||e==='All Movies'){toast('All category cannot be deleted');return}if(confirm('Delete this adult category?')){A.settings.adultCategories.splice(i,1);ensureBilingualSettings();save();render();toast('Adult category deleted')}}
-function saveAdultTexts(){A.settings.adultLibraryBadge=$('#aLibBadge').value.trim();A.settings.adultLibraryTitle=$('#aLibTitle').value.trim();A.settings.adultLibraryDesc=$('#aLibDesc').value.trim();A.settings.adultTickerText=$('#aTicker').value.trim();A.settings.adultNewLabel=$('#aNewLabel').value.trim();A.settings.adultNewSub=$('#aNewSub').value.trim();A.settings.adultTrendingLabel=$('#aTrendLabel').value.trim();A.settings.adultTrendingSub=$('#aTrendSub').value.trim();save();toast('Adult page text saved')}
+<div class="card" style="margin-top:14px">
+  <div class="toolbar"><div><h3 style="margin:0">Adult Movies</h3><div class="muted smalltext">${adultList.length} items · same edit flow as Movies</div></div>
+  <button type="button" class="btn primary" onclick="openAdultMovie()">＋ Add</button></div>
+  <div class="movie-cards">${cards}</div>
+</div>
+<div class="card" style="margin-top:14px"><h3>Adult Page Text</h3><div class="muted smalltext">Labels on the Adult page.</div><div class="form-grid" style="margin-top:12px"><div class="field"><label>Badge</label><input id="aLibBadge" value="${A.settings.adultLibraryBadge||''}"></div><div class="field"><label>Title</label><input id="aLibTitle" value="${A.settings.adultLibraryTitle||''}"></div><div class="field"><label>Description</label><input id="aLibDesc" value="${A.settings.adultLibraryDesc||''}"></div><div class="field"><label>Ticker Text</label><input id="aTicker" value="${A.settings.adultTickerText||''}"></div><div class="field"><label>New Label</label><input id="aNewLabel" value="${A.settings.adultNewLabel||''}"></div><div class="field"><label>New Sub</label><input id="aNewSub" value="${A.settings.adultNewSub||''}"></div><div class="field"><label>Trending Label</label><input id="aTrendLabel" value="${A.settings.adultTrendingLabel||''}"></div><div class="field"><label>Trending Sub</label><input id="aTrendSub" value="${A.settings.adultTrendingSub||''}"></div></div>
+<button class="btn primary" style="margin-top:12px;width:100%" onclick="saveAdultTexts()">Save Adult Texts → Firebase</button></div>`;
+}
+
+function saveAdultTexts(){
+  A.settings.adultLibraryBadge=(($('#aLibBadge')||{}).value||'').trim();
+  A.settings.adultLibraryTitle=(($('#aLibTitle')||{}).value||'').trim();
+  A.settings.adultLibraryDesc=(($('#aLibDesc')||{}).value||'').trim();
+  A.settings.adultTickerText=(($('#aTicker')||{}).value||'').trim();
+  A.settings.adultNewLabel=(($('#aNewLabel')||{}).value||'').trim();
+  A.settings.adultNewSub=(($('#aNewSub')||{}).value||'').trim();
+  A.settings.adultTrendingLabel=(($('#aTrendLabel')||{}).value||'').trim();
+  A.settings.adultTrendingSub=(($('#aTrendSub')||{}).value||'').trim();
+  save();
+  toast('✓ Adult টেক্সট Firebase-এ সেভ');
+}
 
 function adultMovieRows(ms){
   if(!ms||!ms.length) return `<tr><td colspan="7" class="muted">No adult movies yet. Use “＋ Add Adult Movie”.</td></tr>`;
@@ -1491,7 +1549,7 @@ function saveMovie(id){
   toast('Saving...');
   if(!window.CineHubFB){
     if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?x:m);else A.movies.unshift(x);
-    save(true);closeModal();render();toast(isAdult?'Saved as Adult':'Movie saved (local)');
+    save(true);closeModal();render();toast(isAdult?'✓ Adult মুভি সেভ (local fallback)':'✓ মুভি সেভ (local fallback)');
     return;
   }
   const tmo=setTimeout(function(){toast('Still saving… check network / Deploy');},8000);
@@ -1500,7 +1558,7 @@ function saveMovie(id){
     window.__savingMovie=false; clearTimeout(tmo);
     if(id!=null){A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);}else if(!A.movies.some(m=>String(m.id)===String(saved&&saved.id))){A.movies.unshift(saved);}
     save(true);closeModal();render();
-    toast(isAdult?'Saved as Adult (Adult tab)':'Movie saved to Firebase');
+    toast(isAdult?'✓ Adult মুভি Firebase-এ সেভ হয়েছে':'✓ মুভি Firebase-এ সেভ হয়েছে');
   }).catch(function(e){
     window.__savingMovie=false; clearTimeout(tmo);
     console.error(e);
@@ -1602,9 +1660,26 @@ function saveTask(idx){
 function openAdBlock(){showModal(`<div class="modal-head"><h2>Add Ad Block</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Ad Block Name</label><input id="extraAdName" placeholder="e.g. Home Reward"></div><div class="field"><label>Ad Block ID</label><input id="extraAdId" placeholder="43222"></div></div><button class="btn primary" style="margin-top:15px" onclick="saveExtraAd()">Add Ad Block</button>`)}
 function saveExtraAd(){const n=$('#extraAdName').value.trim(),id=$('#extraAdId').value.trim();if(!n||!id)return;A.settings.adBlocks.extra=A.settings.adBlocks.extra||{};A.settings.adBlocks.extra[n]=id;save();closeModal();render();toast('Ad block added')}
 function openAdultMovie(id=null){const m=id!=null&&id!==0&&id!==''?A.movies.find(x=>String(x.id)===String(id)):null;const cats=(A.settings.adultCategories||[]).filter(x=>catEn(x)!=='All');const idArg=m?JSON.stringify(String(m.id)):'null';showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Adult Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="adultTitle" value="${(m?.title||'').replace(/"/g,'&quot;')}" placeholder="Adult title"></div><div class="field"><label>Year</label><input id="adultYear" type="number" value="${m?.year||new Date().getFullYear()}"></div><div class="field"><label>Category</label><select id="adultCat">${cats.map(c=>{const k=catEn(c);return `<option ${m?.category===k?'selected':''}>${k}</option>`}).join('')}</select></div><div class="field"><label>Rating</label><input id="adultRating" type="number" step=".1" value="${m?.rating||0}"></div><div class="field"><label>Poster URL</label><input id="adultPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="adultS1" value="${(m?.server1||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="adultS2" value="${(m?.server2||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="adultS3" value="${(m?.server3||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div></div><button class="btn primary" style="margin-top:15px" onclick="saveAdultMovie(${idArg})">Save Adult Movie</button>`)}
-function saveAdultMovie(id){id=(id===0||id===null||id===undefined||id==='')?null:id;const old=id!=null?A.movies.find(m=>String(m.id)===String(id)):null;const t=$('#adultTitle').value.trim();if(!t)return;const x={id:id!=null?String(id):("manual_"+Date.now()),title:t,type:'Adult',year:+$('#adultYear').value||new Date().getFullYear(),rating:+$('#adultRating').value||0,category:$('#adultCat').value,adult:true,poster:$('#adultPoster').value.trim(),server1:$('#adultS1').value.trim(),server2:$('#adultS2').value.trim(),server3:$('#adultS3').value.trim(),server1_link:$('#adultS1').value.trim(),server2_link:$('#adultS2').value.trim(),server3_link:$('#adultS3').value.trim(),clicks:old?.clicks||0,downloads:old?.downloads||0,status:'Published',manual_movie:true,added_time:old?.added_time||Date.now()};toast('Saving...');if(window.CineHubFB){window.CineHubFB.saveMovie(x).then(function(saved){if(id!=null){A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);}else if(!A.movies.some(m=>String(m.id)===String(saved&&saved.id))){A.movies.unshift(saved);}save(true);closeModal();render();toast('Adult movie saved')}).catch(function(e){console.error(e);toast('Save failed: '+(e&&e.message?e.message:e))})}else{if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?x:m);else A.movies.unshift(x);save();closeModal();render();toast('Adult movie saved')}}
+function saveAdultMovie(id){id=(id===0||id===null||id===undefined||id==='')?null:id;const old=id!=null?A.movies.find(m=>String(m.id)===String(id)):null;const t=(($('#adultTitle')||{}).value||'').trim();if(!t){toast('Title required');return;}const x={id:id!=null?String(id):("manual_"+Date.now()),title:t,type:'Adult',year:+$('#adultYear').value||new Date().getFullYear(),rating:+$('#adultRating').value||0,category:$('#adultCat').value,adult:true,poster:$('#adultPoster').value.trim(),server1:$('#adultS1').value.trim(),server2:$('#adultS2').value.trim(),server3:$('#adultS3').value.trim(),server1_link:$('#adultS1').value.trim(),server2_link:$('#adultS2').value.trim(),server3_link:$('#adultS3').value.trim(),clicks:old?.clicks||0,downloads:old?.downloads||0,status:'Published',manual_movie:true,added_time:old?.added_time||Date.now()};toast('Saving...');if(window.CineHubFB){window.CineHubFB.saveMovie(x).then(function(saved){if(id!=null){A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);}else if(!A.movies.some(m=>String(m.id)===String(saved&&saved.id))){A.movies.unshift(saved);}save(true);closeModal();render();toast('✓ Adult মুভি Firebase-এ সেভ')}).catch(function(e){console.error(e);toast('⚠ Adult সেভ ব্যর্থ: '+(e&&e.message?e.message:e)+' — Code.gs Deploy চেক করো')})}else{if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?x:m);else A.movies.unshift(x);save();closeModal();render();toast('✓ Adult মুভি Firebase-এ সেভ')}}
 function editAdultMovie(id){openAdultMovie(id)}
-function showModal(body){$('#modal').innerHTML=`<div class="modal-box">${body}</div>`;$('#modal').classList.remove('hidden')}function closeModal(){$('#modal').classList.add('hidden')}
+function showModal(body){
+  var m = document.getElementById('modal');
+  if(!m){
+    m = document.createElement('div');
+    m.id = 'modal';
+    m.className = 'modal hidden';
+    m.onclick = function(e){ if(e.target===m) closeModal(); };
+    document.body.appendChild(m);
+  }
+  m.innerHTML = '<div class="modal-box">'+body+'</div>';
+  m.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(){
+  var m = document.getElementById('modal');
+  if(m){ m.classList.add('hidden'); m.innerHTML=''; }
+  document.body.style.overflow = '';
+}
 function render(){
   try{
     const box=contentEl();
