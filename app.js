@@ -1820,14 +1820,11 @@ function setupAdminButton(){
   try{
     const btn=document.getElementById("adminPanelBtn");
     if(!btn) return;
-    if(isAdminUser()){
-      btn.classList.remove("hidden");
-      btn.style.display="flex";
-      btn.onclick=function(){location.href="admin.html"};
-    }else{
-      btn.classList.add("hidden");
-      btn.style.display="";
-    }
+    // Always show entry — real auth is on admin.html gate (ADMIN_IDS + initData).
+    // Hiding the button when server check fails locked owners out of the panel.
+    btn.classList.remove("hidden");
+    btn.style.display="flex";
+    btn.onclick=function(){ location.href="admin.html"; };
   }catch(e){}
 }
 
