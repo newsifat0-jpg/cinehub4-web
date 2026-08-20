@@ -795,7 +795,7 @@ function buy(){
     <button type="button" class="pf-btn wide" style="margin-top:8px" onclick="openLink(cfg.howToBuyVideo||cfg.telegramBotLink)">▶ How to Buy Points</button>
   </div>
   <div class="pf-section">💎 SELECT PACKAGE</div>
-  ${pkgs.map((p,i)=>`<div class="pkg-row">
+  ${pkgs.map((p,i)=>`<div class="pkg-row pkg-tone-${(i%6)+1}">
     <div class="pkg-ico">${icons[i%icons.length]}</div>
     <div class="pkg-meta">
       <div class="pkg-name">${p.name} ${p.tag?`<span class="pkg-tag">${p.tag}</span>`:""}</div>
@@ -1403,6 +1403,17 @@ function bindLangSwitch(){
   });
   syncLangButtons();
 }
+
+function markDrawerActive(){
+  try{
+    const page=state.page==="detail"?"movies":state.page;
+    document.querySelectorAll("#drawer button[data-page]").forEach(function(b){
+      const p=b.getAttribute("data-page");
+      if(p===page){ b.classList.add("active"); b.classList.add("is-active"); }
+      else { b.classList.remove("active"); b.classList.remove("is-active"); }
+    });
+  }catch(e){}
+}
 function bindDrawer(){
   bindLangSwitch();
   const ham=document.getElementById("hamBtn");
@@ -1572,7 +1583,7 @@ function bindHomeStickyScroll(){
 function render(animate=false){
 /* Skip paints while splash is covering the screen (prevents open-time jerk) */
 if(window.__cinehub_splashUp && !window.__cinehub_forcePaint){ window.__cinehub_needPaint=true; return; }
-try{const views={movies:moviesPage,search:searchPage,series,adult,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===state.page||(state.page==="detail"&&b.dataset.page==="movies")));bindPageBack();bindDrawer();setupAdminButton();window.CINEHUB4_LANG?.translateDOM();
+try{const views={movies:moviesPage,search:searchPage,series,adult,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===state.page||(state.page==="detail"&&b.dataset.page==="movies")));bindPageBack();bindDrawer();markDrawerActive();setupAdminButton();window.CINEHUB4_LANG?.translateDOM();
 try{bindHomeStickyScroll()}catch(e){}
 const mic=$("#micBtn");if(mic)mic.onclick=startVoiceSearch;
 const qel=$("#q");if(qel){qel.addEventListener("input",()=>{/* live optional */});}

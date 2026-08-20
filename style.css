@@ -612,3 +612,149 @@ body{background:radial-gradient(1200px 600px at 50% -10%,#152038 0%,#070b14 55%,
 }
 .adsgram-banner-btn:active{opacity:.9}
 .adsgram-task-banner{display:block;width:100%;min-height:72px}
+
+
+/* ===== Aesthetic unique borders: Profile / Drawer / Packages ===== */
+.pf-card{
+  border:1px solid #2dd4bf66!important;
+  box-shadow:0 0 0 1px #2dd4bf22,0 0 20px #2dd4bf18,0 8px 24px rgba(0,0,0,.25)!important;
+}
+.pf-stat:nth-child(1){
+  border:1px solid #fbbf2466!important;
+  box-shadow:0 0 14px #fbbf2422!important;
+  background:linear-gradient(145deg,#1a1830,#12182a)!important;
+}
+.pf-stat:nth-child(2){
+  border:1px solid #60a5fa66!important;
+  box-shadow:0 0 14px #60a5fa22!important;
+  background:linear-gradient(145deg,#121a30,#12182a)!important;
+}
+.pf-panel{
+  border:1px solid #a78bfa55!important;
+  box-shadow:0 0 0 1px #a78bfa18,0 0 18px #7c3aed18!important;
+}
+.pf-how-card:nth-child(1){
+  border:1px solid #34d39955!important;
+  box-shadow:0 0 12px #34d39920!important;
+}
+.pf-how-card:nth-child(2){
+  border:1px solid #fb718555!important;
+  box-shadow:0 0 12px #fb718520!important;
+}
+.earn-card{
+  border:1px solid #38bdf855!important;
+  box-shadow:0 0 16px #0ea5e918!important;
+}
+.task-row{
+  border:1px solid #6366f155!important;
+  border-radius:14px;
+  padding:10px 12px!important;
+  margin-bottom:8px;
+  background:#12182a;
+  box-shadow:0 0 10px #6366f112;
+}
+.task-row.done{
+  border-color:#22c55e55!important;
+  box-shadow:0 0 10px #22c55e15;
+}
+
+/* Package rows — unique colors each */
+.pkg-row{
+  border-width:1px!important;
+  border-style:solid!important;
+  transition:transform .15s ease,box-shadow .2s ease;
+}
+.pkg-row:nth-child(1){border-color:#22d3ee66!important;box-shadow:0 0 16px #22d3ee20!important;background:linear-gradient(135deg,#0f1c2e,#121826)!important}
+.pkg-row:nth-child(2){border-color:#a78bfa66!important;box-shadow:0 0 16px #a78bfa22!important;background:linear-gradient(135deg,#1a1430,#121826)!important}
+.pkg-row:nth-child(3){border-color:#fbbf2466!important;box-shadow:0 0 16px #fbbf2420!important;background:linear-gradient(135deg,#1c1810,#121826)!important}
+.pkg-row:nth-child(4){border-color:#fb718566!important;box-shadow:0 0 16px #fb718522!important;background:linear-gradient(135deg,#1c1218,#121826)!important}
+.pkg-row:nth-child(5){border-color:#34d39966!important;box-shadow:0 0 16px #34d39920!important;background:linear-gradient(135deg,#0f1c18,#121826)!important}
+.pkg-row:nth-child(6){border-color:#60a5fa66!important;box-shadow:0 0 16px #60a5fa20!important;background:linear-gradient(135deg,#101828,#121826)!important}
+.pkg-row:nth-child(n+7){border-color:#e879f966!important;box-shadow:0 0 16px #e879f920!important}
+.pkg-row:active{transform:scale(.985)}
+
+/* Drawer menu — each item unique border color */
+.drawer button[data-page],
+.drawer #adminPanelBtn{
+  border:1px solid transparent!important;
+  background:#12182a!important;
+  transition:background .2s ease,border-color .2s ease,box-shadow .2s ease,transform .15s ease;
+}
+.drawer button[data-page]:nth-of-type(1),
+.drawer button[data-page][data-page="movies"]{border-color:#22d3ee55!important}
+.drawer button[data-page][data-page="series"]{border-color:#a78bfa55!important}
+.drawer button[data-page][data-page="adult"]{border-color:#fb718555!important}
+.drawer button[data-page][data-page="buy"]{border-color:#fbbf2455!important}
+.drawer button[data-page][data-page="tasks"]{border-color:#34d39955!important}
+.drawer button[data-page][data-page="profile"]{border-color:#60a5fa55!important}
+.drawer button[data-page][data-page="points"]{border-color:#e879f955!important}
+.drawer button[data-page][data-page="settings"]{border-color:#94a3b855!important}
+.drawer #adminPanelBtn{border-color:#f472b655!important}
+
+/* Active menu — full strong color fill */
+.drawer button[data-page].active,
+.drawer button[data-page].is-active{
+  color:#fff!important;
+  font-weight:900!important;
+  border-width:1.5px!important;
+  box-shadow:0 0 18px currentColor;
+  transform:translateX(2px);
+}
+.drawer button[data-page="movies"].active,
+.drawer button[data-page="movies"].is-active{
+  background:linear-gradient(135deg,#0891b2,#22d3ee)!important;
+  border-color:#67e8f9!important;
+  box-shadow:0 0 20px #22d3ee55!important;
+}
+.drawer button[data-page="series"].active,
+.drawer button[data-page="series"].is-active{
+  background:linear-gradient(135deg,#6d28d9,#a78bfa)!important;
+  border-color:#c4b5fd!important;
+  box-shadow:0 0 20px #a78bfa55!important;
+}
+.drawer button[data-page="adult"].active,
+.drawer button[data-page="adult"].is-active{
+  background:linear-gradient(135deg,#be123c,#fb7185)!important;
+  border-color:#fda4af!important;
+  box-shadow:0 0 20px #fb718555!important;
+}
+.drawer button[data-page="buy"].active,
+.drawer button[data-page="buy"].is-active{
+  background:linear-gradient(135deg,#d97706,#fbbf24)!important;
+  border-color:#fde68a!important;
+  box-shadow:0 0 20px #fbbf2455!important;
+}
+.drawer button[data-page="tasks"].active,
+.drawer button[data-page="tasks"].is-active{
+  background:linear-gradient(135deg,#059669,#34d399)!important;
+  border-color:#6ee7b7!important;
+  box-shadow:0 0 20px #34d39955!important;
+}
+.drawer button[data-page="profile"].active,
+.drawer button[data-page="profile"].is-active{
+  background:linear-gradient(135deg,#2563eb,#60a5fa)!important;
+  border-color:#93c5fd!important;
+  box-shadow:0 0 20px #60a5fa55!important;
+}
+.drawer button[data-page="points"].active,
+.drawer button[data-page="points"].is-active{
+  background:linear-gradient(135deg,#c026d3,#e879f9)!important;
+  border-color:#f0abfc!important;
+  box-shadow:0 0 20px #e879f955!important;
+}
+.drawer button[data-page="settings"].active,
+.drawer button[data-page="settings"].is-active{
+  background:linear-gradient(135deg,#475569,#94a3b8)!important;
+  border-color:#cbd5e1!important;
+}
+.lang-switch{
+  border:1px solid #818cf855!important;
+  box-shadow:0 0 12px #6366f118!important;
+}
+
+.pkg-row.pkg-tone-1{border-color:#22d3ee66!important;box-shadow:0 0 16px #22d3ee20!important;background:linear-gradient(135deg,#0f1c2e,#121826)!important}
+.pkg-row.pkg-tone-2{border-color:#a78bfa66!important;box-shadow:0 0 16px #a78bfa22!important;background:linear-gradient(135deg,#1a1430,#121826)!important}
+.pkg-row.pkg-tone-3{border-color:#fbbf2466!important;box-shadow:0 0 16px #fbbf2420!important;background:linear-gradient(135deg,#1c1810,#121826)!important}
+.pkg-row.pkg-tone-4{border-color:#fb718566!important;box-shadow:0 0 16px #fb718522!important;background:linear-gradient(135deg,#1c1218,#121826)!important}
+.pkg-row.pkg-tone-5{border-color:#34d39966!important;box-shadow:0 0 16px #34d39920!important;background:linear-gradient(135deg,#0f1c18,#121826)!important}
+.pkg-row.pkg-tone-6{border-color:#60a5fa66!important;box-shadow:0 0 16px #60a5fa20!important;background:linear-gradient(135deg,#101828,#121826)!important}
