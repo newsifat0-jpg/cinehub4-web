@@ -242,6 +242,90 @@ window.CINEHUB4_LANG = (() => {
     "Task completed": "টাস্ক সম্পন্ন",
     "Points added": "পয়েন্ট যোগ হয়েছে",
     "Already claimed today": "আজ ইতিমধ্যে নেওয়া হয়েছে",
+
+    // Categories (defaults + common)
+    "All Movies": "সব মুভি",
+    "Bangla Moves": "বাংলা মুভি",
+    "Bangla Movies": "বাংলা মুভি",
+    "Hollywood Movie Hindi": "হলিউড মুভি হিন্দি",
+    "Hollywood": "হলিউড",
+    "Bollywood": "বলিউড",
+    "All": "সব",
+    "Adult Movie": "অ্যাডাল্ট মুভি",
+    "Anime": "অ্যানিমে",
+    "Web Series": "ওয়েব সিরিজ",
+    "Dual Audio": "ডুয়াল অডিও",
+    "South Indian": "সাউথ ইন্ডিয়ান",
+    "Korean": "কোরিয়ান",
+    "Chinese": "চাইনিজ",
+    "Turkish": "তুর্কি",
+    "English": "ইংরেজি",
+
+    // Profile / earning extras
+    "HOW IT WORKS": "কীভাবে কাজ করে",
+    "When friend joins": "বন্ধু জয়েন করলে",
+    "Points Added": "পয়েন্ট যোগ হয়",
+    "More Earning": "আরও আয়",
+    "Watch ads & earn": "এড দেখে আয় করুন",
+    "Watch Tutorial": "টিউটোরিয়াল দেখুন",
+    "MORE POINT EARNING": "আরও পয়েন্ট আয়",
+    "Watch Ads & Earn Points": "এড দেখে পয়েন্ট আয় করুন",
+    "Complete ads to get rewards and unlock videos with points.": "রিওয়ার্ড পেতে এড সম্পন্ন করুন এবং পয়েন্ট দিয়ে ভিডিও আনলক করুন।",
+    "Instant Reward": "ইনস্ট্যান্ট রিওয়ার্ড",
+    "More Points": "আরও পয়েন্ট",
+    "Unlock Videos": "ভিডিও আনলক",
+    "More Point Earning": "আরও পয়েন্ট আয়",
+    "Referral link copied!": "রেফারেল লিংক কপি হয়েছে!",
+    "Points": "পয়েন্ট",
+    "points": "পয়েন্ট",
+    "Watch Ad & Earn": "এড দেখে আয় করুন",
+    "Buy Points": "পয়েন্ট কিনুন",
+    "Refer & Earn": "রেফার করে আয় করুন",
+    "Daily Ad Limit": "ডেইলি এড লিমিট",
+    "Only for earning points": "শুধু পয়েন্ট আয়ের জন্য",
+    "day": "দিন",
+    "Movie unlock is not limited by the daily ad limit.": "মুভি আনলক ডেইলি এড লিমিট দ্বারা সীমাবদ্ধ নয়।",
+    "TOP 1": "টপ ১",
+
+    // Ticker defaults
+    "Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ": "পছন্দের কনটেন্ট শেয়ার করুন ও পয়েন্ট দিয়ে আনলক করুন 🚀 • নিয়মিত নতুন মুভি ও সিরিজ • এড বা পয়েন্ট দিয়ে আনলক • ",
+    "18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ": "১৮+ অ্যাডাল্ট জোন • নিয়মিত নতুন অ্যাডাল্ট কনটেন্ট • এড বা পয়েন্ট দিয়ে আনলক • ",
+
+
+    "Confirm Purchase": "কেনাকাটা নিশ্চিত করুন",
+    "Package": "প্যাকেজ",
+    "Pay Amount": "পেমেন্ট অ্যামাউন্ট",
+    "You Get": "আপনি পাবেন",
+    "Confirm": "কনফার্ম",
+    "Purchase Custom Coins": "কাস্টম কয়েন কিনুন",
+    "PAYMENT STEP": "পেমেন্ট স্টেপ",
+    "PAY AMOUNT": "পে অ্যামাউন্ট",
+    "YOU GET": "আপনি পাবেন",
+    "Select Wallet": "ওয়ালেট সিলেক্ট করুন",
+    "After confirmation, select a wallet address, send the exact USDT amount, then submit TxID and screenshot for admin approval.": "কনফার্মের পর ওয়ালেট অ্যাড্রেস সিলেক্ট করুন, সঠিক USDT পাঠান, তারপর TxID ও স্ক্রিনশট জমা দিন অ্যাডমিন অ্যাপ্রুভালের জন্য।",
+    "Complete ads and premium earning tasks to unlock exclusive videos instantly.": "এক্সক্লুসিভ ভিডিও আনলক করতে এড ও প্রিমিয়াম আয়ের টাস্ক সম্পন্ন করুন।",
+    "Daily Limit": "ডেইলি লিমিট",
+    "Current Balance": "বর্তমান ব্যালেন্স",
+    "Points Per Ad": "প্রতি এডে পয়েন্ট",
+    "Ads Watched": "এড দেখা হয়েছে",
+    "EARNING SETTINGS": "আয়ের সেটিংস",
+    "Reward Per Ad": "প্রতি এডে রিওয়ার্ড",
+    "Maximum Daily Ads": "সর্বোচ্চ ডেইলি এড",
+    "Remaining Today": "আজ বাকি",
+    "completed today": "আজ সম্পন্ন",
+    "Watch Ad Now": "এখনই এড দেখুন",
+    "MORE EARNING BUTTONS": "আরও আয়ের বাটন",
+    "Reward": "রিওয়ার্ড",
+    "Completed": "সম্পন্ন",
+    "Done": "ডান",
+    "One-time task": "ওয়ান-টাইম টাস্ক",
+    "Daily task": "ডেইলি টাস্ক",
+    "one click": "ওয়ান ক্লিক",
+    "Watch rewarded ad": "রিওয়ার্ডেড এড দেখুন",
+    "Join Telegram channel": "টেলিগ্রাম চ্যানেলে যোগ দিন",
+    "Refer a friend": "বন্ধু রেফার করুন",
+    "Daily login": "ডেইলি লগইন",
+
     "Loading...": "লোড হচ্ছে...",
   };
 
@@ -250,7 +334,14 @@ window.CINEHUB4_LANG = (() => {
   function getOverrides() {
     try {
       const s = JSON.parse(localStorage.getItem("cinehub4_settings") || "{}");
-      return s.uiTexts || { en: {}, bn: {} };
+      const ui = s.uiTexts || { en: {}, bn: {} };
+      // Admin-defined category translations: { "All Movies": {en:"All Movies", bn:"সব মুভি"}, ... }
+      // or flat: categoryLabelsBn: { "All Movies": "সব মুভি" }
+      const catBn = s.categoryLabelsBn || s.categoryTranslations || {};
+      const catEn = s.categoryLabelsEn || {};
+      ui.bn = Object.assign({}, ui.bn || {}, catBn);
+      ui.en = Object.assign({}, ui.en || {}, catEn);
+      return ui;
     } catch (e) {
       return { en: {}, bn: {} };
     }

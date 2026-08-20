@@ -23,8 +23,8 @@ const DEFAULT={
   wallets:[{name:"USDT TRC20",address:"",network:"TRC20"}],
   tasks:[],
   customPointRate:100,
-  categories:["All Movies","Bangla Moves","Hollywood Movie Hindi"],
-  adultCategories:["All","Adult Movie","Anime"],
+  categories:[{en:"All Movies",bn:"সব মুভি"},{en:"Bangla Moves",bn:"বাংলা মুভি"},{en:"Hollywood Movie Hindi",bn:"হলিউড মুভি হিন্দি"}],
+  adultCategories:[{en:"All",bn:"সব"},{en:"Adult Movie",bn:"অ্যাডাল্ট মুভি"},{en:"Anime",bn:"অ্যানিমে"}],
   tickerText:"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ",
   adultTickerText:"18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ",
   libraryBadge:"MOVIE ZONE",
@@ -44,15 +44,15 @@ const DEFAULT={
   adultTrendingLabel:"Trending",
   adultTrendingSub:"MOST WATCHED",
   packages:[
-    {name:"Basic Package",price:0.99,points:110,tag:"SMART CHOICE"},
-    {name:"Standard Package",price:4.99,points:550,tag:"STARTER"},
-    {name:"Premium Package",price:9.99,points:1200,tag:"BEST VALUE"},
-    {name:"Ultimate Package",price:14.99,points:2000,tag:"POPULAR"}
+    {name:"Basic Package",nameBn:"বেসিক প্যাকেজ",price:0.99,points:110,tag:"SMART CHOICE",tagBn:"স্মার্ট চয়েস"},
+    {name:"Standard Package",nameBn:"স্ট্যান্ডার্ড প্যাকেজ",price:4.99,points:550,tag:"STARTER",tagBn:"স্টার্টার"},
+    {name:"Premium Package",nameBn:"প্রিমিয়াম প্যাকেজ",price:9.99,points:1200,tag:"BEST VALUE",tagBn:"বেস্ট ভ্যালু"},
+    {name:"Ultimate Package",nameBn:"আলটিমেট প্যাকেজ",price:14.99,points:2000,tag:"POPULAR",tagBn:"পপুলার"}
   ],
-  adBlocks:{rewarded:"43222",interstitial:"",banner:"",task:"",adult:"",extra:{}},
+  adBlocks:{rewarded:"",interstitial:"",banner:"",task:"",adult:"",extra:{}},
   // Multi-network slots: each placement can use a different ad network
   adSlots:{
-    rewarded:{network:"adsgram",id:"43222"},
+    rewarded:{network:"adsgram",id:""},
     unlock:{network:"adsgram",id:""},
     interstitial:{network:"adsgram",id:""},
     task:{network:"adsgram",id:""},
@@ -83,19 +83,63 @@ const A={section:"dashboard",settings:{...DEFAULT,...JSON.parse(localStorage.get
 function loadAdminMovies(){
   if(!window.CineHubFB){A.moviesLoaded=true;try{render()}catch(e){}return}
   window.CineHubFB.listenMovies(function(list){
-    A.movies=list||[];
+    var raw=list||[];
+    var seen={}, out=[];
+    raw.forEach(function(m){
+      var id=String(m.id||"");
+      if(!id||seen[id]) return;
+      seen[id]=1; out.push(m);
+    });
+    A.movies=out;
     A.moviesLoaded=true;
     try{render()}catch(e){console.error(e)}
   });
 }
 setTimeout(loadAdminMovies,200);
 A.settings.adBlocks={...DEFAULT.adBlocks,...(A.settings.adBlocks||{})};
+if(A.settings.adultEnabled===false||A.settings.adultLibraryEnabled===false)A.adultEnabled=false;
+else if(A.settings.adultEnabled===true)A.adultEnabled=true;
 ensureAdSlots();A.settings.categories=A.settings.categories||DEFAULT.categories;A.settings.adultCategories=A.settings.adultCategories&&A.settings.adultCategories.length?A.settings.adultCategories:DEFAULT.adultCategories;
+
+/* —— Bilingual helpers (EN + BN) —— */
+function catEn(c){ if(c==null)return ""; if(typeof c==="string")return c; return String(c.en||c.name||""); }
+function catBn(c){ if(c==null)return ""; if(typeof c==="string")return ""; return String(c.bn||""); }
+function catLabelAdmin(c){ var e=catEn(c), b=catBn(c); return b? (e+" · "+b) : e; }
+function normalizeCategories(list){
+  if(!Array.isArray(list)) return [];
+  return list.map(function(c){
+    if(c && typeof c==="object") return {en:String(c.en||c.name||"").trim(), bn:String(c.bn||"").trim()};
+    return {en:String(c||"").trim(), bn:""};
+  }).filter(function(c){ return c.en; });
+}
+function ensureBilingualSettings(){
+  var s=A.settings;
+  s.categories = normalizeCategories(s.categories||[]);
+  s.adultCategories = normalizeCategories(s.adultCategories||[]);
+  if(!s.packages) s.packages=[];
+  s.packages.forEach(function(p){ if(p && p.nameBn==null) p.nameBn=p.nameBn||""; if(p && p.tagBn==null) p.tagBn=p.tagBn||""; });
+  if(!s.tasks) s.tasks=[];
+  s.tasks.forEach(function(t){ if(t && t.nameBn==null) t.nameBn=""; });
+  s.uiTexts = s.uiTexts || {en:{}, bn:{}};
+  // Build categoryLabelsBn from category objects for mini-app t()
+  var mapBn={}, mapEn={};
+  (s.categories||[]).concat(s.adultCategories||[]).forEach(function(c){
+    var e=catEn(c); if(!e) return;
+    if(catBn(c)) mapBn[e]=catBn(c);
+    mapEn[e]=e;
+  });
+  s.categoryLabelsBn = Object.assign({}, s.categoryLabelsBn||{}, mapBn);
+  s.categoryLabelsEn = Object.assign({}, s.categoryLabelsEn||{}, mapEn);
+}
+
+try{ensureBilingualSettings()}catch(e){console.warn(e)}
+
 function el(id){return document.getElementById(id)}
 function contentEl(){return el("content")}
 function titleEl(){return el("pageTitle")}
 const toastEl=$("#toast");
 function save(silent){
+  try{ensureBilingualSettings()}catch(e){}
   try{
     if(A.settings.wallets&&A.settings.wallets[0]){
       A.settings.usdtWallet=A.settings.wallets[0].address||A.settings.usdtWallet||"";
@@ -249,7 +293,7 @@ function dashboard(){
     }
   }
   return `<div class="grid stats"><div class="card stat"><span class="label">Total Users</span><div class="num">${money(A.users)}</div><span class="up">From Firebase</span><span class="ico">♙</span></div><div class="card stat"><span class="label">Movies</span><div class="num">${A.movies.length}</div><span class="up">Live library</span><span class="ico">🎬</span></div><div class="card stat"><span class="label">Points Issued</span><div class="num">${money(A.points)}</div><span class="up">Sum of user points</span><span class="ico">◈</span></div><div class="card stat"><span class="label">Pending Payments</span><div class="num">${(A.payments||[]).filter(p=>(p.status||"pending")==="pending").length}</div><span class="up">Needs review</span><span class="ico">৳</span></div></div><div class="grid section-grid"><div class="card"><h3>Platform Activity</h3><div class="muted smalltext">Clicks, downloads and ad rewards</div><div class="chart">${[38,55,48,72,66,91,76].map(x=>`<div class="bar" style="height:${x}%"></div>`).join('')}</div></div><div class="card"><h3>Quick Controls</h3><div class="quick"><button onclick="openMovie()"><b>＋ Add Movie</b>Publish title</button><button onclick="setSection('ads')"><b>◉ Ad IDs</b>Manage every ad block</button><button onclick="setSection('content')"><b>🔗 Links & Video</b>Telegram + How to Watch</button><button onclick="setSection('categories')"><b>▦ Categories</b>Add / rename / delete</button></div></div></div><div class="card" style="margin-top:14px"><h3>System Status</h3><div class="switch"><span>Movie Library</span><span class="badge green">ONLINE</span></div><div class="switch"><span>Points & 15-hour unlock</span><span class="badge green">ACTIVE</span></div><div class="switch"><span>Adult Library</span><span class="badge ${A.adultEnabled?'green':'red'}">${A.adultEnabled?'ENABLED':'DISABLED'}</span></div></div>`}
-function movies(){return `<div class="toolbar"><div class="left"><button class="btn primary" onclick="openMovie()">＋ Add Movie</button><button class="btn" onclick="openTmdbImport()">Import TMDB</button></div><input class="search" id="movieSearch" placeholder="Search movie..." oninput="filterMovies()"></div><div class="card table-wrap"><table class="table"><thead><tr><th>Movie</th><th>Category</th><th>Rating</th><th>Clicks</th><th>Downloads</th><th>Status</th><th>Action</th></tr></thead><tbody id="movieBody">${movieRows(A.movies)}</tbody></table></div>`}
+function movies(){const list=(A.movies||[]).filter(m=>!m.adult);return `<div class="toolbar"><div class="left"><button class="btn primary" onclick="openMovie()">＋ Add Movie</button><button class="btn" onclick="openTmdbImport()">Import TMDB</button></div><input class="search" id="movieSearch" placeholder="Search movie..." oninput="filterMovies()"></div><div class="card table-wrap"><table class="table"><thead><tr><th>Movie</th><th>Category</th><th>Rating</th><th>Clicks</th><th>Downloads</th><th>Status</th><th>Action</th></tr></thead><tbody id="movieBody">${movieRows(list)}</tbody></table></div>`}
 function movieRows(ms){return (ms||[]).map(function(m,idx){
   var id=String(m.id!=null?m.id:("idx_"+idx));
   var title=String(m.title||"Untitled").replace(/</g,"&lt;").replace(/"/g,"&quot;");
@@ -286,9 +330,11 @@ document.addEventListener('click',function(e){
   const edit=e.target.closest('.dots-edit');
   if(edit){
     e.stopPropagation();
-    const mid=(edit.closest('[data-mid]')||edit.closest('tr')||{}).getAttribute&& (edit.closest('tr').getAttribute('data-mid'));
+    const tr=edit.closest('tr');
+    const mid=tr && tr.getAttribute('data-mid');
+    const isAdult = (edit.getAttribute('data-adult')==='1') || (tr && tr.getAttribute('data-adult')==='1');
     closeAllDots();
-    if(mid) openMovie(mid);
+    if(mid){ if(isAdult) openAdultMovie(mid); else openMovie(mid); }
     return;
   }
   const del=e.target.closest('.dots-del');
@@ -304,16 +350,37 @@ document.addEventListener('click',function(e){
   if(!e.target.closest('.dots-menu'))closeAllDots();
 });
 function filterMovies(){const q=$("#movieSearch").value.toLowerCase();$("#movieBody").innerHTML=movieRows(A.movies.filter(m=>m.title.toLowerCase().includes(q)))}
-function categories(){return `<div class="card"><div class="toolbar"><div><h3 style="margin:0">Movie Categories</h3><div class="muted smalltext">User app category tabs are controlled from here.</div></div><button class="btn primary" onclick="openCategory()">＋ Add Category</button></div><div class="tag-list">${A.settings.categories.map((c,i)=>`<div class="tag-item"><span>${c}</span><div><button class="btn" onclick="editCategory(${i})">Edit</button> <button class="btn danger" onclick="deleteCategory(${i})">Delete</button></div></div>`).join('')}</div></div>`}
+function categories(){
+  ensureBilingualSettings();
+  const rows=(A.settings.categories||[]).map((c,i)=>{
+    const e=catEn(c).replace(/</g,"&lt;"), b=catBn(c).replace(/</g,"&lt;");
+    return `<div class="tag-item"><span><b>${e||"—"}</b>${b?` <span class="muted">/ ${b}</span>`:""}</span><div><button class="btn" onclick="editCategory(${i})">Edit</button> <button class="btn danger" onclick="deleteCategory(${i})">Delete</button></div></div>`;
+  }).join("");
+  const arows=(A.settings.adultCategories||[]).map((c,i)=>{
+    const e=catEn(c).replace(/</g,"&lt;"), b=catBn(c).replace(/</g,"&lt;");
+    return `<div class="tag-item"><span><b>${e||"—"}</b>${b?` <span class="muted">/ ${b}</span>`:""}</span><div><button class="btn" onclick="editAdultCategory(${i})">Edit</button> <button class="btn danger" onclick="deleteAdultCategory(${i})">Delete</button></div></div>`;
+  }).join("");
+  return `<div class="card"><div class="toolbar"><div><h3 style="margin:0">Movie Categories</h3><div class="muted smalltext">Add in <b>English + বাংলা</b> — user sees the language they selected.</div></div><button class="btn primary" onclick="openCategory()">＋ Add Category</button></div><div class="tag-list">${rows||'<div class="muted">No categories</div>'}</div></div>
+  <div class="card" style="margin-top:14px"><div class="toolbar"><div><h3 style="margin:0">Adult Categories</h3><div class="muted smalltext">Same bilingual system for 18+ tabs.</div></div><button class="btn primary" onclick="openAdultCategory()">＋ Add Adult Category</button></div><div class="tag-list">${arows||'<div class="muted">No adult categories</div>'}</div></div>`;
+}
 function users(){
   if (!window.__usersLoaded) {
     window.__usersLoaded = true;
     if (window.CineHubFB && window.CineHubFB.listUsers) {
       window.CineHubFB.listUsers().then(function(list){
-        A.userList = Array.isArray(list) ? list : [];
-        A.users = A.userList.length;
+        var raw = Array.isArray(list) ? list : [];
+        var seen = {}, out = [];
+        raw.forEach(function(u){
+          var id = String(u.id || u.uid || "");
+          if(!id || seen[id]) return;
+          seen[id] = 1;
+          u.id = id;
+          out.push(u);
+        });
+        A.userList = out;
+        A.users = out.length;
         var pts = 0;
-        A.userList.forEach(function(u){ pts += Number(u.points||0); });
+        out.forEach(function(u){ pts += Number(u.points||0); });
         A.points = pts;
         try { localStorage.setItem("cinehub4_users", JSON.stringify(A.userList)); } catch(e){}
         if (A.section === "users" || A.section === "dashboard") render();
@@ -323,7 +390,7 @@ function users(){
       });
     }
   }
-  var list = A.userList && A.userList.length ? A.userList : [];
+  var list = A.userList && A.userList.length ? A.userList.slice() : [];
   if (!list.length) {
     try { list = JSON.parse(localStorage.getItem("cinehub4_users")||"[]"); } catch(e){ list = []; }
   }
@@ -344,16 +411,69 @@ function users(){
       '<td>'+unlocks+'</td>'+
       '<td>'+ads+'</td>'+
       '<td><span class="badge '+(st==="Blocked"?"red":"green")+'">'+st+'</span></td>'+
-      '<td class="muted smalltext">Firebase live</td></tr>';
-  }).join("") : '<tr><td colspan="6" class="muted">No users yet — they appear after first open of the mini app</td></tr>';
-  return '<div class="toolbar"><div class="left"><span class="muted">Total: '+(A.users||list.length)+' users from Firebase</span></div>'+
+      '<td style="white-space:nowrap">'+
+        '<button class="btn" type="button" onclick="openUserDetail(\''+id.replace(/'/g,"\\'")+'\')">Details</button> '+
+        '<button class="btn" type="button" onclick="openSetPoints(\''+id.replace(/'/g,"\\'")+'\')">Points</button> '+
+        '<button class="btn" type="button" onclick="toggleBlockUser(\''+id.replace(/'/g,"\\'")+'\')">'+(u.blocked?"Unblock":"Block")+'</button> '+
+        '<button class="btn danger" type="button" onclick="adminDeleteUser(\''+id.replace(/'/g,"\\'")+'\')">Delete</button>'+
+      '</td></tr>';
+  }).join("") : '<tr><td colspan="6" class="muted">No users yet — they appear after opening the mini app</td></tr>';
+  return '<div class="toolbar"><div class="left"><span class="muted">Total: '+(list.length)+' users</span> <button class="btn" type="button" onclick="window.__usersLoaded=false;render()">↻ Refresh</button></div>'+
     '<input class="search" id="userSearch" placeholder="Search user ID / name..." oninput="render()"></div>'+
     '<div class="card table-wrap"><table class="table"><thead><tr>'+
-    '<th>User</th><th>Points</th><th>Unlocks</th><th>Ads Today</th><th>Status</th><th>Source</th>'+
+    '<th>User</th><th>Points</th><th>Unlocks</th><th>Ads Today</th><th>Status</th><th>Actions</th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
-
-function adjUserPts(idx,delta){ toast('Use Firebase users — adjust via bot if needed'); }
+function openUserDetail(uid){
+  var u = (A.userList||[]).find(function(x){ return String(x.id)===String(uid); }) || {};
+  var unlocks = u.unlocks ? Object.keys(u.unlocks) : [];
+  showModal('<div class="modal-head"><h2>User Details</h2><button class="btn" onclick="closeModal()">×</button></div>'+
+    '<div class="pay-meta-row"><span>Name</span><b>'+String(u.name||u.username||"—").replace(/</g,"")+'</b></div>'+
+    '<div class="pay-meta-row"><span>Telegram ID</span><b>'+String(uid).replace(/</g,"")+'</b></div>'+
+    '<div class="pay-meta-row"><span>Points</span><b>'+(u.points||0)+'</b></div>'+
+    '<div class="pay-meta-row"><span>Referrals</span><b>'+(u.refs||u.referralCount||0)+'</b></div>'+
+    '<div class="pay-meta-row"><span>Ads today</span><b>'+(u.ads_today||0)+'</b></div>'+
+    '<div class="pay-meta-row"><span>Unlocks</span><b>'+unlocks.length+'</b></div>'+
+    '<div class="pay-meta-row"><span>Status</span><b>'+(u.blocked?"Blocked":"Active")+'</b></div>'+
+    '<div class="muted smalltext" style="margin-top:10px;word-break:break-all">Unlock IDs: '+(unlocks.slice(0,20).join(", ")||"none")+'</div>'+
+    '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">'+
+    '<button class="btn primary" onclick="closeModal();openSetPoints(\''+String(uid).replace(/'/g,"\\'")+'\')">Edit Points</button>'+
+    '<button class="btn" onclick="closeModal();toggleBlockUser(\''+String(uid).replace(/'/g,"\\'")+'\')">'+(u.blocked?"Unblock":"Block")+'</button>'+
+    '<button class="btn danger" onclick="closeModal();adminDeleteUser(\''+String(uid).replace(/'/g,"\\'")+'\')">Delete User</button></div>');
+}
+function openSetPoints(uid){
+  var u = (A.userList||[]).find(function(x){ return String(x.id)===String(uid); }) || {};
+  showModal('<div class="modal-head"><h2>Set Points</h2><button class="btn" onclick="closeModal()">×</button></div>'+
+    '<p class="muted">User ID: '+String(uid).replace(/</g,"")+'</p>'+
+    '<div class="field"><label>Points</label><input id="adminPts" type="number" value="'+(u.points||0)+'"></div>'+
+    '<button class="btn primary" style="margin-top:12px;width:100%" onclick="saveAdminPoints(\''+String(uid).replace(/'/g,"\\'")+'\')">Save Points</button>');
+}
+function saveAdminPoints(uid){
+  var pts = Number((document.getElementById("adminPts")||{}).value||0);
+  if(!window.CineHubFB||!window.CineHubFB.adminUpdateUser){ toast("API missing — redeploy Code.gs"); return; }
+  toast("Saving…");
+  window.CineHubFB.adminUpdateUser(uid,{points:pts}).then(function(){
+    (A.userList||[]).forEach(function(u){ if(String(u.id)===String(uid)) u.points=pts; });
+    closeModal(); render(); toast("Points updated");
+  }).catch(function(e){ toast("Failed: "+(e&&e.message?e.message:e)); });
+}
+function toggleBlockUser(uid){
+  var u = (A.userList||[]).find(function(x){ return String(x.id)===String(uid); }) || {};
+  var blocked = !u.blocked;
+  if(!window.CineHubFB||!window.CineHubFB.adminUpdateUser){ toast("API missing — redeploy Code.gs"); return; }
+  window.CineHubFB.adminUpdateUser(uid,{blocked:blocked}).then(function(){
+    u.blocked = blocked; render(); toast(blocked?"User blocked":"User unblocked");
+  }).catch(function(e){ toast("Failed: "+(e&&e.message?e.message:e)); });
+}
+function adminDeleteUser(uid){
+  if(!confirm("Delete user "+uid+" permanently?")) return;
+  if(!window.CineHubFB||!window.CineHubFB.deleteUser){ toast("API missing — redeploy Code.gs"); return; }
+  window.CineHubFB.deleteUser(uid).then(function(){
+    A.userList = (A.userList||[]).filter(function(u){ return String(u.id)!==String(uid); });
+    A.users = A.userList.length;
+    render(); toast("User deleted");
+  }).catch(function(e){ toast("Failed: "+(e&&e.message?e.message:e)); });
+}
 function points(){return `<div class="toolbar"><div><h2 style="margin:0;font-size:18px">Points & Unlock Control</h2><p class="muted smalltext" style="margin:4px 0 0">Download lock · ads · points · daily limits — one place</p></div></div>
 <div class="grid section-grid">
   <div class="card"><h3>🔓 Movie Unlock Rules</h3>
@@ -368,6 +488,13 @@ function points(){return `<div class="toolbar"><div><h2 style="margin:0;font-siz
   <div class="card"><h3>🎁 Earn Points</h3>
     <div class="form-grid">
       <div class="field"><label>Points per ad watched</label><input id="adRewardP" type="number" value="${A.settings.adReward}"></div>
+      <div class="field"><label>Top Ad section reset</label>
+        <select id="dailyAdResetMode">
+          <option value="midnight" ${(A.settings.dailyAdResetMode||"midnight")==="midnight"?"selected":""}>Every night 12:00 AM</option>
+          <option value="hours" ${A.settings.dailyAdResetMode==="hours"?"selected":""}>After X hours</option>
+        </select>
+      </div>
+      <div class="field"><label>Reset after hours (if hours mode)</label><input id="dailyAdResetHours" type="number" value="${A.settings.dailyAdResetHours||24}"></div>
       <div class="field"><label>Daily ad earning limit</label><input id="dailyLimitP" type="number" value="${A.settings.dailyAdLimit}"></div>
       <div class="field"><label>Join bonus (new user)</label><input id="bonus" type="number" value="${A.settings.joinBonus||A.settings.newUserBonus||10}"></div>
       <div class="field"><label>Referral reward</label><input id="ref" type="number" value="${A.settings.referralReward||20}"></div>
@@ -381,7 +508,11 @@ function points(){return `<div class="toolbar"><div><h2 style="margin:0;font-siz
   </div>
 </div>
 <button class="btn primary" style="margin-top:14px;width:100%;padding:14px" onclick="savePoints()">💾 Save Unlock & Points Settings</button>`}
-function savePoints(){A.settings.unlockCost=+$('#unlockCost').value||5;A.settings.unlockHours=+$('#unlockHours').value||15;A.settings.adReward=+$('#adRewardP').value||2;A.settings.dailyAdLimit=+$('#dailyLimitP').value||20;A.settings.dailyUnlockLimit=+$('#dailyUnlockLimit').value||0;A.settings.adsForUnlock=+$('#adsForUnlockP').value||5;A.settings.downloadServers=Math.max(1,Math.min(10,+$('#downloadServersP').value||3));A.settings.joinBonus=+$('#bonus').value||10;A.settings.newUserBonus=A.settings.joinBonus;A.settings.referralReward=+$('#ref').value||20;save();render();toast('Points & Unlock settings saved')}
+function savePoints(){
+  const rm=document.getElementById("dailyAdResetMode");
+  if(rm) A.settings.dailyAdResetMode=rm.value||"midnight";
+  A.settings.dailyAdResetHours=+$('#dailyAdResetHours')?.value||24;
+  A.settings.unlockCost=+$('#unlockCost').value||5;A.settings.unlockHours=+$('#unlockHours').value||15;A.settings.adReward=+$('#adRewardP').value||2;A.settings.dailyAdLimit=+$('#dailyLimitP').value||20;A.settings.dailyUnlockLimit=+$('#dailyUnlockLimit').value||0;A.settings.adsForUnlock=+$('#adsForUnlockP').value||5;A.settings.downloadServers=Math.max(1,Math.min(10,+$('#downloadServersP').value||3));A.settings.joinBonus=+$('#bonus').value||10;A.settings.newUserBonus=A.settings.joinBonus;A.settings.referralReward=+$('#ref').value||20;save();render();toast('Points & Unlock settings saved')}
 function ads(){
   ensureAdSlots();
   const slots = A.settings.adSlots || {};
@@ -526,35 +657,49 @@ function saveAds(){
 }
 
 function tasks(){
-  if(!A.settings.tasks||!A.settings.tasks.length){
+  // Only seed defaults once — never force-fill after admin deletes all
+  if(!A.settings.tasks){
+    A.settings.tasks=[];
+  }
+  if(!A.settings.tasks.length && !A.settings._tasksCleared){
     A.settings.tasks=[
-      {name:"one click",reward:2,limit:1,type:"countdown",seconds:5,link:"",resetHours:24,permanent:false},
-      {name:"Watch rewarded ad",reward:A.settings.adReward||2,limit:A.settings.dailyAdLimit||20,type:"ad",link:"",resetHours:24,permanent:false},
-      {name:"Join Telegram channel",reward:5,limit:1,type:"link",link:A.settings.telegramChannelLink||"",resetHours:24,permanent:false},
-      {name:"Refer a friend",reward:A.settings.referralReward||20,limit:10,type:"share",link:"",resetHours:24,permanent:false}
+      {name:"Daily Login",nameBn:"ডেইলি লগইন",reward:2,limit:1,type:"login",seconds:0,link:"",resetHours:24,resetMode:"midnight",permanent:false},
+      {name:"Join Telegram channel",nameBn:"টেলিগ্রাম চ্যানেলে যোগ দিন",reward:5,limit:1,type:"telegram",seconds:0,link:A.settings.telegramChannelLink||"",resetHours:24,resetMode:"hours",permanent:true},
+      {name:"Open link task",nameBn:"লিংক ওপেন টাস্ক",reward:2,limit:1,type:"link",seconds:15,link:"",resetHours:24,resetMode:"hours",permanent:false},
+      {name:"Watch ads task",nameBn:"এড দেখুন",reward:2,limit:5,type:"ad",seconds:0,link:"",resetHours:24,resetMode:"midnight",permanent:false},
+      {name:"Refer a friend",nameBn:"বন্ধু রেফার করুন",reward:A.settings.referralReward||20,limit:10,type:"share",seconds:0,link:"",resetHours:24,resetMode:"hours",permanent:false}
     ];
   }
   const cards=A.settings.tasks.map((t,i)=>`
   <div class="card task-admin-card" style="margin-bottom:12px">
     <div class="toolbar" style="margin-bottom:10px">
       <h3 style="margin:0;font-size:15px">🎁 Task #${i+1}</h3>
-      <button class="btn danger" onclick="A.settings.tasks.splice(${i},1);save();render()">🗑 Delete</button>
+      <button class="btn danger" onclick="A.settings.tasks.splice(${i},1);if(!A.settings.tasks.length)A.settings._tasksCleared=true;save();render()">🗑 Delete</button>
     </div>
     <div class="form-grid">
-      <div class="field"><label>Task Name</label><input value="${(t.name||"").replace(/"/g,"&quot;")}" onchange="A.settings.tasks[${i}].name=this.value;save()"></div>
+      <div class="field"><label>Task Name (English)</label><input value="${(t.name||"").replace(/"/g,"&quot;")}" onchange="A.settings.tasks[${i}].name=this.value;save()"></div>
+      <div class="field"><label>টাস্ক নাম (বাংলা)</label><input value="${(t.nameBn||"").replace(/"/g,"&quot;")}" placeholder="বাংলা নাম" onchange="A.settings.tasks[${i}].nameBn=this.value;save()"></div>
       <div class="field"><label>Reward Points</label><input type="number" value="${t.reward||0}" onchange="A.settings.tasks[${i}].reward=Number(this.value)||0;save()"></div>
       <div class="field"><label>Daily Limit</label><input type="number" value="${t.limit||1}" onchange="A.settings.tasks[${i}].limit=Number(this.value)||1;save()"></div>
       <div class="field"><label>Type</label>
         <select onchange="A.settings.tasks[${i}].type=this.value;save();render()">
-          <option value="countdown" ${t.type==="countdown"||t.type==="oneclick"?"selected":""}>Countdown (one-click)</option>
-          <option value="ad" ${t.type==="ad"?"selected":""}>Watch Ad</option>
-          <option value="link" ${t.type==="link"?"selected":""}>Open Link</option>
-          <option value="share" ${t.type==="share"?"selected":""}>Share Referral</option>
-          <option value="login" ${t.type==="login"?"selected":""}>Daily Login</option>
+          <option value="login" ${t.type==="login"?"selected":""}>Daily Login (tap = points)</option>
+          <option value="telegram" ${t.type==="telegram"||t.type==="join"?"selected":""}>Telegram Join (must join channel)</option>
+          <option value="social" ${t.type==="social"||t.type==="visit"?"selected":""}>Social / any link (NO countdown — Claim)</option>
+          <option value="link" ${t.type==="link"?"selected":""}>Open Link + countdown</option>
+          <option value="countdown" ${t.type==="countdown"||t.type==="oneclick"?"selected":""}>Countdown only</option>
+          <option value="ad" ${t.type==="ad"?"selected":""}>Watch Ads (N times to complete)</option>
+          <option value="share" ${t.type==="share"?"selected":""}>Refer friends (counts real joins)</option>
+        </select>
+      </div>
+      <div class="field"><label>Reset mode</label>
+        <select onchange="A.settings.tasks[${i}].resetMode=this.value;save()">
+          <option value="hours" ${(t.resetMode||"hours")==="hours"?"selected":""}>After X hours</option>
+          <option value="midnight" ${t.resetMode==="midnight"?"selected":""}>Every day at 12:00 AM</option>
         </select>
       </div>
       <div class="field"><label>Countdown Seconds</label><input type="number" value="${t.seconds||5}" onchange="A.settings.tasks[${i}].seconds=Number(this.value)||5;save()"></div>
-      <div class="field" style="grid-column:1/-1"><label>Link URL (for link type / join channel)</label>
+      <div class="field" style="grid-column:1/-1"><label>Link / Channel (t.me/… or -100… for private, or any https:// social link)</label>
         <input value="${(t.link||"").replace(/"/g,"&quot;")}" placeholder="https://t.me/..." onchange="A.settings.tasks[${i}].link=this.value;save()">
       </div>
       <div class="field"><label>Reset Every (Hours)</label><input type="number" min="1" value="${t.resetHours||24}" ${t.permanent?"disabled":""} onchange="A.settings.tasks[${i}].resetHours=Number(this.value)||24;save()" placeholder="e.g. 24"></div>
@@ -566,10 +711,10 @@ function tasks(){
   </div>`).join("");
   return `<div class="toolbar">
     <div><h2 style="margin:0;font-size:18px">Daily Tasks</h2><p class="muted smalltext" style="margin:4px 0 0">Add · Edit · Delete · Link · Points · Limit · Reset Hours · Permanent — all here</p></div>
-    <button class="btn primary" onclick="A.settings.tasks.push({name:'New Task',reward:2,limit:1,type:'countdown',seconds:5,link:'',resetHours:24,permanent:false});save();render()">＋ Add Task</button>
+    <button class="btn primary" onclick="A.settings.tasks.push({name:'New Task',nameBn:'',reward:2,limit:1,type:'login',seconds:5,link:'',resetHours:24,resetMode:'hours',permanent:false});save();render()">＋ Add Task</button>
   </div>
   ${cards||'<div class="card muted">No tasks yet. Click Add Task.</div>'}
-  <div class="card" style="margin-top:8px"><p class="muted smalltext">User app → Drawer → Daily Tasks shows these. Countdown tasks show timer like the reference video. Link tasks open the URL you set. "Reset Every (Hours)" controls how often a task becomes available again after being completed. Turn on "Permanent" for a one-time task that stays marked Done forever until you delete it here.</p></div>`;
+  <div class="card" style="margin-top:8px"><p class="muted smalltext">User app → Tasks page. Types: <b>Daily Login</b> = one tap points. <b>Telegram Join</b> = points only after bot verifies membership (bot must be admin in channel). <b>Social / any link</b> = Facebook, YouTube, Instagram, Website… no timer; Claim or Cancel. <b>Open Link</b> = URL + countdown. <b>Telegram Join</b> = public or private channel/group (bot must be Admin; private → use chat id -100…). <b>Watch Ads</b> = complete after Limit ads. <b>Refer</b> = real joins count. Top “Watch Ad Now” is separate (Points settings: reward + daily limit + reset). Permanent = stays Done until you delete the task.</p></div>`;
 }
 
 function payments(){
@@ -665,21 +810,42 @@ function payView(id){
 }
 function payActionId(id, st){
   if (!window.CineHubFB || !window.CineHubFB.updatePayment) {
-    toast("API missing"); return;
+    toast("API missing — redeploy Code.gs"); return;
   }
-  toast("Updating…");
-  window.CineHubFB.updatePayment(id, {status: st, reviewed_at: Date.now()}).then(function(){
+  toast(st==="approved"?"Accepting & adding points…":"Updating…");
+  window.CineHubFB.updatePayment(id, {status: st, reviewed_at: Date.now()}).then(function(res){
     window.__payLoaded = false;
     if (A.payments) {
-      A.payments.forEach(function(p){ if (String(p.id)===String(id)) p.status = st; });
+      A.payments.forEach(function(p){
+        if (String(p.id)===String(id)) {
+          p.status = st;
+          if (res && res.points_credited) p.points_credited = true;
+        }
+      });
     }
     render();
-    toast(st==="approved"?"Accepted":"Rejected");
+    if (st==="approved") {
+      var pts = (res && res.credited_points) || "";
+      toast(pts ? ("Accepted · +"+pts+" points to user") : "Accepted · points credited");
+    } else if (st==="rejected") {
+      toast("Rejected · no points added");
+    } else {
+      toast("Updated");
+    }
   }).catch(function(e){ toast("Failed: "+(e&&e.message?e.message:e)); });
 }
 function payDeleteId(id){
-  // soft-delete via status
-  payActionId(id, "deleted");
+  if (!confirm("Delete this payment request from Firebase? User points will NOT be removed.")) return;
+  if (!window.CineHubFB || !window.CineHubFB.deletePayment) {
+    toast("API missing — redeploy Code.gs"); return;
+  }
+  toast("Deleting…");
+  window.CineHubFB.deletePayment(id).then(function(){
+    A.payments = (A.payments||[]).filter(function(p){ return String(p.id)!==String(id); });
+    window.__payLoaded = false;
+    render();
+    toast("Payment deleted from Firebase");
+  }).catch(function(e){ toast("Delete failed: "+(e&&e.message?e.message:e)); });
 }
 
 function requests(){
@@ -717,32 +883,69 @@ function reqManage(id){
   }).catch(function(e){ toast(e&&e.message?e.message:e); });
 }
 function reqDelete(id){
-  if (!confirm("Delete this request?")) return;
-  window.CineHubFB.updateRequest(id, {status: "deleted"}).then(function(){
+  if (!confirm("Delete this request from Firebase?")) return;
+  if (!window.CineHubFB || !window.CineHubFB.deleteRequest) {
+    toast("API missing — redeploy Code.gs"); return;
+  }
+  window.CineHubFB.deleteRequest(id).then(function(){
     A.requests = (A.requests||[]).filter(function(x){return String(x.id)!==String(id);});
-    render(); toast("Deleted");
+    window.__reqLoaded = false;
+    render(); toast("Request deleted from Firebase");
   }).catch(function(e){ toast(e&&e.message?e.message:e); });
 }
 
-function adult(){return `<div class="grid section-grid"><div class="card"><h3>Adult Library</h3><div class="switch"><span>Enable adult section</span><span class="toggle ${A.adultEnabled?'on':''}" onclick="A.adultEnabled=!A.adultEnabled;render()"><i></i></span></div><div class="switch"><span>Separate adult ad block</span><span class="badge">${A.settings.adBlocks.adult||'NOT SET'}</span></div><div class="switch"><span>18+ confirmation</span><span class="badge green">REQUIRED</span></div><button class="btn primary" style="margin-top:15px" onclick="openAdultMovie()">＋ Add Adult Movie</button></div><div class="card"><h3>Adult Ad Rule</h3><div class="muted smalltext">Adult advertisements use their own Ad Block ID. This is independent from normal rewarded ads.</div><button class="btn" style="margin-top:12px" onclick="setSection('ads')">Configure Adult Ad</button></div></div>
-<div class="card" style="margin-top:14px"><div class="toolbar"><div><h3 style="margin:0">Adult Categories</h3><div class="muted smalltext">Separate from Movie Categories — has no connection to regular movies.</div></div><button class="btn primary" onclick="openCategoryAdult()">＋ Add Adult Category</button></div><div class="tag-list">${A.settings.adultCategories.map((c,i)=>`<div class="tag-item"><span>${c}</span><div><button class="btn" onclick="editCategoryAdult(${i})">Edit</button> <button class="btn danger" onclick="deleteCategoryAdult(${i})">Delete</button></div></div>`).join('')}</div></div>
+function adult(){const adultList=(A.movies||[]).filter(m=>m.adult);return `<div class="grid section-grid">
+<div class="card"><h3>Adult Library</h3>
+  <div class="switch"><span>Enable adult section (user 18+ tab)</span><span class="toggle ${A.adultEnabled?'on':''}" onclick="A.adultEnabled=!A.adultEnabled;A.settings.adultEnabled=A.adultEnabled;A.settings.adultLibraryEnabled=A.adultEnabled;save();render()"><i></i></span></div>
+  <div class="switch"><span>Adult movies in DB</span><span class="badge green">${adultList.length}</span></div>
+  <div class="switch"><span>18+ confirmation</span><span class="badge green">REQUIRED</span></div>
+  <button class="btn primary" style="margin-top:15px" onclick="openAdultMovie()">＋ Add Adult Movie</button>
+</div>
+<div class="card"><h3>Adult Ad Rule</h3><div class="muted smalltext">Adult ads use their own Block ID (Ads section).</div>
+  <button class="btn" style="margin-top:12px" onclick="setSection('ads')">Configure Adult Ad</button>
+  <button class="btn" style="margin-top:8px" onclick="setSection('categories')">Adult Categories (EN+BN)</button>
+</div>
+</div>
+<div class="card table-wrap" style="margin-top:14px"><div class="toolbar"><h3 style="margin:0">Adult Movies</h3><span class="muted">${adultList.length} items</span></div>
+<table class="table"><thead><tr><th>Movie</th><th>Category</th><th>Rating</th><th>Clicks</th><th>Downloads</th><th>Status</th><th>Action</th></tr></thead>
+<tbody>${adultMovieRows(adultList)}</tbody></table></div>`}
+<!-- Adult categories: use Categories section (EN+BN) -->
 <div class="card" style="margin-top:14px"><h3>Adult Page Text</h3><div class="muted smalltext">Edit labels shown on the Adult page. Colors and layout stay the same as Movies.</div><div class="form-grid" style="margin-top:12px"><div class="field"><label>Badge</label><input id="aLibBadge" value="${A.settings.adultLibraryBadge||''}"></div><div class="field"><label>Title</label><input id="aLibTitle" value="${A.settings.adultLibraryTitle||''}"></div><div class="field"><label>Description</label><input id="aLibDesc" value="${A.settings.adultLibraryDesc||''}"></div><div class="field"><label>Ticker Text</label><input id="aTicker" value="${A.settings.adultTickerText||''}"></div><div class="field"><label>New Label</label><input id="aNewLabel" value="${A.settings.adultNewLabel||''}"></div><div class="field"><label>New Sub</label><input id="aNewSub" value="${A.settings.adultNewSub||''}"></div><div class="field"><label>Trending Label</label><input id="aTrendLabel" value="${A.settings.adultTrendingLabel||''}"></div><div class="field"><label>Trending Sub</label><input id="aTrendSub" value="${A.settings.adultTrendingSub||''}"></div></div><button class="btn primary" style="margin-top:14px" onclick="saveAdultTexts()">Save Adult Page Text</button></div>
 <div class="card table-wrap" style="margin-top:14px"><div class="toolbar"><h3 style="margin:0">Adult Movies</h3></div><table class="table"><thead><tr><th>Movie</th><th>Category</th><th>Rating</th><th>Clicks</th><th>Downloads</th><th>Status</th><th>Action</th></tr></thead><tbody>${adultMovieRows(A.movies.filter(m=>m.adult))}</tbody></table></div>`}
-function openCategoryAdult(index=null){const old=index===null?'':A.settings.adultCategories[index];showModal(`<div class="modal-head"><h2>${index===null?'Add':'Edit'} Adult Category</h2><button class="btn" onclick="closeModal()">×</button></div><div class="field"><label>Category name</label><input id="catNameAdult" value="${old}"></div><button class="btn primary" style="margin-top:15px" onclick="saveCategoryAdult(${index===null?-1:index})">Save Category</button>`)}
-function editCategoryAdult(i){openCategoryAdult(i)}
+function openCategoryAdult(index=null){openAdultCategory(index)}
+function editCategoryAdult(i){openAdultCategory(i)}
 function saveCategoryAdult(i){const n=$('#catNameAdult').value.trim();if(!n)return;if(i<0)A.settings.adultCategories.push(n);else A.settings.adultCategories[i]=n;save();closeModal();render();toast('Adult category saved')}
 function deleteCategoryAdult(i){if(A.settings.adultCategories[i]==='All'){toast('All category cannot be deleted');return}if(confirm('Delete this adult category?')){A.settings.adultCategories.splice(i,1);save();render();toast('Adult category deleted')}}
 function saveAdultTexts(){A.settings.adultLibraryBadge=$('#aLibBadge').value.trim();A.settings.adultLibraryTitle=$('#aLibTitle').value.trim();A.settings.adultLibraryDesc=$('#aLibDesc').value.trim();A.settings.adultTickerText=$('#aTicker').value.trim();A.settings.adultNewLabel=$('#aNewLabel').value.trim();A.settings.adultNewSub=$('#aNewSub').value.trim();A.settings.adultTrendingLabel=$('#aTrendLabel').value.trim();A.settings.adultTrendingSub=$('#aTrendSub').value.trim();save();toast('Adult page text saved')}
-function adultMovieRows(ms){return ms.length?ms.map(m=>`<tr><td><div class="movie-row"><div class="thumb">${(m.title||'?').slice(0,1)}</div><div><b>${m.title}</b><div class="muted">${m.year}</div></div></div></td><td>${m.category||'Adult'}</td><td>⭐ ${m.rating}</td><td>${money(m.clicks||0)}</td><td>${money(m.downloads||0)}</td><td><span class="badge ${m.status==='Published'?'green':''}">${m.status}</span></td><td class="action-cell"><button type="button" class="btn dots-btn" data-mid="${m.id}" aria-label="Actions">⋮</button><div class="dots-menu hidden" id="dm-${m.id}"><button type="button" onclick="editAdultMovie(${JSON.stringify(String(m.id))});closeAllDots()">Edit</button><button type="button" class="danger" onclick="deleteMovie(${JSON.stringify(String(m.id))});closeAllDots()">Delete</button></div></td></tr>`).join(''):`<tr><td colspan="7" class="muted">No adult movies yet. Use “＋ Add Adult Movie” above.</td></tr>`}
+function adultMovieRows(ms){
+  if(!ms||!ms.length) return `<tr><td colspan="7" class="muted">No adult movies yet. Use “＋ Add Adult Movie”.</td></tr>`;
+  return ms.map(function(m){
+    var id=String(m.id||"");
+    var title=String(m.title||"Untitled").replace(/</g,"&lt;");
+    return '<tr data-mid="'+id.replace(/"/g,"&quot;")+'" data-adult="1">'+
+      '<td><div class="movie-row"><div class="thumb">'+(title.slice(0,1)||"?")+'</div><div><b>'+title+'</b><div class="muted">'+(m.year||"")+'</div></div></div></td>'+
+      '<td>'+String(m.category||"Adult").replace(/</g,"")+'</td>'+
+      '<td>⭐ '+(m.rating||0)+'</td>'+
+      '<td>'+money(m.clicks||0)+'</td>'+
+      '<td>'+money(m.downloads||0)+'</td>'+
+      '<td><span class="badge green">'+(m.status||"Published")+'</span></td>'+
+      '<td class="action-cell"><button type="button" class="btn dots-btn" data-mid="'+id.replace(/"/g,"&quot;")+'" data-adult="1">⋮</button>'+
+      '<div class="dots-menu hidden" data-menu-for="'+id.replace(/"/g,"&quot;")+'">'+
+      '<button type="button" class="dots-edit" data-adult="1">Edit</button>'+
+      '<button type="button" class="danger dots-del">Delete</button></div></td></tr>';
+  }).join("");
+}
 
-function contentPage(){const s=A.settings;return `<div class="toolbar"><div><h2 style="margin:0;font-size:18px">Links & Videos</h2><p class="muted smalltext" style="margin:4px 0 0">Each link is independent — change only what you need</p></div></div>
+function contentPage(){const s=A.settings;return `<div class="toolbar"><div><h2 style="margin:0;font-size:18px">Links & Videos</h2><p class="muted smalltext" style="margin:4px 0 0">Labels support <b>English + বাংলা</b>. URLs are shared.</p></div></div>
 <div class="grid section-grid">
   <div class="card"><h3>▶ How to Watch (Movies)</h3>
-    <div class="field"><label>Button label</label><input id="lnk_howLabel" value="${s.howToWatchLabel||'▶ How to Watch'}"></div>
+    <div class="field"><label>Button label (EN)</label><input id="lnk_howLabel" value="${s.howToWatchLabel||'▶ How to Watch'}"></div>
+    <div class="field" style="margin-top:10px"><label>বাটন লেবেল (বাংলা)</label><input id="lnk_howLabelBn" value="${s.howToWatchLabelBn||''}" placeholder="▶ কীভাবে দেখবেন"></div>
     <div class="field" style="margin-top:10px"><label>Link / Video URL</label><input id="lnk_howWatch" value="${s.howToWatchVideo||''}" placeholder="https://..."></div>
   </div>
   <div class="card"><h3>▶ How to Watch (Adult)</h3>
-    <div class="field"><label>Button label</label><input id="lnk_adultHowLabel" value="${s.adultHowToWatchLabel||'▶ How to Watch'}"></div>
+    <div class="field"><label>Button label (EN)</label><input id="lnk_adultHowLabel" value="${s.adultHowToWatchLabel||'▶ How to Watch'}"></div>
+    <div class="field" style="margin-top:10px"><label>বাটন লেবেল (বাংলা)</label><input id="lnk_adultHowLabelBn" value="${s.adultHowToWatchLabelBn||''}" placeholder="▶ কীভাবে দেখবেন"></div>
     <div class="field" style="margin-top:10px"><label>Link / Video URL</label><input id="lnk_adultHowWatch" value="${s.adultHowToWatchVideo||''}" placeholder="https://..."></div>
   </div>
   <div class="card"><h3>🛒 How to Buy</h3>
@@ -761,8 +964,10 @@ function contentPage(){const s=A.settings;return `<div class="toolbar"><div><h2 
 function saveAllLinks(){
   const g=id=>document.getElementById(id);
   if(g('lnk_howLabel')) A.settings.howToWatchLabel=g('lnk_howLabel').value.trim();
+  if(g('lnk_howLabelBn')) A.settings.howToWatchLabelBn=g('lnk_howLabelBn').value.trim();
   if(g('lnk_howWatch')) A.settings.howToWatchVideo=g('lnk_howWatch').value.trim();
   if(g('lnk_adultHowLabel')) A.settings.adultHowToWatchLabel=g('lnk_adultHowLabel').value.trim();
+  if(g('lnk_adultHowLabelBn')) A.settings.adultHowToWatchLabelBn=g('lnk_adultHowLabelBn').value.trim();
   if(g('lnk_adultHowWatch')) A.settings.adultHowToWatchVideo=g('lnk_adultHowWatch').value.trim();
   if(g('lnk_howBuy')) A.settings.howToBuyVideo=g('lnk_howBuy').value.trim();
   if(g('lnk_tutorial')) A.settings.watchTutorialVideo=g('lnk_tutorial').value.trim();
@@ -772,15 +977,19 @@ function saveAllLinks(){
   save(); toast('All links saved to Firebase');
 }
 function saveVideo(){saveAllLinks()}
-function broadcast(){return `<div class="card"><h3>Broadcast Center</h3><div class="form-grid"><div class="field"><label>Audience</label><select><option>All users</option><option>Active users</option><option>Users with points</option></select></div><div class="field"><label>Type</label><select><option>Text</option><option>Movie announcement</option></select></div></div><div class="field" style="margin-top:12px"><label>Message</label><textarea placeholder="Write your broadcast..."></textarea></div><button class="btn primary" style="margin-top:12px" onclick="toast('Broadcast queued in demo')">Send Broadcast</button></div>`}
+function broadcast(){return `<div class="card"><h3>Broadcast Center</h3><p class="muted">Bot broadcast is handled from your Telegram Bot (BotBusiness / bot commands). This panel does not send demo messages.</p><div class="field" style="margin-top:12px"><label>Tip</label><p class="muted smalltext">Use your bot admin commands to notify users. Mini App + Firebase data stays shared.</p></div></div>`}
 function settings(){
   const s=A.settings;
-  const pkgs=(s.packages||[]).map((p,i)=>`<div class="field" style="grid-column:1/-1;display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;align-items:end">
-    <div><label>Package ${i+1}</label><input data-pkg="${i}" data-k="name" value="${p.name||""}"></div>
-    <div><label>USDT</label><input data-pkg="${i}" data-k="price" type="number" step="0.01" value="${p.price||0}"></div>
-    <div><label>Points</label><input data-pkg="${i}" data-k="points" type="number" value="${p.points||0}"></div>
-    <div><label>Tag</label><input data-pkg="${i}" data-k="tag" value="${p.tag||""}"></div>
-    <button class="btn danger" onclick="A.settings.packages.splice(${i},1);save();render()">×</button>
+  const pkgs=(s.packages||[]).map((p,i)=>`<div class="field" style="grid-column:1/-1;border:1px solid #243049;border-radius:12px;padding:12px;margin-bottom:8px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><label>Package name (EN)</label><input data-pkg="${i}" data-k="name" value="${(p.name||"").replace(/"/g,"&quot;")}"></div>
+      <div><label>প্যাকেজ নাম (বাংলা)</label><input data-pkg="${i}" data-k="nameBn" value="${(p.nameBn||"").replace(/"/g,"&quot;")}" placeholder="বাংলা"></div>
+      <div><label>Tag (EN)</label><input data-pkg="${i}" data-k="tag" value="${(p.tag||"").replace(/"/g,"&quot;")}"></div>
+      <div><label>ট্যাগ (বাংলা)</label><input data-pkg="${i}" data-k="tagBn" value="${(p.tagBn||"").replace(/"/g,"&quot;")}" placeholder="বাংলা"></div>
+      <div><label>USDT price</label><input data-pkg="${i}" data-k="price" type="number" step="0.01" value="${p.price||0}"></div>
+      <div><label>Points</label><input data-pkg="${i}" data-k="points" type="number" value="${p.points||0}"></div>
+    </div>
+    <button class="btn danger" style="margin-top:8px" onclick="A.settings.packages.splice(${i},1);save();render()">× Delete package</button>
   </div>`).join("");
   return `<div class="grid section-grid">
   <div class="card"><h3>Brand & Links</h3>
@@ -797,16 +1006,28 @@ function settings(){
     </div>
   </div>
 
-  <div class="card"><h3>Home Page Texts</h3>
+  <div class="card"><h3>Home Page Texts (EN + বাংলা)</h3>
     <div class="form-grid">
-      <div class="field"><label>New Movies button</label><input id="s_newLabel" value="${s.newMoviesLabel||"New Movies"}"></div>
-      <div class="field"><label>New Movies sub</label><input id="s_newSub" value="${s.newMoviesSub||"LATEST UPLOADS"}"></div>
-      <div class="field"><label>Trending button</label><input id="s_trendLabel" value="${s.trendingLabel||"Trending"}"></div>
-      <div class="field"><label>Trending sub</label><input id="s_trendSub" value="${s.trendingSub||"MOST WATCHED"}"></div>
-      <div class="field"><label>Library badge</label><input id="s_libBadge" value="${s.libraryBadge||"MOVIE ZONE"}"></div>
-      <div class="field"><label>Library title</label><input id="s_libTitle" value="${s.libraryTitle||"Cinema Library"}"></div>
-      <div class="field" style="grid-column:1/-1"><label>Library description</label><textarea id="s_libDesc" rows="2">${s.libraryDesc||""}</textarea></div>
-      <div class="field"><label>How to Watch button text</label><input id="s_howLabel" value="${s.howToWatchLabel||"▶ How to Watch"}"></div>
+      <div class="field"><label>New Movies (EN)</label><input id="s_newLabel" value="${s.newMoviesLabel||"New Movies"}"></div>
+      <div class="field"><label>নতুন মুভি (বাংলা)</label><input id="s_newLabelBn" value="${s.newMoviesLabelBn||""}" placeholder="নতুন মুভি"></div>
+      <div class="field"><label>New sub (EN)</label><input id="s_newSub" value="${s.newMoviesSub||"LATEST UPLOADS"}"></div>
+      <div class="field"><label>সাব (বাংলা)</label><input id="s_newSubBn" value="${s.newMoviesSubBn||""}" placeholder="লেটেস্ট আপলোড"></div>
+      <div class="field"><label>Trending (EN)</label><input id="s_trendLabel" value="${s.trendingLabel||"Trending"}"></div>
+      <div class="field"><label>ট্রেন্ডিং (বাংলা)</label><input id="s_trendLabelBn" value="${s.trendingLabelBn||""}" placeholder="ট্রেন্ডিং"></div>
+      <div class="field"><label>Trending sub (EN)</label><input id="s_trendSub" value="${s.trendingSub||"MOST WATCHED"}"></div>
+      <div class="field"><label>সাব (বাংলা)</label><input id="s_trendSubBn" value="${s.trendingSubBn||""}" placeholder="সবচেয়ে বেশি দেখা"></div>
+      <div class="field"><label>Library badge (EN)</label><input id="s_libBadge" value="${s.libraryBadge||"MOVIE ZONE"}"></div>
+      <div class="field"><label>ব্যাজ (বাংলা)</label><input id="s_libBadgeBn" value="${s.libraryBadgeBn||""}" placeholder="মুভি জোন"></div>
+      <div class="field"><label>Library title (EN)</label><input id="s_libTitle" value="${s.libraryTitle||"Cinema Library"}"></div>
+      <div class="field"><label>টাইটেল (বাংলা)</label><input id="s_libTitleBn" value="${s.libraryTitleBn||""}" placeholder="সিনেমা লাইব্রেরি"></div>
+      <div class="field" style="grid-column:1/-1"><label>Library description (EN)</label><textarea id="s_libDesc" rows="2">${s.libraryDesc||""}</textarea></div>
+      <div class="field" style="grid-column:1/-1"><label>বর্ণনা (বাংলা)</label><textarea id="s_libDescBn" rows="2">${s.libraryDescBn||""}</textarea></div>
+      <div class="field"><label>How to Watch btn (EN)</label><input id="s_howLabel" value="${s.howToWatchLabel||"▶ How to Watch"}"></div>
+      <div class="field"><label>হাউ টু ওয়াচ (বাংলা)</label><input id="s_howLabelBn" value="${s.howToWatchLabelBn||""}" placeholder="▶ কীভাবে দেখবেন"></div>
+      <div class="field" style="grid-column:1/-1"><label>Ticker text (EN)</label><textarea id="s_ticker" rows="2">${s.tickerText||""}</textarea></div>
+      <div class="field" style="grid-column:1/-1"><label>টিকার (বাংলা)</label><textarea id="s_tickerBn" rows="2">${s.tickerTextBn||""}</textarea></div>
+      <div class="field" style="grid-column:1/-1"><label>How to Watch body text (EN)</label><textarea id="s_howWatch" rows="2">${s.howToWatchText||""}</textarea></div>
+      <div class="field" style="grid-column:1/-1"><label>হাউ টু ওয়াচ টেক্সট (বাংলা)</label><textarea id="s_howWatchBn" rows="2">${s.howToWatchTextBn||""}</textarea></div>
       <div class="field"><label class="muted smalltext">Link URL → Links & Videos tab</label><span class="muted">—</span></div>
       <div class="field" style="grid-column:1/-1"><label>Scrolling ticker text</label><textarea id="s_ticker" rows="2">${s.tickerText||""}</textarea></div>
       <div class="field" style="grid-column:1/-1"><label>Categories (comma separated)</label><input id="s_cats" value="${(s.categories||[]).join(", ")}"></div>
@@ -832,7 +1053,7 @@ function settings(){
   </div>
   <div class="card"><h3>Point Packages</h3>
     <div class="form-grid">${pkgs||'<div class="muted">No packages</div>'}
-      <button class="btn" onclick="A.settings.packages=A.settings.packages||[];A.settings.packages.push({name:'New',price:1,points:100,tag:''});save();render()">+ Add Package</button>
+      <button class="btn" onclick="A.settings.packages=A.settings.packages||[];A.settings.packages.push({name:'New Package',nameBn:'',price:1,points:100,tag:'',tagBn:''});save();render()">+ Add Package</button>
     </div>
   </div>
 
@@ -858,7 +1079,7 @@ function settings(){
   </div>
   <div class="card"><h3>Security</h3>
     <div class="switch"><span>Admin-only panel gate</span><span class="badge green">ENABLED</span></div>
-    <div class="switch"><span>Adult library</span><span class="toggle ${A.adultEnabled?'on':''}" onclick="A.adultEnabled=!A.adultEnabled;this.classList.toggle('on');save()"><i></i></span></div>
+    <div class="switch"><span>Adult library</span><span class="toggle ${A.adultEnabled?'on':''}" onclick="A.adultEnabled=!A.adultEnabled;A.settings.adultEnabled=A.adultEnabled;A.settings.adultLibraryEnabled=A.adultEnabled;this.classList.toggle('on');save()"><i></i></span></div>
   </div>
   <div class="card" style="grid-column:1/-1">
     <button class="btn primary" style="width:100%;padding:14px;font-size:15px" onclick="saveAllSettings()">💾 Save All Settings</button>
@@ -879,6 +1100,18 @@ function saveAllSettings(){
     if(g("s_watchTutorial")) s.watchTutorialVideo=g("s_watchTutorial").value;
   if(g("s_howBuy")) s.howToBuyVideo=g("s_howBuy").value;
   if(g("s_newLabel")) s.newMoviesLabel=g("s_newLabel").value;
+
+  if(g("s_newLabelBn")) s.newMoviesLabelBn=g("s_newLabelBn").value;
+  if(g("s_newSubBn")) s.newMoviesSubBn=g("s_newSubBn").value;
+  if(g("s_trendLabelBn")) s.trendingLabelBn=g("s_trendLabelBn").value;
+  if(g("s_trendSubBn")) s.trendingSubBn=g("s_trendSubBn").value;
+  if(g("s_libBadgeBn")) s.libraryBadgeBn=g("s_libBadgeBn").value;
+  if(g("s_libTitleBn")) s.libraryTitleBn=g("s_libTitleBn").value;
+  if(g("s_libDescBn")) s.libraryDescBn=g("s_libDescBn").value;
+  if(g("s_howLabelBn")) s.howToWatchLabelBn=g("s_howLabelBn").value;
+  if(g("s_tickerBn")) s.tickerTextBn=g("s_tickerBn").value;
+  if(g("s_howWatchBn")) s.howToWatchTextBn=g("s_howWatchBn").value;
+
   if(g("s_newSub")) s.newMoviesSub=g("s_newSub").value;
   if(g("s_trendLabel")) s.trendingLabel=g("s_trendLabel").value;
   if(g("s_trendSub")) s.trendingSub=g("s_trendSub").value;
@@ -920,7 +1153,52 @@ function saveAllSettings(){
 }
 
 function saveBrand(){A.settings.appName=$('#appName').value.trim()||'Cine Hub4';A.settings.botUsername=$('#botUser').value.trim();save();toast('Brand saved. Refresh user app to see it')}
-function openMovie(id=null){const m=id!=null&&id!==0&&id!==''?A.movies.find(x=>String(x.id)===String(id)):null;const idArg=m?JSON.stringify(String(m.id)):'null';showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="mTitle" value="${(m?.title||'').replace(/"/g,'&quot;')}"></div><div class="field"><label>Year</label><input id="mYear" type="number" value="${m?.year||2026}"></div><div class="field"><label>Category</label><select id="mCat">${(function(){var cats=(A.settings.categories||[]).slice(); if(m&&m.category&&cats.indexOf(m.category)<0)cats.unshift(m.category); if(cats.indexOf('All Movies')<0)cats.unshift('All Movies'); return cats.map(function(c){return '<option'+(m&&m.category===c?' selected':'')+'>'+c+'</option>';}).join('');})()}</select></div><div class="field"><label>Rating</label><input id="mRating" type="number" step=".1" value="${m?.rating||8}"></div><div class="field"><label>Poster URL</label><input id="mPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="s1" value="${(m?.server1||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="s2" value="${(m?.server2||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="s3" value="${(m?.server3||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Adult?</label><select id="mAdult"><option value="0">No</option><option value="1" ${m?.adult?'selected':''}>Yes</option></select></div></div><button class="btn primary" style="margin-top:15px" onclick="saveMovie(${idArg})">Save Movie</button>`)}
+function catOptionsHtml(isAdult, selected){
+  var src = isAdult ? (A.settings.adultCategories||[]) : (A.settings.categories||[]);
+  var cats = src.map(function(c){ return catEn(c); }).filter(Boolean);
+  if(isAdult){
+    cats = cats.filter(function(c){ return c !== "All"; });
+    if(!cats.length) cats = ["Adult Movie"];
+  } else {
+    if(cats.indexOf("All Movies") < 0) cats.unshift("All Movies");
+  }
+  if(selected && cats.indexOf(selected) < 0) cats.unshift(selected);
+  return cats.map(function(c){
+    return '<option'+(selected===c?' selected':'')+'>'+String(c).replace(/</g,'')+'</option>';
+  }).join('');
+}
+function syncMovieCatOptions(){
+  var adultEl = document.getElementById("mAdult");
+  var catEl = document.getElementById("mCat");
+  if(!adultEl || !catEl) return;
+  var isAdult = adultEl.value === "1";
+  var prev = catEl.value;
+  catEl.innerHTML = catOptionsHtml(isAdult, prev);
+}
+function openMovie(id=null){
+  const m = id!=null && id!==0 && id!=='' ? A.movies.find(x=>String(x.id)===String(id)) : null;
+  if(m && m.adult){ openAdultMovie(id); return; }
+  const idArg = m ? JSON.stringify(String(m.id)) : 'null';
+  const isAdult = !!(m && m.adult);
+  showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Movie</h2><button class="btn" onclick="closeModal()">×</button></div>
+  <div class="form-grid">
+    <div class="field"><label>Title</label><input id="mTitle" value="${(m?.title||'').replace(/"/g,'&quot;')}"></div>
+    <div class="field"><label>Year</label><input id="mYear" type="number" value="${m?.year||2026}"></div>
+    <div class="field"><label>Adult content?</label>
+      <select id="mAdult" onchange="syncMovieCatOptions()">
+        <option value="0" ${!isAdult?'selected':''}>No — normal movie</option>
+        <option value="1" ${isAdult?'selected':''}>Yes — adult library</option>
+      </select>
+    </div>
+    <div class="field"><label>Category</label><select id="mCat">${catOptionsHtml(isAdult, m?.category||'')}</select></div>
+    <div class="field"><label>Rating</label><input id="mRating" type="number" step=".1" value="${m?.rating||8}"></div>
+    <div class="field"><label>Poster URL</label><input id="mPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
+    <div class="field" style="grid-column:1/-1"><label>Server 1 URL</label><input id="s1" value="${(m?.server1||m?.server1_link||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
+    <div class="field" style="grid-column:1/-1"><label>Server 2 URL</label><input id="s2" value="${(m?.server2||m?.server2_link||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
+    <div class="field" style="grid-column:1/-1"><label>Server 3 URL</label><input id="s3" value="${(m?.server3||m?.server3_link||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
+  </div>
+  <button class="btn primary" style="margin-top:15px;width:100%" onclick="saveMovie(${idArg})">💾 Save Movie</button>`);
+}
 function saveMovie(id){
   if(window.__savingMovie){toast('Already saving…');return;}
   id=(id===0||id===null||id===undefined||id==='')?null:id;
@@ -928,8 +1206,8 @@ function saveMovie(id){
   const isAdult=$('#mAdult').value==='1';
   let cat=$('#mCat').value;
   if(isAdult){
-    const ac=(A.settings.adultCategories||[]).filter(x=>x!=='All');
-    if(ac.length&&!ac.includes(cat))cat=ac[0];
+    const ac=(A.settings.adultCategories||[]).filter(x=>catEn(x)!=='All');
+    if(ac.length&&!ac.some(function(x){return catEn(x)===cat;}))cat=catEn(ac[0]);
   }
   const s1=($('#s1')||{}).value?$('#s1').value.trim():'';
   const s2=($('#s2')||{}).value?$('#s2').value.trim():'';
@@ -961,7 +1239,7 @@ function saveMovie(id){
   window.__savingMovie=true;
   window.CineHubFB.saveMovie(x).then(function(saved){
     window.__savingMovie=false; clearTimeout(tmo);
-    if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);else A.movies.unshift(saved);
+    if(id!=null){A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);}else if(!A.movies.some(m=>String(m.id)===String(saved&&saved.id))){A.movies.unshift(saved);}
     save(true);closeModal();render();
     toast(isAdult?'Saved as Adult (Adult tab)':'Movie saved to Firebase');
   }).catch(function(e){
@@ -970,10 +1248,68 @@ function saveMovie(id){
     toast('Save failed: '+(e&&e.message?e.message:String(e)));
   });
 }
-function editMovie(id){openMovie(id)}function deleteMovie(id){if(confirm('Delete this movie?')){if(window.CineHubFB){window.CineHubFB.deleteMovie(id).then(function(){A.movies=A.movies.filter(m=>String(m.id)!==String(id));save(true);render();toast('Movie deleted')}).catch(function(e){console.error(e);toast('Delete failed: '+(e&&e.message?e.message:e))})}else{A.movies=A.movies.filter(m=>m.id!==id);save();render();toast('Movie deleted')}}}
-function openCategory(index=null){const old=index===null?'':A.settings.categories[index];showModal(`<div class="modal-head"><h2>${index===null?'Add':'Edit'} Category</h2><button class="btn" onclick="closeModal()">×</button></div><div class="field"><label>Category name</label><input id="catName" value="${old}"></div><button class="btn primary" style="margin-top:15px" onclick="saveCategory(${index===null?-1:index})">Save Category</button>`)}
-function editCategory(i){openCategory(i)}function saveCategory(i){const n=$('#catName').value.trim();if(!n)return;if(i<0)A.settings.categories.push(n);else A.settings.categories[i]=n;save();closeModal();render();toast('Category saved')}
-function deleteCategory(i){if(A.settings.categories[i]==='All'){toast('All category cannot be deleted');return}if(confirm('Delete this category?')){A.settings.categories.splice(i,1);save();render();toast('Category deleted')}}
+function editMovie(id){openMovie(id)}
+function deleteMovie(id){
+  id=String(id||"");
+  if(!id){toast("No movie id");return;}
+  if(!confirm("Delete this movie from Firebase permanently?")) return;
+  toast("Deleting…");
+  if(window.CineHubFB && window.CineHubFB.deleteMovie){
+    window.CineHubFB.deleteMovie(id).then(function(){
+      A.movies=(A.movies||[]).filter(function(m){return String(m.id)!==id;});
+      save(true); render();
+      toast("Movie deleted from Firebase");
+    }).catch(function(e){
+      console.error(e);
+      toast("Delete failed: "+(e&&e.message?e.message:e)+" — open Admin as Telegram admin & redeploy Code.gs");
+    });
+  } else {
+    A.movies=(A.movies||[]).filter(function(m){return String(m.id)!==id;});
+    save(); render(); toast("Movie removed locally only");
+  }
+}
+function openCategory(index=null){
+  ensureBilingualSettings();
+  const cur=index===null?{en:"",bn:""}:(A.settings.categories[index]||{en:"",bn:""});
+  const en=catEn(cur).replace(/"/g,"&quot;"), bn=catBn(cur).replace(/"/g,"&quot;");
+  showModal(`<div class="modal-head"><h2>${index===null?"Add":"Edit"} Category</h2><button class="btn" onclick="closeModal()">×</button></div>
+  <div class="field"><label>English name</label><input id="catNameEn" value="${en}" placeholder="e.g. Bangla Movies"></div>
+  <div class="field" style="margin-top:10px"><label>বাংলা নাম</label><input id="catNameBn" value="${bn}" placeholder="যেমন: বাংলা মুভি"></div>
+  <p class="muted smalltext" style="margin-top:8px">User selects language in mini app → matching name is shown. Movies still match by English name.</p>
+  <button class="btn primary" style="margin-top:15px" onclick="saveCategory(${index===null?-1:index})">Save Category</button>`);
+}
+function editCategory(i){openCategory(i)}
+function saveCategory(i){
+  const en=($('#catNameEn')||{}).value; const bn=($('#catNameBn')||{}).value;
+  const e=String(en||"").trim(); if(!e){toast("English name required");return;}
+  const obj={en:e, bn:String(bn||"").trim()};
+  if(i<0) A.settings.categories.push(obj); else A.settings.categories[i]=obj;
+  ensureBilingualSettings(); save(); closeModal(); render(); toast("Category saved");
+}
+function deleteCategory(i){
+  const e=catEn(A.settings.categories[i]);
+  if(e==="All"||e==="All Movies"){toast("Default All category should stay");}
+  if(confirm("Delete this category?")){A.settings.categories.splice(i,1);ensureBilingualSettings();save();render();toast("Category deleted")}
+}
+function openAdultCategory(index=null){
+  ensureBilingualSettings();
+  const cur=index===null?{en:"",bn:""}:(A.settings.adultCategories[index]||{en:"",bn:""});
+  const en=catEn(cur).replace(/"/g,"&quot;"), bn=catBn(cur).replace(/"/g,"&quot;");
+  showModal(`<div class="modal-head"><h2>${index===null?"Add":"Edit"} Adult Category</h2><button class="btn" onclick="closeModal()">×</button></div>
+  <div class="field"><label>English name</label><input id="acatNameEn" value="${en}"></div>
+  <div class="field" style="margin-top:10px"><label>বাংলা নাম</label><input id="acatNameBn" value="${bn}"></div>
+  <button class="btn primary" style="margin-top:15px" onclick="saveAdultCategory(${index===null?-1:index})">Save</button>`);
+}
+function editAdultCategory(i){openAdultCategory(i)}
+function saveAdultCategory(i){
+  const e=String((($('#acatNameEn')||{}).value)||"").trim(); if(!e){toast("English name required");return;}
+  const obj={en:e, bn:String((($('#acatNameBn')||{}).value)||"").trim()};
+  if(i<0) A.settings.adultCategories.push(obj); else A.settings.adultCategories[i]=obj;
+  ensureBilingualSettings(); save(); closeModal(); render(); toast("Adult category saved");
+}
+function deleteAdultCategory(i){
+  if(confirm("Delete this adult category?")){A.settings.adultCategories.splice(i,1);ensureBilingualSettings();save();render();toast("Deleted")}
+}
 function openTask(name='',idx=null){
   const tasks=A.settings.tasks||[];
   const t=(idx!=null&&tasks[idx])?tasks[idx]:{name:name||'',reward:2,limit:1,type:'countdown',seconds:5,link:'',resetHours:24,permanent:false};
@@ -1006,8 +1342,8 @@ function saveTask(idx){
 }
 function openAdBlock(){showModal(`<div class="modal-head"><h2>Add Ad Block</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Ad Block Name</label><input id="extraAdName" placeholder="e.g. Home Reward"></div><div class="field"><label>Ad Block ID</label><input id="extraAdId" placeholder="43222"></div></div><button class="btn primary" style="margin-top:15px" onclick="saveExtraAd()">Add Ad Block</button>`)}
 function saveExtraAd(){const n=$('#extraAdName').value.trim(),id=$('#extraAdId').value.trim();if(!n||!id)return;A.settings.adBlocks.extra=A.settings.adBlocks.extra||{};A.settings.adBlocks.extra[n]=id;save();closeModal();render();toast('Ad block added')}
-function openAdultMovie(id=null){const m=id!=null&&id!==0&&id!==''?A.movies.find(x=>String(x.id)===String(id)):null;const cats=(A.settings.adultCategories||[]).filter(x=>x!=='All');const idArg=m?JSON.stringify(String(m.id)):'null';showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Adult Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="adultTitle" value="${(m?.title||'').replace(/"/g,'&quot;')}" placeholder="Adult title"></div><div class="field"><label>Year</label><input id="adultYear" type="number" value="${m?.year||new Date().getFullYear()}"></div><div class="field"><label>Category</label><select id="adultCat">${cats.map(c=>`<option ${m?.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Rating</label><input id="adultRating" type="number" step=".1" value="${m?.rating||0}"></div><div class="field"><label>Poster URL</label><input id="adultPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="adultS1" value="${(m?.server1||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="adultS2" value="${(m?.server2||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="adultS3" value="${(m?.server3||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div></div><button class="btn primary" style="margin-top:15px" onclick="saveAdultMovie(${idArg})">Save Adult Movie</button>`)}
-function saveAdultMovie(id){id=(id===0||id===null||id===undefined||id==='')?null:id;const old=id!=null?A.movies.find(m=>String(m.id)===String(id)):null;const t=$('#adultTitle').value.trim();if(!t)return;const x={id:id!=null?String(id):("manual_"+Date.now()),title:t,type:'Adult',year:+$('#adultYear').value||new Date().getFullYear(),rating:+$('#adultRating').value||0,category:$('#adultCat').value,adult:true,poster:$('#adultPoster').value.trim(),server1:$('#adultS1').value.trim(),server2:$('#adultS2').value.trim(),server3:$('#adultS3').value.trim(),server1_link:$('#adultS1').value.trim(),server2_link:$('#adultS2').value.trim(),server3_link:$('#adultS3').value.trim(),clicks:old?.clicks||0,downloads:old?.downloads||0,status:'Published',manual_movie:true,added_time:old?.added_time||Date.now()};toast('Saving...');if(window.CineHubFB){window.CineHubFB.saveMovie(x).then(function(saved){if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);else A.movies.unshift(saved);save(true);closeModal();render();toast('Adult movie saved')}).catch(function(e){console.error(e);toast('Save failed: '+(e&&e.message?e.message:e))})}else{if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?x:m);else A.movies.unshift(x);save();closeModal();render();toast('Adult movie saved')}}
+function openAdultMovie(id=null){const m=id!=null&&id!==0&&id!==''?A.movies.find(x=>String(x.id)===String(id)):null;const cats=(A.settings.adultCategories||[]).filter(x=>catEn(x)!=='All');const idArg=m?JSON.stringify(String(m.id)):'null';showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Adult Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="adultTitle" value="${(m?.title||'').replace(/"/g,'&quot;')}" placeholder="Adult title"></div><div class="field"><label>Year</label><input id="adultYear" type="number" value="${m?.year||new Date().getFullYear()}"></div><div class="field"><label>Category</label><select id="adultCat">${cats.map(c=>{const k=catEn(c);return `<option ${m?.category===k?'selected':''}>${k}</option>`}).join('')}</select></div><div class="field"><label>Rating</label><input id="adultRating" type="number" step=".1" value="${m?.rating||0}"></div><div class="field"><label>Poster URL</label><input id="adultPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="adultS1" value="${(m?.server1||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="adultS2" value="${(m?.server2||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="adultS3" value="${(m?.server3||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div></div><button class="btn primary" style="margin-top:15px" onclick="saveAdultMovie(${idArg})">Save Adult Movie</button>`)}
+function saveAdultMovie(id){id=(id===0||id===null||id===undefined||id==='')?null:id;const old=id!=null?A.movies.find(m=>String(m.id)===String(id)):null;const t=$('#adultTitle').value.trim();if(!t)return;const x={id:id!=null?String(id):("manual_"+Date.now()),title:t,type:'Adult',year:+$('#adultYear').value||new Date().getFullYear(),rating:+$('#adultRating').value||0,category:$('#adultCat').value,adult:true,poster:$('#adultPoster').value.trim(),server1:$('#adultS1').value.trim(),server2:$('#adultS2').value.trim(),server3:$('#adultS3').value.trim(),server1_link:$('#adultS1').value.trim(),server2_link:$('#adultS2').value.trim(),server3_link:$('#adultS3').value.trim(),clicks:old?.clicks||0,downloads:old?.downloads||0,status:'Published',manual_movie:true,added_time:old?.added_time||Date.now()};toast('Saving...');if(window.CineHubFB){window.CineHubFB.saveMovie(x).then(function(saved){if(id!=null){A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);}else if(!A.movies.some(m=>String(m.id)===String(saved&&saved.id))){A.movies.unshift(saved);}save(true);closeModal();render();toast('Adult movie saved')}).catch(function(e){console.error(e);toast('Save failed: '+(e&&e.message?e.message:e))})}else{if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?x:m);else A.movies.unshift(x);save();closeModal();render();toast('Adult movie saved')}}
 function editAdultMovie(id){openAdultMovie(id)}
 function showModal(body){$('#modal').innerHTML=`<div class="modal-box">${body}</div>`;$('#modal').classList.remove('hidden')}function closeModal(){$('#modal').classList.add('hidden')}
 function render(){
