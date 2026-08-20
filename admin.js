@@ -237,7 +237,6 @@ function adminLogin(){
     if(btn){ btn.disabled=true; btn.textContent="Checking…"; }
     setGateStatus("⏳ Checking…", false);
     var tgId=getTelegramUserId();
-    var typed=(document.getElementById("adminIdInput")&&document.getElementById("adminIdInput").value||"").trim();
     var initData="";
     try{ initData=window.Telegram.WebApp.initData||""; }catch(e){}
     var api=(window.APP_CONFIG&&window.APP_CONFIG.apiBaseUrl)||"";
@@ -245,80 +244,73 @@ function adminLogin(){
     function finishBtn(){
       if(btn){ btn.disabled=false; btn.textContent="Enter Admin Panel"; }
     }
-
-    // 1) Server check (preferred)
-    if(api && initData){
-      var ctrl=setTimeout(function(){
-        setGateStatus("⏳ Still waiting for server…", false);
-      }, 5000);
-      fetch(api,{
-        method:"POST",
-        headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body:JSON.stringify({action:"adminCheck",initData:initData}),
-        redirect:"follow"
-      }).then(function(r){ return r.text(); }).then(function(txt){
-        clearTimeout(ctrl);
-        var res=null;
-        try{ res=JSON.parse(txt); }catch(e){
-          setGateStatus("❌ API bad JSON: "+String(txt).slice(0,100), true);
-          finishBtn();
-          return;
-        }
-        var d=(res&&res.data)||{};
-        console.log("[adminCheck]", d);
-        // TEMP DEBUG - unmissable
-        try{
-          alert("DEBUG adminCheck result\nok: "+(res&&res.ok)+"\nisAdmin: "+d.isAdmin+"\ndebugId: "+d.debugId+"\nreason: "+d.debugReason+"\nADMIN_IDS: "+d.debugAdminIdsRaw+"\nhashMatch: "+d.debugHashMatch+"\nsoft: "+d.soft+"\nauthDate: "+d.debugAuthDate+"\ndiffSec: "+d.debugDateDiffSec);
-        }catch(eDbg2){}
-        if(res&&res.ok&&d.isAdmin){
-          setGateStatus("✓ Verified"+(d.soft?" (soft)":""), false);
-          finishBtn();
-          openGateNow();
-          return;
-        }
-        // 2) Local Telegram ID match typed field — still need server list match shown
-        setGateStatus(
-          "❌ Denied<br>ID: <b>"+(d.debugId||tgId||typed||"—")+"</b><br>"+
-          "reason: <b>"+(d.debugReason||"—")+"</b><br>"+
-          "ADMIN_IDS: <b>"+(d.debugAdminIdsRaw||"—")+"</b><br>"+
-          "hash: <b>"+String(d.debugHashMatch)+"</b> soft: <b>"+String(d.soft)+"</b><br>"+
-          "Redeploy Code.gs New version if soft not ok",
-          true
-        );
-        finishBtn();
-      }).catch(function(err){
-        clearTimeout(ctrl);
-        setGateStatus("❌ Network: "+(err&&err.message?err.message:err), true);
-        try{ alert("DEBUG network error: "+(err&&err.message?err.message:err)); }catch(x){}
-        finishBtn();
-        // 3) Last-resort: if Telegram user id present and matches typed, open once with warning
-        if(tgId && (!typed || typed===tgId) && (localStorage.getItem("cinehub4_admin_session")==="1"||sessionStorage.getItem("cinehub4_is_admin")==="1")){
-          setGateStatus("⚠ Offline session restore", false);
-          openGateNow();
-        }
-      });
-      return;
+    function clearAdminFlags(){
+      try{
+        window.__IS_ADMIN=false;
+        window.__ADMIN_IDS=[];
+        localStorage.removeItem("cinehub4_admin_session");
+        sessionStorage.removeItem("cinehub4_is_admin");
+      }catch(e){}
     }
 
-    // No initData / no api — try session restore
-    if(localStorage.getItem("cinehub4_admin_session")==="1"||sessionStorage.getItem("cinehub4_is_admin")==="1"){
-      setGateStatus("⚠ Session restore", false);
+    // Must be inside Telegram Mini App with valid backend
+    if(!api){
+      clearAdminFlags();
+      setGateStatus("❌ apiBaseUrl missing in config.js", true);
       finishBtn();
-      openGateNow();
       return;
     }
-    setGateStatus("❌ initData/api নেই। বট থেকে মিনি অ্যাপ খুলুন। ID: "+(tgId||typed||"—"), true);
-    try{ alert("DEBUG: no initData or no api\ninitData present: "+!!initData+"\napi present: "+!!api); }catch(x){}
-    finishBtn();
+    if(!initData){
+      clearAdminFlags();
+      setGateStatus("❌ initData নেই। বট থেকে মিনি অ্যাপ খুলুন। ID: "+(tgId||"—"), true);
+      finishBtn();
+      return;
+    }
+
+    fetch(api,{
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify({action:"adminCheck",initData:initData}),
+      redirect:"follow"
+    }).then(function(r){ return r.text(); }).then(function(txt){
+      var res=null;
+      try{ res=JSON.parse(txt); }catch(e){
+        clearAdminFlags();
+        setGateStatus("❌ API bad JSON: "+String(txt).slice(0,120), true);
+        finishBtn();
+        return;
+      }
+      var d=(res&&res.data)||{};
+      console.log("[adminCheck]", d);
+      if(res&&res.ok&&d.isAdmin){
+        setGateStatus("✓ Verified admin", false);
+        finishBtn();
+        openGateNow();
+        return;
+      }
+      // Not admin — clear any leftover session
+      clearAdminFlags();
+      setGateStatus(
+        "❌ Access denied<br>Your ID: <b>"+(d.debugId||tgId||"—")+"</b><br>"+
+        "reason: <b>"+(d.debugReason||"not in ADMIN_IDS")+"</b><br>"+
+        "Server ADMIN_IDS: <b>"+(d.debugAdminIdsRaw||"(empty)")+"</b><br>"+
+        "hashMatch: "+String(d.debugHashMatch)+"<br>"+
+        "Script Properties → ADMIN_IDS তে আপনার numeric Telegram ID দিন",
+        true
+      );
+      finishBtn();
+    }).catch(function(err){
+      clearAdminFlags();
+      setGateStatus("❌ Network: "+(err&&err.message?err.message:err), true);
+      finishBtn();
+    });
   }catch(e){
     setGateStatus("Error: "+e, true);
-    try{ alert("Admin login error: "+e); }catch(x){}
   }
 }
 window.adminLogin=adminLogin;
 function loadAdminIdsFromFB(fromButton){
   if(fromButton) return adminLogin();
-  // auto try
   try{
     var initData=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData;
     var api=window.APP_CONFIG&&window.APP_CONFIG.apiBaseUrl;
@@ -330,7 +322,17 @@ function loadAdminIdsFromFB(fromButton){
       redirect:"follow"
     }).then(function(r){return r.text()}).then(function(txt){
       var res=JSON.parse(txt);
-      if(res&&res.ok&&res.data&&res.data.isAdmin){ openGateNow(); return true; }
+      if(res&&res.ok&&res.data&&res.data.isAdmin){
+        openGateNow();
+        return true;
+      }
+      // Not admin: wipe any previous fake session
+      try{
+        window.__IS_ADMIN=false;
+        window.__ADMIN_IDS=[];
+        localStorage.removeItem("cinehub4_admin_session");
+        sessionStorage.removeItem("cinehub4_is_admin");
+      }catch(e){}
       return false;
     }).catch(function(){ return false; });
   }catch(e){ return Promise.resolve(false); }
@@ -340,15 +342,8 @@ function boot(){
   var tgId=getTelegramUserId();
   var inp=document.getElementById("adminIdInput");
   if(inp&&tgId) inp.value=tgId;
-  setGateStatus("ID: "+(tgId||"—")+" — Enter চাপুন", false);
-  // TEMP DEBUG - unmissable, remove after fixing
-  try{
-    alert("DEBUG boot()\nadmin.js version: DEBUG-BUILD-1\ntgId: "+(tgId||"EMPTY")+"\nAPP_CONFIG present: "+!!window.APP_CONFIG+"\napiBaseUrl: "+((window.APP_CONFIG&&window.APP_CONFIG.apiBaseUrl)||"MISSING")+"\ninitData length: "+((window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData)||"").length);
-  }catch(eDbg){ try{alert("DEBUG boot() crashed: "+eDbg);}catch(x){} }
-  // Auto enter if already verified this session
-  try{
-    if(sessionStorage.getItem("cinehub4_is_admin")==="1"){ openGateNow(); return; }
-  }catch(e){}
+  setGateStatus("ID: "+(tgId||"—")+" — শুধু ADMIN_IDS-এ থাকা অ্যাকাউন্ট ঢুকতে পারবে", false);
+  // Always re-verify with server (never trust old session alone)
   loadAdminIdsFromFB(false);
 }
 function sectionTitle(s){const map={dashboard:'Dashboard',movies:'Movies',categories:'Categories',users:'Users',points:'Points & Unlocks',ads:'Ads & Ad IDs',tasks:'Daily Tasks',payments:'Payments',adult:'Adult Library',requests:'Movie Requests',content:'Links & Videos',broadcast:'Broadcast',settings:'Settings'};return map[s]||s}
@@ -383,7 +378,7 @@ function wireAdminNav(){
   const ou=document.getElementById('openUser');
   if(ou) ou.onclick=()=>location.href='index.html';
   const lo=document.getElementById('logout');
-  if(lo) lo.onclick=()=>{localStorage.removeItem('cinehub4_admin_session');location.reload()};
+  if(lo) lo.onclick=()=>{try{localStorage.removeItem('cinehub4_admin_session');sessionStorage.removeItem('cinehub4_is_admin');window.__IS_ADMIN=false;window.__ADMIN_IDS=[];}catch(e){}location.href='index.html'};
   const bd=document.getElementById('sideBackdrop');
   if(bd) bd.onclick=function(){closeSidebar()};
 }

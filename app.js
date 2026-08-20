@@ -1712,12 +1712,12 @@ function bindDrawer(){
 }
 function isAdminUser(){
   try{
+    // Only trust flags set after successful server adminCheck this session
     if(window.__IS_ADMIN===true) return true;
-    try{ if(sessionStorage.getItem("cinehub4_is_admin")==="1") return true; }catch(e){}
     const ids=(window.__ADMIN_IDS||[]);
     const tg=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initDataUnsafe&&window.Telegram.WebApp.initDataUnsafe.user;
     const uid=tg&&tg.id!=null?String(tg.id):"";
-    return !!uid && ids.map(String).includes(uid);
+    return !!uid && ids.length>0 && ids.map(String).includes(uid);
   }catch(e){return false}
 }
 // Secure admin check: backend verifies Telegram initData. No admin IDs are exposed to the browser.
@@ -1820,11 +1820,16 @@ function setupAdminButton(){
   try{
     const btn=document.getElementById("adminPanelBtn");
     if(!btn) return;
-    // Always show entry — real auth is on admin.html gate (ADMIN_IDS + initData).
-    // Hiding the button when server check fails locked owners out of the panel.
-    btn.classList.remove("hidden");
-    btn.style.display="flex";
-    btn.onclick=function(){ location.href="admin.html"; };
+    // ONLY show for server-verified admins (Script Properties ADMIN_IDS)
+    if(isAdminUser()){
+      btn.classList.remove("hidden");
+      btn.style.display="flex";
+      btn.onclick=function(){ location.href="admin.html"; };
+    }else{
+      btn.classList.add("hidden");
+      btn.style.display="none";
+      btn.onclick=null;
+    }
   }catch(e){}
 }
 

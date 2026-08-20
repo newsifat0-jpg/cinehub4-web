@@ -48,7 +48,7 @@
 </div>
 <div class="drawer-spacer"></div>
 <button type="button" data-page="telegram">◉ <span>Telegram</span></button>
-<button id="adminPanelBtn" class="admin-only" type="button" style="display:flex">🛡️ <span data-i18n="Admin Panel">Admin Panel</span></button>
+<button id="adminPanelBtn" class="admin-only hidden" type="button" style="display:none">🛡️ <span data-i18n="Admin Panel">Admin Panel</span></button>
 </aside>
 </div>
 <div id="pageTransition" class="page-transition hidden" aria-hidden="true">
@@ -70,7 +70,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="config.js?v=20260820final"></script>
 <script src="firebase-helper.js?v=20260820final"></script>
-<script src="app.js?v=20260820adminbtn"></script>
+<script src="app.js?v=20260820adminonly"></script>
 <script>
 /* last-resort safety net only — app.js owns the normal splash removal.
    This never fires unless app.js itself failed to boot, so it can't

@@ -167,7 +167,7 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
 .drawer button[data-page],.drawer #adminPanelBtn{border:0;background:#141a2e;color:#e8ecff;text-align:left;padding:12px 12px;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px}
 .drawer button[data-page]:active{background:#1c2438}
 .drawer-spacer{flex:1;min-height:12px}
-.admin-only.hidden{display:none}
+.admin-only.hidden{display:none!important}
 
 /* Lang switch */
 .lang-switch{margin:8px 0;padding:12px;background:#12182a;border:1px solid #252d45;border-radius:14px}
