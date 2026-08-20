@@ -587,7 +587,16 @@ function adminDeleteUser(uid){
     render(); toast("User deleted");
   }).catch(function(e){ toast("Failed: "+(e&&e.message?e.message:e)); });
 }
-function points(){return `<div class="toolbar"><div><h2 style="margin:0;font-size:18px">Points & Unlock Control</h2><p class="muted smalltext" style="margin:4px 0 0">Download lock · ads · points · daily limits — one place</p></div></div>
+function points(){return `<div class="toolbar"><div><h2 style="margin:0;font-size:18px">Points & Unlock Control</h2><p class="muted smalltext" style="margin:4px 0 0">Controls the <b>Watch Ad Now</b> block on user Profile (Reward / Daily limit / Remaining). Task list buttons are managed under <b>Daily Tasks</b>.</p></div></div>
+<div class="card" style="margin-bottom:14px;border:1px solid #3b82f655;background:linear-gradient(135deg,#0f172a,#1e3a5f22)">
+  <div style="display:flex;gap:10px;align-items:flex-start">
+    <div style="width:40px;height:40px;border-radius:12px;background:#3b82f6;display:flex;align-items:center;justify-content:center;font-size:18px">▶</div>
+    <div>
+      <b style="color:#e2e8f0">User app → Watch Ad Now</b>
+      <div class="muted smalltext" style="margin-top:4px">Reward Per Ad · Maximum Daily Ads · Remaining Today — all live from these settings. Separate from Daily Tasks cards.</div>
+    </div>
+  </div>
+</div>
 <div class="grid section-grid">
   <div class="card"><h3>🔓 Movie Unlock Rules</h3>
     <div class="form-grid">
@@ -823,7 +832,7 @@ function tasks(){
     </div>
   </div>`).join("");
   return `<div class="toolbar">
-    <div><h2 style="margin:0;font-size:18px">Daily Tasks</h2><p class="muted smalltext" style="margin:4px 0 0">Add · Edit · Delete · Link · Points · Limit · Reset Hours · Permanent — all here</p></div>
+    <div><h2 style="margin:0;font-size:18px">Daily Tasks</h2><p class="muted smalltext" style="margin:4px 0 0">User app → <b>MORE EARNING BUTTONS</b> (Start cards). Independent from Watch Ad Now / Points settings.</p></div>
     <button class="btn primary" onclick="A.settings.tasks.push({name:'New Task',nameBn:'',reward:2,limit:1,type:'login',seconds:5,link:'',resetHours:24,resetMode:'hours',permanent:false});save();render()">＋ Add Task</button>
   </div>
   ${cards||'<div class="card muted">No tasks yet. Click Add Task.</div>'}
