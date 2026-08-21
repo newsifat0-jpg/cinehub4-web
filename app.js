@@ -547,12 +547,12 @@ let movies=[];
 let userData={points:0,unlocks:{},ads_today:0,ads_day:"",language:"en",refs:0};
 const state={page:(sessionStorage.getItem("cinehub4_page")||"movies"),adultOK:false,points:0,query:"",category:"All Movies",mode:"new",adultCategory:"All",adultMode:"new",history:JSON.parse(sessionStorage.getItem("cinehub4_history")||"[]"),unlockProgress:0,buyStep:null,buyOrder:null,moviesLoaded:false,userLoaded:false,firstPaint:true};
 function save(){
-  // ALL user progress → Firebase only (no local source of truth)
+  // ALL user progress → Firebase only (include task_progress to avoid race wipe)
   if(window.CineHubFB){
     if(userData){
       userData.points = state.points;
     }
-    window.CineHubFB.updateUserField(null,{
+    var patch = {
       points: Number(state.points) || 0,
       unlocks: (userData && userData.unlocks) || {},
       ads_today: Number((userData && userData.ads_today) || 0),
@@ -561,8 +561,13 @@ function save(){
       language: (userData && userData.language) || "en",
       refs: Number((userData && userData.refs) || 0),
       referred_by: (userData && userData.referred_by) || null,
+      task_progress: (userData && userData.task_progress) || {},
+      unlock_prog: (userData && userData.unlock_prog) || {},
+      unlock_ad_prog: (userData && userData.unlock_ad_prog) || {},
       updated_at: Date.now()
-    }).catch(function(e){ console.warn("save user", e); });
+    };
+    if(userData && userData.ref_task_count!=null) patch.ref_task_count = Number(userData.ref_task_count)||0;
+    window.CineHubFB.updateUserField(null, patch).catch(function(e){ console.warn("save user", e); });
   }
 }
 /* Boot flag: while splash is up, queue one paint only — no intermediate jerks */
@@ -1203,9 +1208,16 @@ function getTasks(){
 }
 /** Task progress in Firebase users/{uid}.task_progress — multi-device sync */
 function taskStableId(tk,i){
-  const name=String((tk&&(tk.id||tk.name))||("task")).toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,28);
+  // Prefer permanent admin-assigned id so reorder/new tasks never shift progress keys
+  if(tk && tk.id){
+    return "tid_"+String(tk.id).replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,40);
+  }
+  const name=String((tk&&tk.name)||("task")).toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,24);
   const typ=String((tk&&tk.type)||"x").toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,12);
-  return "t"+String(i)+"_"+name+"_"+typ;
+  const link=String((tk&&(tk.link||tk.adId||""))||"").toLowerCase().replace(/[^a-z0-9]+/g,"").slice(0,16);
+  // include reward+limit to distinguish two "New Task" rows
+  const sig=String((tk&&tk.reward)||0)+"_"+String((tk&&tk.limit)||1);
+  return "t_"+name+"_"+typ+"_"+sig+(link?("_"+link):"")+(i!=null?("_i"+i):"");
 }
 function getTaskProgMap(){
   if(!userData) userData={};
@@ -1217,6 +1229,12 @@ function taskResetInfo(i,tk){
   const limit=Math.max(1, Number(tk&&tk.limit)||1);
   const map=getTaskProgMap();
   let entry=map[sid]||{};
+  // merge legacy index-based key if present (older builds)
+  try{
+    const legacy="t"+String(i)+"_"+String((tk&&tk.name)||"task").toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,28)+"_"+String((tk&&tk.type)||"x").toLowerCase().slice(0,12);
+    const leg=map[legacy];
+    if(leg && (Number(leg.count)||0) > (Number(entry.count)||0)) entry=leg;
+  }catch(e){}
   let count=Number(entry.count)||0;
   if(tk && (tk.type==="share"||tk.type==="refer") && userData && userData.ref_task_count!=null){
     count=Math.max(count, Number(userData.ref_task_count)||0);
@@ -1259,13 +1277,23 @@ function markTaskProgress(i,tk){
   };
   if(next>=st.limit) entry.done_at=Date.now();
   map[st.sid]=entry;
+  // also keep legacy index key so old clients still see progress
+  try{
+    const legacy="t"+String(i)+"_"+String((tk&&tk.name)||"task").toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,28)+"_"+String((tk&&tk.type)||"x").toLowerCase().slice(0,12);
+    map[legacy]=entry;
+  }catch(e){}
+  if(!userData) userData={};
   userData.task_progress=map;
   if(tk && (tk.type==="share"||tk.type==="refer")){
     userData.ref_task_count=next;
   }
   try{
     if(window.CineHubFB){
-      const patch={task_progress:map, updated_at:Date.now()};
+      const patch={
+        task_progress:map,
+        points: Number(state.points)||0,
+        updated_at:Date.now()
+      };
       if(tk && (tk.type==="share"||tk.type==="refer")) patch.ref_task_count=next;
       window.CineHubFB.updateUserField(null, patch).catch(function(){});
     }
@@ -1324,21 +1352,23 @@ function runTask(i){
   if(st.done){toast(tk.permanent?t("Already completed"):t("Done"));return}
   const credit=function(opts){
     opts=opts||{};
-    // Ad-type: progress each view; reward each view (or only on finish if rewardOnce)
-    const rewardEach = (tk.type==="ad" && !tk.rewardOnce);
-    const willFinish = (st.count+1) >= st.limit;
     if(tk.type==="ad" && tk.rewardOnce){
-      const finished=markTaskProgress(i,tk);
-      if(finished){
-        state.points+=Number(tk.reward||0);save();
-        toast("+"+(tk.reward||0)+" points · "+t("Done"));
-      } else {
-        toast(t("Ad progress")+" "+(st.count+1)+"/"+st.limit);
+      // progress first without points, pay only when finished
+      const st2=taskResetInfo(i,tk);
+      const next=st2.count+1;
+      const willFinish=next>=st2.limit;
+      if(willFinish){
+        state.points+=Number(tk.reward||0);
+        if(userData) userData.points=state.points;
       }
+      const finished=markTaskProgress(i,tk);
+      if(finished) toast("+"+(tk.reward||0)+" points · "+t("Done"));
+      else toast(t("Ad progress")+" "+next+"/"+st2.limit);
       render(false);
       return finished;
     }
-    state.points+=Number(tk.reward||0);save();
+    state.points+=Number(tk.reward||0);
+    if(userData) userData.points=state.points;
     const finished=markTaskProgress(i,tk);
     toast("+"+(tk.reward||0)+" points"+(finished?" · "+t("Done"):" · "+(st.count+1)+"/"+st.limit));
     render(false);
@@ -1417,7 +1447,7 @@ function runTask(i){
   // Watch ads until limit — each completion counts
   if(type==="ad"){
     window.__cinehub_pendingTask = i;
-    watchAd("task");
+    try{ watchAd("task"); }catch(e){ window.__cinehub_pendingTask=null; toast(t("Ad failed to load. Try again.")); }
     return;
   }
 
@@ -2081,7 +2111,15 @@ function usePointsForUnlock(){
   toast("-"+spend+" "+t("Points")+" · "+t("Progress")+": "+prog+"/"+cost+" · "+t("Remaining")+": "+rem);
   render(false);
 }
-function unlockWithAds(){watchAd("unlock")}
+function unlockWithAds(){
+  var mid=state.detailId;
+  var isAdult=false;
+  try{
+    var m=(movies||[]).find(function(x){return String(x.id)===String(mid);});
+    isAdult=isAdultMovie(m);
+  }catch(e){}
+  watchAd(isAdult?"adult":"unlock");
+}
 function unlockPoints(){usePointsForUnlock()}
 
 function openServer(movieId,serverNo){
@@ -2611,7 +2649,7 @@ function watchAd(mode){
   }
 
   function onAdDone(){
-    if(mode==="unlock"){
+    if(mode==="unlock" || mode==="adult"){
       const mid=state.detailId;
       if(!mid){toast(t("Open a movie first"));return;}
       loadSharedSettings();
@@ -2632,11 +2670,10 @@ function watchAd(mode){
       window.__cinehub_pendingTask=null;
       const tk=getTasks()[ti];
       if(tk){
-        state.points+=Number(tk.reward||0);save();
-        const finished=markTaskProgress(ti,tk);
-        toast("+"+(tk.reward||0)+" points"+(finished?" · Done":""));
-        // Task ads do NOT count toward daily earning ad limit
-        if(window.CineHubFB) try{window.CineHubFB.updateUserField(null,{points:state.points})}catch(e){}
+        state.points+=Number(tk.reward||0);
+        if(userData) userData.points=state.points;
+        const finished=markTaskProgress(ti,tk); // writes points + task_progress together
+        toast("+"+(tk.reward||0)+" points"+(finished?" · "+t("Done"):" · "+t("Progress")));
         render(false);
         return;
       }

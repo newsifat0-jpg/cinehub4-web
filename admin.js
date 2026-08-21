@@ -280,6 +280,17 @@ function getTelegramUserId(){try{return window.Telegram?.WebApp?.initDataUnsafe?
 // Admin IDs loaded from Firestore config/main (not in public source)
 window.__ADMIN_IDS = window.__ADMIN_IDS || [];
 
+
+function ensureTaskIds(){
+  if(!A.settings.tasks) A.settings.tasks=[];
+  A.settings.tasks.forEach(function(t,i){
+    if(!t) return;
+    if(!t.id){
+      t.id = "task_"+Date.now()+"_"+i+"_"+Math.random().toString(36).slice(2,6);
+    }
+  });
+}
+
 function ensureAdSlots(){
   A.settings.adSlots = A.settings.adSlots || {};
   const b = A.settings.adBlocks || {};
@@ -1193,6 +1204,7 @@ function saveAds(){
   render();
 }
 function tasks(){
+  try{ ensureTaskIds(); }catch(e){}
   // Only seed defaults once — never force-fill after admin deletes all
   if(!A.settings.tasks){
     A.settings.tasks=[];
@@ -1257,7 +1269,7 @@ function tasks(){
   </div>`).join("");
   return `<div class="toolbar">
     <div><h2 style="margin:0;font-size:18px">Daily Tasks</h2><p class="muted smalltext" style="margin:4px 0 0">User app → <b>MORE EARNING BUTTONS</b> (Start cards). Independent from Watch Ad Now / Points settings.</p></div>
-    <button class="btn primary" onclick="A.settings.tasks.push({name:'New Task',nameBn:'',reward:2,limit:1,type:'login',seconds:5,link:'',resetHours:24,resetMode:'hours',permanent:false,adNetwork:'',adId:'',adMode:'first',adNetworks:[]});save();render()">＋ Add Task</button>
+    <button class="btn primary" onclick="A.settings.tasks.push({id:'task_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name:'New Task',nameBn:'',reward:2,limit:1,type:'ad',seconds:5,link:'',resetHours:24,resetMode:'hours',permanent:false,adNetwork:'',adId:'',adMode:'first',adNetworks:[]});save();render()">＋ Add Task</button>
   </div>
   ${cards||'<div class="card muted">No tasks yet. Click Add Task.</div>'}
   <div class="card" style="margin-top:8px"><p class="muted smalltext">User app → Tasks page. Types: <b>Daily Login</b> = one tap points. <b>Telegram Join</b> = points only after bot verifies membership (bot must be admin in channel). <b>Social / any link</b> = Facebook, YouTube, Instagram, Website… no timer; Claim or Cancel. <b>Open Link</b> = URL + countdown. <b>Telegram Join</b> = public or private channel/group (bot must be Admin; private → use chat id -100…). <b>Watch Ads</b> = complete after Limit ads. <b>Refer</b> = real joins count. Top “Watch Ad Now” is separate (Points settings: reward + daily limit + reset). Permanent = stays Done until you delete the task.</p></div>`;

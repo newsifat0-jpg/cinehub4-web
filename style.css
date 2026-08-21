@@ -203,52 +203,71 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
   background:transparent;
   border:0;border-radius:18px;
   backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  /* constant outer glow — never off on any side */
-  box-shadow:
-    0 0 0 1px rgba(0,198,255,.35),
-    0 0 12px rgba(0,198,255,.35),
-    0 0 18px rgba(124,92,255,.28),
-    0 0 14px rgba(255,80,80,.22),
-    0 8px 28px rgba(0,0,0,.45);
+  box-shadow:0 8px 28px rgba(0,0,0,.4);
   overflow:hidden;
   isolation:isolate;
 }
+/* Fixed ring — only colors rotate, shape never moves */
 .bottom-nav::before{
-  content:"";position:absolute;left:50%;top:50%;
-  width:280%;height:280%;
-  transform:translate(-50%,-50%);
-  /* dense colors so every edge stays lit while spinning */
+  content:"";position:absolute;inset:0;
+  border-radius:18px;
+  padding:2px;
   background:conic-gradient(
-    from 0deg,
-    #00d4ff 0deg,
-    #3b82f6 40deg,
-    #7c5cff 80deg,
-    #a855f7 120deg,
-    #ff4d6d 160deg,
-    #ff8c00 200deg,
-    #fbbf24 240deg,
-    #22d3ee 280deg,
-    #00d4ff 320deg,
-    #00d4ff 360deg
+    from var(--nav-ang, 0deg),
+    #00e5ff 0deg,
+    #3b82f6 60deg,
+    #8b5cf6 120deg,
+    #ec4899 180deg,
+    #f59e0b 240deg,
+    #22d3ee 300deg,
+    #00e5ff 360deg
   );
-  animation:navGlowSpin 2.8s linear infinite;
-  z-index:0;pointer-events:none;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite:exclude;
+  animation:navColorSpin 4s linear infinite;
+  pointer-events:none;z-index:0;
   opacity:1;
-  filter:brightness(1.15) saturate(1.2);
 }
 .bottom-nav::after{
   content:"";position:absolute;inset:2px;
   border-radius:16px;
-  background:rgba(10,14,24,.96);
+  background:rgba(10,14,24,.97);
   backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   z-index:1;pointer-events:none;
-  /* inner edge always catches a thin bright rim */
-  box-shadow:
-    inset 0 0 0 1px rgba(0,198,255,.12),
-    inset 0 0 12px rgba(124,92,255,.06);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);
 }
-@keyframes navGlowSpin{
-  to{transform:translate(-50%,-50%) rotate(360deg)}
+@property --nav-ang{
+  syntax:"<angle>";
+  inherits:false;
+  initial-value:0deg;
+}
+@keyframes navColorSpin{
+  to{ --nav-ang:360deg; }
+}
+/* fallback for browsers without @property — rotate full layer still only paints the ring via mask */
+@supports not (background:conic-gradient(from var(--nav-ang),red,blue)){
+  .bottom-nav::before{
+    inset:-40%;
+    width:180%;height:180%;
+    left:50%;top:50%;
+    transform:translate(-50%,-50%);
+    border-radius:50%;
+    padding:0;
+    -webkit-mask:none;mask:none;
+    background:conic-gradient(#00e5ff,#3b82f6,#8b5cf6,#ec4899,#f59e0b,#22d3ee,#00e5ff);
+    animation:navGlowSpin 4s linear infinite;
+  }
+  .bottom-nav{overflow:hidden}
+  .bottom-nav::after{inset:2px}
+  @keyframes navGlowSpin{
+    to{transform:translate(-50%,-50%) rotate(360deg)}
+  }
 }
 .bottom-nav .nav-item{position:relative;z-index:2}
 
