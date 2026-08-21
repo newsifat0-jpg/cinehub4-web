@@ -1044,37 +1044,66 @@ function buy(){
 /* —— Unlock helpers (admin: cost / hours / ads / servers) —— */
 function unlockKey(id){return "cinehub4_unlock_"+id}
 function progressKey(id){return "cinehub4_uprog_"+id}
+function adProgressKey(id){return "cinehub4_uad_"+id}
 function isMovieUnlocked(id){
   try{
     if(userData && userData.unlocks){
       const exp=Number(userData.unlocks[String(id)]||0);
       if(exp>Date.now()) return true;
     }
-    // fallback local
     const exp2=Number(localStorage.getItem(unlockKey(id))||0);
     return exp2>Date.now();
   }catch(e){return false}
 }
 function markMovieUnlocked(id){
+  loadSharedSettings();
   const hours=Number(cfg.unlockHours)||15;
   const exp=Date.now()+hours*3600*1000;
+  if(!userData) userData={};
   if(!userData.unlocks) userData.unlocks={};
   userData.unlocks[String(id)]=exp;
   try{localStorage.setItem(unlockKey(id),String(exp))}catch(e){}
   try{localStorage.removeItem(progressKey(id))}catch(e){}
-  if(window.CineHubFB) window.CineHubFB.setUnlock(null, id, hours);
+  try{localStorage.removeItem(adProgressKey(id))}catch(e){}
+  if(window.CineHubFB) try{window.CineHubFB.setUnlock(null, id, hours)}catch(e){}
   state.unlockProgress=Number(cfg.unlockCost)||5;
   return hours;
 }
+/** Points contributed toward unlockCost */
 function getUnlockProgress(id){
   try{return Number(localStorage.getItem(progressKey(id))||0)}catch(e){return 0}
 }
 function setUnlockProgress(id,n){
-  const cost=Number(cfg.unlockCost)||5;
+  loadSharedSettings();
+  const cost=Math.max(1, Number(cfg.unlockCost)||5);
   const v=Math.max(0,Math.min(cost,Number(n)||0));
   try{localStorage.setItem(progressKey(id),String(v))}catch(e){}
   state.unlockProgress=v;
   return v;
+}
+/** Ads watched toward adsForUnlock */
+function getAdUnlockProgress(id){
+  try{return Number(localStorage.getItem(adProgressKey(id))||0)}catch(e){return 0}
+}
+function setAdUnlockProgress(id,n){
+  loadSharedSettings();
+  const need=Math.max(1, Number(cfg.adsForUnlock)||5);
+  const v=Math.max(0,Math.min(need,Number(n)||0));
+  try{localStorage.setItem(adProgressKey(id),String(v))}catch(e){}
+  return v;
+}
+function tryCompleteUnlock(id){
+  loadSharedSettings();
+  const cost=Math.max(1, Number(cfg.unlockCost)||5);
+  const adsNeed=Math.max(1, Number(cfg.adsForUnlock)||5);
+  const p=getUnlockProgress(id);
+  const a=getAdUnlockProgress(id);
+  if(p>=cost || a>=adsNeed){
+    const h=markMovieUnlocked(id);
+    toast(t("Content unlocked.")+" · "+h+"h");
+    return true;
+  }
+  return false;
 }
 function serverCount(){return Math.max(1,Math.min(10,Number(cfg.downloadServers)||3))}
 
@@ -1204,11 +1233,15 @@ function detailView(){
     </div>`;
   }
 
-  const prog=Math.min(cost, getUnlockProgress(m.id) || state.unlockProgress || 0);
+  const prog=Math.min(cost, getUnlockProgress(m.id) || 0);
   state.unlockProgress=prog;
+  const adProg=getAdUnlockProgress(m.id);
   const rem=Math.max(0,cost-prog);
   const my=Number(state.points||0);
-  const pct=Math.min(100,(prog/Math.max(1,cost))*100);
+  // Overall fill: max of points-path% and ads-path%
+  const pctPts=Math.min(100,(prog/Math.max(1,cost))*100);
+  const pctAds=Math.min(100,(adProg/Math.max(1,adsNeed))*100);
+  const pct=Math.max(pctPts, pctAds);
   return pageBackBar(pageLabel)+`
   <div class="ps-page">
     <div class="ps-notice">
@@ -1232,7 +1265,7 @@ function detailView(){
       </div>
       <div class="ps-progress">
         <div class="ps-bar"><i style="width:${pct}%"></i></div>
-        <div class="ps-prog-txt">${t("Progress")}: ${prog}/${cost} · ${t("Ads needed")}: ${adsNeed} · ${hours}h</div>
+        <div class="ps-prog-txt">${t("Points")}: ${prog}/${cost} · ${t("Ads")}: ${adProg}/${adsNeed} · ${hours}h</div>
       </div>
       <div class="ps-hint">${t("Unlock with points or ads")}</div>
       <button type="button" class="ps-btn lock" onclick="unlockWithAds()">🔒 ${t("Unlock Video")}</button>
@@ -1245,26 +1278,33 @@ function detailView(){
 function usePointsForUnlock(){
   loadSharedSettings();
   const id=state.detailId;
-  if(!id)return;
+  if(!id){toast(t("Open a movie first"));return}
   if(isMovieUnlocked(id)){toast(t("Already unlocked"));render(false);return}
-  const cost=Number(cfg.unlockCost)||5;
+  const cost=Math.max(1, Number(cfg.unlockCost)||5);
   let prog=getUnlockProgress(id);
-  const need=Math.max(0,cost-prog);
+  const need=Math.max(0, cost-prog);
   if(need<=0){
-    const h=markMovieUnlocked(id);
+    markMovieUnlocked(id);
     toast(t("Content unlocked."));
     render(false);
     return;
   }
-  if(state.points<need){
-    toast(t("Not enough points")+" ("+need+" "+t("needed")+")");
+  const have=Math.max(0, Number(state.points)||0);
+  if(have<=0){
+    toast(t("Not enough points")+" (0)");
     return;
   }
-  state.points-=need;
+  // Spend whatever user has (partial OK) — 1 point = 1 progress
+  const spend=Math.min(have, need);
+  state.points=have-spend;
   save();
-  setUnlockProgress(id,cost);
-  const h=markMovieUnlocked(id);
-  toast(t("Content unlocked.")+" · -"+need+" "+t("Points"));
+  prog=setUnlockProgress(id, prog+spend);
+  const rem=Math.max(0, cost-prog);
+  if(tryCompleteUnlock(id)){
+    render(false);
+    return;
+  }
+  toast("-"+spend+" "+t("Points")+" · "+t("Progress")+": "+prog+"/"+cost+" · "+t("Remaining")+": "+rem);
   render(false);
 }
 function unlockWithAds(){watchAd("unlock")}
@@ -1638,13 +1678,14 @@ function watchAd(mode){
     if(mode==="unlock"){
       const mid=state.detailId;
       if(!mid){toast(t("Open a movie first"));return;}
-      const needAds=Number(cfg.adsForUnlock)||Number(cfg.unlockCost)||5;
-      let prog=getUnlockProgress(mid)+1;
-      setUnlockProgress(mid,prog);
-      toast("+1 "+t("ad progress")+" ("+prog+"/"+needAds+")");
-      if(prog>=needAds){
-        const h=markMovieUnlocked(mid);
-        toast(t("Unlocked for")+" "+h+" "+t("hours"));
+      loadSharedSettings();
+      const needAds=Math.max(1, Number(cfg.adsForUnlock)||5);
+      let adProg=getAdUnlockProgress(mid)+1;
+      adProg=setAdUnlockProgress(mid, adProg);
+      toast("+1 "+t("ad progress")+" ("+adProg+"/"+needAds+")");
+      if(tryCompleteUnlock(mid)){
+        render(false);
+        return;
       }
       render(false);
       return;

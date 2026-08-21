@@ -158,6 +158,9 @@ window.CINEHUB4_LANG = (() => {
     "Already completed today": "আজ ইতিমধ্যে সম্পন্ন",
     "Already claimed today": "আজ ইতিমধ্যে নেওয়া হয়েছে",
     "More Watching": "আরও দেখুন",
+    "Ads": "অ্যাডস",
+    "ad progress": "অ্যাড প্রোগ্রেস",
+
 
     "UNLOCK NOTICE": "আনলক নোটিশ",
     "MOVIE CONTENT": "মুভি কনটেন্ট",

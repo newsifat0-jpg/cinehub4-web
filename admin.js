@@ -786,8 +786,21 @@ function points(){return `<div class="toolbar"><div><h2 style="margin:0;font-siz
 function savePoints(){
   const rm=document.getElementById("dailyAdResetMode");
   if(rm) A.settings.dailyAdResetMode=rm.value||"midnight";
-  A.settings.dailyAdResetHours=+$('#dailyAdResetHours')?.value||24;
-  A.settings.unlockCost=+$('#unlockCost').value||5;A.settings.unlockHours=+$('#unlockHours').value||15;A.settings.adReward=+$('#adRewardP').value||2;A.settings.dailyAdLimit=+$('#dailyLimitP').value||20;A.settings.dailyUnlockLimit=+$('#dailyUnlockLimit').value||0;A.settings.adsForUnlock=+$('#adsForUnlockP').value||5;A.settings.downloadServers=Math.max(1,Math.min(10,+$('#downloadServersP').value||3));A.settings.joinBonus=+$('#bonus').value||10;A.settings.newUserBonus=A.settings.joinBonus;A.settings.referralReward=+$('#ref').value||20;save();render();toast('Points & Unlock settings saved')}
+  A.settings.dailyAdResetHours=Number(($('#dailyAdResetHours')||{}).value)||24;
+  A.settings.unlockCost=Math.max(1, Number(($('#unlockCost')||{}).value)||5);
+  A.settings.unlockHours=Math.max(1, Number(($('#unlockHours')||{}).value)||15);
+  A.settings.adReward=Math.max(0, Number(($('#adRewardP')||{}).value)||2);
+  A.settings.dailyAdLimit=Math.max(0, Number(($('#dailyLimitP')||{}).value)||20);
+  A.settings.dailyUnlockLimit=Math.max(0, Number(($('#dailyUnlockLimit')||{}).value)||0);
+  A.settings.adsForUnlock=Math.max(1, Number(($('#adsForUnlockP')||{}).value)||5);
+  A.settings.downloadServers=Math.max(1,Math.min(10, Number(($('#downloadServersP')||{}).value)||3));
+  A.settings.joinBonus=Math.max(0, Number(($('#bonus')||{}).value)||10);
+  A.settings.newUserBonus=A.settings.joinBonus;
+  A.settings.referralReward=Math.max(0, Number(($('#ref')||{}).value)||20);
+  save();
+  render();
+  toast("✓ Unlock: "+A.settings.unlockCost+" pts / "+A.settings.adsForUnlock+" ads / "+A.settings.unlockHours+"h → Firebase");
+}
 function ads(){
   ensureAdSlots();
   const slots = A.settings.adSlots || {};
