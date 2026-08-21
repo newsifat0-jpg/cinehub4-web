@@ -295,8 +295,8 @@ let cfg={...defaults,...JSON.parse(localStorage.getItem("cinehub4_settings")||"{
 if(!cfg.categories||!cfg.categories.length)cfg.categories=defaults.categories.slice();
 if(!cfg.adultCategories||!cfg.adultCategories.length)cfg.adultCategories=defaults.adultCategories.slice();
 let movies=[];
-let userData={points:1,unlocks:{},ads_today:0,ads_day:"",language:"en",refs:0};
-const state={page:(sessionStorage.getItem("cinehub4_page")||"movies"),adultOK:false,points:1,query:"",category:"All Movies",mode:"new",adultCategory:"All",adultMode:"new",history:JSON.parse(sessionStorage.getItem("cinehub4_history")||"[]"),unlockProgress:0,buyStep:null,buyOrder:null,moviesLoaded:false,userLoaded:false,firstPaint:true};
+let userData={points:0,unlocks:{},ads_today:0,ads_day:"",language:"en",refs:0};
+const state={page:(sessionStorage.getItem("cinehub4_page")||"movies"),adultOK:false,points:0,query:"",category:"All Movies",mode:"new",adultCategory:"All",adultMode:"new",history:JSON.parse(sessionStorage.getItem("cinehub4_history")||"[]"),unlockProgress:0,buyStep:null,buyOrder:null,moviesLoaded:false,userLoaded:false,firstPaint:true};
 function save(){
   // ALL user progress → Firebase only (no local source of truth)
   if(window.CineHubFB){
@@ -397,7 +397,7 @@ function showBlockedScreen(){
         userData = u || userData;
         if(!isUserBlocked()){
           hideBlockedScreen();
-          state.points = Number(userData && userData.points) || 1;
+          state.points = Number(userData && userData.points) || 0;
           safeRender(false);
         }
       }).catch(function(){});
@@ -422,7 +422,7 @@ function loadUserFromFB(){
   window.CineHubFB.loadUser().then(function(u){
     // Firebase is the only source of truth for user progress (multi-device)
     userData = Object.assign({
-      points:1, unlocks:{}, ads_today:0, ads_total:0, refs:0,
+      points:0, unlocks:{}, ads_today:0, ads_total:0, refs:0,
       task_progress:{}, unlock_prog:{}, unlock_ad_prog:{}
     }, u || {});
     if(!userData.task_progress || typeof userData.task_progress!=="object") userData.task_progress={};
@@ -430,7 +430,6 @@ function loadUserFromFB(){
     if(!userData.unlock_ad_prog || typeof userData.unlock_ad_prog!=="object") userData.unlock_ad_prog={};
     if(!userData.unlocks || typeof userData.unlocks!=="object") userData.unlocks={};
     state.points = Number(userData.points) || 0;
-    if(!state.points && state.points!==0) state.points = 1;
     state.userLoaded = true;
     try{
       if(userData && !userData.join_bonus_given){
