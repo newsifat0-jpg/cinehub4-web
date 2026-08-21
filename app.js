@@ -223,29 +223,104 @@ function shareMovie(id){
     if(!mid){ toast("ID missing"); return; }
     var m = (typeof movies!=="undefined" && movies) ? movies.find(function(x){ return String(x.id)===mid; }) : null;
     var title = m ? String(m.title||"").split("|")[0].trim() : "Movie";
+    var poster = m ? String(m.poster||m.poster_path||"") : "";
     var link = movieShareLink(mid);
     if(!link){ toast("Link empty — set Mini App link in Admin → Settings"); return; }
-    var text = title + " — Cine Hub4";
-    // 1) System share sheet (WhatsApp, Facebook, Messenger, etc. when OS supports it)
-    try{
-      if(navigator.share){
-        navigator.share({ title: title, text: text, url: link }).then(function(){
-          toast(t("Share"));
-        }).catch(function(){
-          showLinkSheet(link, title);
-          openTgShare(link, text);
-        });
-        return;
-      }
-    }catch(e){}
-    // 2) Fallback: link sheet + Telegram share
-    showLinkSheet(link, title);
-    openTgShare(link, text);
+    var text = title + "\n🎬 Cine Hub4\n" + link;
+    showSocialShareSheet({ title: title, link: link, text: text, poster: poster, adult: !!(m&&m.adult) });
   }catch(e){
     console.error(e);
     toast("Share error: "+(e&&e.message?e.message:e));
   }
 }
+function showSocialShareSheet(opts){
+  opts = opts || {};
+  var title = opts.title || "Cine Hub4";
+  var link = opts.link || "";
+  var text = opts.text || (title + "\n" + link);
+  var poster = opts.poster || "";
+  var old = document.getElementById("shareSheet");
+  if(old) old.remove();
+  var sheet = document.createElement("div");
+  sheet.id = "shareSheet";
+  sheet.className = "share-sheet social-share-sheet";
+  var posterHtml = poster
+    ? '<div class="ss-poster"><img src="'+String(poster).replace(/"/g,"&quot;")+'" alt="" onerror="this.parentNode.style.display=\'none\'"></div>'
+    : "";
+  var apps = [
+    {id:"tg", name:"Telegram", icon:"✈️", color:"#2AABEE"},
+    {id:"wa", name:"WhatsApp", icon:"💬", color:"#25D366"},
+    {id:"fb", name:"Facebook", icon:"f", color:"#1877F2"},
+    {id:"msg", name:"Messenger", icon:"💭", color:"#00B2FF"},
+    {id:"x", name:"X / Twitter", icon:"𝕏", color:"#111827"},
+    {id:"tt", name:"TikTok", icon:"♪", color:"#010101"},
+    {id:"rd", name:"Reddit", icon:"◉", color:"#FF4500"},
+    {id:"sys", name:"More", icon:"⋯", color:"#6366f1"}
+  ];
+  var grid = apps.map(function(a){
+    return '<button type="button" class="ss-app" data-app="'+a.id+'" style="--ss-c:'+a.color+'">'+
+      '<span class="ss-ico">'+a.icon+'</span><span class="ss-name">'+a.name+'</span></button>';
+  }).join("");
+  sheet.innerHTML =
+    '<div class="share-sheet-card ss-card">'+
+      '<div class="ss-head">'+
+        posterHtml+
+        '<div class="ss-meta"><div class="ss-title">'+String(title).replace(/</g,"&lt;")+'</div>'+
+        '<div class="ss-sub">'+(opts.adult?"18+ · ":"")+'Cine Hub4</div></div>'+
+        '<button type="button" class="ss-x" id="shareSheetClose" aria-label="Close">✕</button>'+
+      '</div>'+
+      '<div class="ss-grid">'+grid+'</div>'+
+      '<div class="ss-link-row">'+
+        '<input class="share-sheet-input" id="shareSheetInput" type="text" readonly value="">'+
+        '<button type="button" class="share-sheet-btn primary" id="shareSheetCopy">Copy</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(sheet);
+  var inp = document.getElementById("shareSheetInput");
+  if(inp) inp.value = link;
+  document.getElementById("shareSheetClose").onclick = function(){ sheet.remove(); };
+  sheet.onclick = function(e){ if(e.target===sheet) sheet.remove(); };
+  document.getElementById("shareSheetCopy").onclick = function(){
+    hardCopy(link, function(){ toast(t("Link copied")); });
+  };
+  function openExt(url){
+    try{
+      var tg = window.Telegram && window.Telegram.WebApp;
+      if(tg && typeof tg.openLink === "function"){ tg.openLink(url); return; }
+    }catch(e){}
+    try{ window.open(url, "_blank"); }catch(e){ location.href = url; }
+  }
+  sheet.querySelectorAll(".ss-app").forEach(function(btn){
+    btn.onclick = function(){
+      var app = btn.getAttribute("data-app");
+      var encU = encodeURIComponent(link);
+      var encT = encodeURIComponent(text);
+      if(app==="tg"){ openTgShare(link, title + " — Cine Hub4"); sheet.remove(); return; }
+      if(app==="wa"){ openExt("https://wa.me/?text="+encT); sheet.remove(); return; }
+      if(app==="fb"){ openExt("https://www.facebook.com/sharer/sharer.php?u="+encU); sheet.remove(); return; }
+      if(app==="msg"){ openExt("https://www.facebook.com/dialog/send?link="+encU+"&app_id=966242223397117&redirect_uri="+encU); sheet.remove(); return; }
+      if(app==="x"){ openExt("https://twitter.com/intent/tweet?text="+encT+"&url="+encU); sheet.remove(); return; }
+      if(app==="tt"){
+        // TikTok has no universal share URL — copy + toast
+        hardCopy(link, function(){ toast("TikTok · "+t("Link copied")); });
+        return;
+      }
+      if(app==="rd"){ openExt("https://www.reddit.com/submit?url="+encU+"&title="+encodeURIComponent(title)); sheet.remove(); return; }
+      if(app==="sys"){
+        try{
+          if(navigator.share){
+            navigator.share({ title: title, text: text, url: link }).catch(function(){});
+            sheet.remove();
+            return;
+          }
+        }catch(e){}
+        openTgShare(link, title + " — Cine Hub4");
+        sheet.remove();
+      }
+    };
+  });
+}
+window.showSocialShareSheet = showSocialShareSheet;
 function movieDurationLabel(m){
   if(!m) return "";
   var rt = Number(m.runtime || 0);
@@ -754,9 +829,91 @@ function adult(){
     </div>`;
   }
   const list=listForAdult();
-  return `<div class="home-sticky-top" id="homeSticky">`+menuOnlyHeader(t("Adult"))+heroPillsAdult()+`<div class="home-sticky-line"></div></div>`+catRowAdult()+libCardAdult()+tickerAdult()+list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No adult content yet. Add from Admin Panel.")}</div>`;
+  return `<div class="home-sticky-top" id="homeSticky">`+adultHeaderWithSearch()+heroPillsAdult()+`<div class="home-sticky-line"></div></div>`+catRowAdult()+libCardAdult()+tickerAdult()+list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No adult content yet. Add from Admin Panel.")}</div>`;
 }
-function confirmAdult(){state.adultOK=true;render(true)}
+function adultHeaderWithSearch(){
+  return `<div class="page-back-bar adult-head-bar">
+    <button type="button" class="menu-ham" id="hamBtn">☰</button>
+    <span class="page-back-title">${t("Adult")}</span>
+    <button type="button" class="adult-search-btn" onclick="openAdultSearch()" aria-label="Search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    </button>
+  </div>`;
+}
+function openAdultSearch(){
+  state.query = state.adultQuery || "";
+  state.page = "adultSearch";
+  try{ sessionStorage.setItem("cinehub4_page","adultSearch"); }catch(e){}
+  render(true);
+}
+window.openAdultSearch = openAdultSearch;
+function adultSearchPage(){
+  if(cfg.adultEnabled===false || cfg.adultLibraryEnabled===false){
+    return `<div class="empty" style="padding:40px 16px;text-align:center">${t("Adult library is currently unavailable.")}</div>`;
+  }
+  if(!state.adultOK){
+    return adult(); // force gate first
+  }
+  return `<div class="search-top">
+    <button type="button" class="page-back-btn" onclick="nav('adult')" aria-label="Back">‹</button>
+    <div class="search-bar-wrap">
+      <input id="q" type="search" placeholder="${t("Search movies...")}" value="${(state.query||"").replace(/"/g,"&quot;")}"
+        oninput="liveAdultSearchInput(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();doAdultSearch();}">
+      <button type="button" class="mic-btn" id="micBtn" title="Voice search" aria-label="Voice search">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0" stroke="currentColor" stroke-width="2"/><path d="M12 18v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <button type="button" class="search-go" onclick="doAdultSearch()" aria-label="Search">🔍</button>
+    </div>
+  </div>
+  <div id="searchResults" class="search-results">${adultSearchResultsHTML()}</div>`;
+}
+function adultSearchResultsHTML(){
+  var q = (state.query||"").toLowerCase().trim();
+  var list = (movies||[]).filter(function(m){ return !!m.adult; });
+  if(q) list = list.filter(function(m){ return movieMatchesQuery(m, q); });
+  if(q){
+    list = list.slice().sort(function(a,b){
+      var ta=String(a.title||"").toLowerCase(), tb=String(b.title||"").toLowerCase();
+      var pa=ta.indexOf(q), pb=tb.indexOf(q);
+      if(pa!==pb) return (pa<0?999:pa)-(pb<0?999:pb);
+      return ta.localeCompare(tb);
+    });
+  }
+  if(!list.length){
+    return q
+      ? `<div class="empty search-empty">${t("No movies found")}</div>`
+      : `<div class="empty search-empty muted">${t("Search movies...")}</div>`;
+  }
+  return list.map(function(m){ return searchResultRow(m); }).join("");
+}
+function liveAdultSearchInput(el){
+  try{
+    state.query = (el && el.value) || "";
+    state.adultQuery = state.query;
+    clearTimeout(window.__adultSearchT);
+    window.__adultSearchT = setTimeout(function(){ doAdultSearch(); }, 80);
+  }catch(e){ doAdultSearch(); }
+}
+function doAdultSearch(){
+  try{
+    var box = document.getElementById("searchResults");
+    if(box) box.innerHTML = adultSearchResultsHTML();
+  }catch(e){}
+}
+window.liveAdultSearchInput = liveAdultSearchInput;
+window.doAdultSearch = doAdultSearch;
+window.adultSearchPage = adultSearchPage;
+
+function confirmAdult(){
+  state.adultOK=true;
+  var pending = state.pendingAdultDetail;
+  state.pendingAdultDetail = null;
+  if(pending){
+    detail(pending);
+    return;
+  }
+  render(true);
+}
 
 function profile(){
   const tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -1449,13 +1606,21 @@ function detail(id){
   const m=movies.find(x=>String(x.id)===String(id));if(!m){console.warn("detail: movie not found",id);return;}
   m.clicks=(m.clicks||0)+1;m.views=(m.views||m.clicks);
   try{ if(window.CineHubFB && window.CineHubFB.incClicks) window.CineHubFB.incClicks(m.id); }catch(e){}
+  // Adult deep-link / card: confirm 18+ first, then unlock page
+  if(m.adult && !state.adultOK){
+    state.pendingAdultDetail = String(id);
+    state.page = "adult";
+    try{ sessionStorage.setItem("cinehub4_page","adult"); }catch(e){}
+    render(true);
+    return;
+  }
   if(state.page!=="detail"){
     state.history.push(state.page);
     if(state.history.length>30)state.history.shift();
     try{sessionStorage.setItem("cinehub4_history",JSON.stringify(state.history))}catch(e){}
   }
   state.detailId=id;
-  state.unlockProgress=isMovieUnlocked(id)?(Number(cfg.unlockCost)||5):getUnlockProgress(id);
+  state.unlockProgress=isMovieUnlocked(id)?getUnlockRules(id).cost:getUnlockProgress(id);
   if(typeof showPageTransition==="function"){
     showPageTransition(function(){
       state.page="detail";
@@ -2480,13 +2645,14 @@ function render(animate=false){
 if(window.__cinehub_blocked){ return; }
 /* Skip paints while splash is covering the screen (prevents open-time jerk) */
 if(window.__cinehub_splashUp && !window.__cinehub_forcePaint){ window.__cinehub_needPaint=true; return; }
-try{const views={movies:moviesPage,search:searchPage,series,adult,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate && !state.firstPaint && !window.__cinehub_noAnim){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>{
+try{const views={movies:moviesPage,search:searchPage,series,adult,adultSearch:adultSearchPage,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate && !state.firstPaint && !window.__cinehub_noAnim){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>{
   (function(){
   var navPage = state.page;
   if(state.page==="detail"){
     var dm = movies.find(function(x){ return String(x.id)===String(state.detailId); });
     navPage = (dm && dm.adult) ? "adult" : "movies";
   }
+  if(state.page==="adultSearch") navPage = "adult";
   b.classList.toggle("active", b.dataset.page===state.page || b.dataset.page===navPage);
 })();
   if(b.dataset.page==="adult"){
@@ -2551,6 +2717,14 @@ function handleStartParam(){
     if(/^movie_/i.test(sp)){
       const id=String(sp.replace(/^movie_/i,"")).trim();
       if(id){
+        var mm = (movies||[]).find(function(x){ return String(x.id)===String(id); });
+        if(mm && mm.adult && !state.adultOK){
+          state.pendingAdultDetail = id;
+          state.detailId = id;
+          state.page = "adult";
+          try{ localStorage.setItem("cinehub4_page","adult"); sessionStorage.setItem("cinehub4_detail",id); }catch(e){}
+          return true;
+        }
         state.detailId=id;
         state.page="detail";
         state.history=[];

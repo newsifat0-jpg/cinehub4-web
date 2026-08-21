@@ -1115,3 +1115,55 @@ img.poster-full{
   margin:8px 0 0;font-size:13px;line-height:1.45;color:#94a3b8;
 }
 .ps-poster{position:relative}
+
+
+/* Adult header search */
+.adult-head-bar{display:flex;align-items:center;gap:8px;width:100%}
+.adult-head-bar .page-back-title{flex:1}
+.adult-search-btn{
+  width:40px;height:40px;border:0;border-radius:12px;cursor:pointer;
+  display:grid;place-items:center;color:#e2e8f0;
+  background:linear-gradient(145deg,#1e293b,#0f172a);
+  border:1px solid rgba(125,211,252,.35);
+  box-shadow:0 0 14px rgba(56,189,248,.2);
+}
+.adult-search-btn:active{transform:scale(.94)}
+
+/* Social share sheet */
+.social-share-sheet .ss-card{padding:16px 14px 14px;max-width:380px}
+.ss-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;position:relative;padding-right:28px}
+.ss-poster{width:52px;height:72px;border-radius:10px;overflow:hidden;flex-shrink:0;background:#1e293b;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.ss-poster img{width:100%;height:100%;object-fit:cover;display:block}
+.ss-meta{flex:1;min-width:0}
+.ss-title{font-size:15px;font-weight:800;color:#f1f5f9;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ss-sub{font-size:11px;color:#94a3b8;margin-top:4px;font-weight:600}
+.ss-x{position:absolute;right:0;top:0;width:32px;height:32px;border:0;border-radius:10px;background:#1e293b;color:#94a3b8;font-size:14px;cursor:pointer}
+.ss-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.ss-app{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:10px 4px 8px;border:1px solid #243049;border-radius:14px;
+  background:linear-gradient(180deg,#161d33,#101628);cursor:pointer;color:#e2e8f0;
+  transition:transform .15s, box-shadow .2s, border-color .2s;
+}
+.ss-app:active{transform:scale(.94)}
+.ss-app:hover{border-color:var(--ss-c, #6366f1);box-shadow:0 0 16px color-mix(in srgb, var(--ss-c, #6366f1) 35%, transparent)}
+.ss-ico{
+  width:42px;height:42px;border-radius:14px;display:grid;place-items:center;
+  font-size:18px;font-weight:800;color:#fff;
+  background:var(--ss-c, #6366f1);
+  box-shadow:0 6px 16px color-mix(in srgb, var(--ss-c, #6366f1) 40%, transparent);
+}
+.ss-name{font-size:10px;font-weight:700;color:#94a3b8;text-align:center;line-height:1.15}
+.ss-link-row{display:flex;gap:8px;align-items:center}
+.ss-link-row .share-sheet-input{flex:1;margin:0}
+.ss-link-row .share-sheet-btn{flex-shrink:0;padding:10px 14px}
+
+/* Round share on cards — stronger aesthetic */
+.share-btn-round{
+  width:36px;height:36px;border-radius:50%;border:0;cursor:pointer;
+  display:grid;place-items:center;color:#fff;font-size:15px;font-weight:700;
+  background:linear-gradient(135deg,#6366f1,#3b82f6);
+  box-shadow:0 4px 14px rgba(99,102,241,.45);
+  flex-shrink:0;
+}
+.share-btn-round:active{transform:scale(.9)}
