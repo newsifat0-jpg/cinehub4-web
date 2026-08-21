@@ -98,12 +98,21 @@ function telegramShare(text,url){
   nativeShare({text:text,url:url});
 }
 function shareMovie(id){
-  const mid=String(id);
+  const mid=String(id||"").trim();
+  if(!mid){toast(t("Movie")+" ID missing");return}
   const m=movies.find(x=>String(x.id)===mid);
   const title=m?(m.title||"").split("|")[0].trim():"Movie";
-  const link=buildMiniAppLink("movie_"+mid);
-  // text without URL — Telegram share already attaches url (prevents double link)
-  nativeShare({title:title+" | Cine Hub4", text:title+" — watch on Cine Hub4", url:link});
+  // startapp param: only A-Za-z0-9_- allowed by Telegram; keep movie_<id>
+  const param=("movie_"+mid).replace(/[^A-Za-z0-9_\-]/g,"").slice(0,64);
+  const link=buildMiniAppLink(param);
+  const text=title+" — Cine Hub4\n"+link;
+  nativeShare({title:title+" | Cine Hub4", text:text, url:link});
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(link).catch(function(){});
+    }
+  }catch(e){}
+  toast(t("Share")+" · "+t("Link copied"));
 }
 function shareRef(){shareRefLink()}
 function shareRefLink(){
@@ -168,6 +177,16 @@ function loadMoviesFromFB(){
     got=true;
     movies=list||[];
     state.moviesLoaded=true;
+    // Share deep-link: open movie after list arrives
+    try{
+      var pending=sessionStorage.getItem("cinehub4_detail")||"";
+      if(pending && movies.some(function(m){return String(m.id)===String(pending);})){
+        state.detailId=pending;
+        state.page="detail";
+      }
+      // re-apply start param if needed
+      if(typeof handleStartParam==="function") handleStartParam();
+    }catch(e){}
     safeRender(false);
   });
   // Fallback: if client Firestore returns empty (rules/index), pull via backend API
@@ -310,7 +329,27 @@ function goBack(){
   };
   showPageTransition(go);
 }
-function posterHTML(m){if(m.poster)return`<img class="poster-img" src="${m.poster}" alt="">`;return`<div class="poster-fallback"><div class="pt">${(m.title||"").split("|")[0].trim().slice(0,18)}</div></div>`}
+function posterURL(m){
+  if(!m) return "";
+  var u = m.poster || m.poster_url || m.posterUrl || m.image || m.cover || m.thumbnail || m.backdrop || "";
+  u = String(u||"").trim();
+  if(!u) return "";
+  // TMDB relative path support
+  if(u.indexOf("/")===0 && u.indexOf("//")!==0) u = "https://image.tmdb.org/t/p/w780"+u;
+  if(/^https?:\/\//i.test(u)) return u;
+  return "";
+}
+function posterHTML(m, mode){
+  mode = mode || "card";
+  var url = posterURL(m);
+  var title = ((m&&m.title)||"Movie").split("|")[0].trim().replace(/</g,"").replace(/"/g,"&quot;");
+  if(url){
+    var cls = mode==="full" ? "poster-img poster-full" : "poster-img";
+    return '<img class="'+cls+'" src="'+url.replace(/"/g,"&quot;")+'" alt="'+title+'" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.onerror=null;this.classList.add(\'poster-broken\');var s=this.parentNode&&this.parentNode.querySelector(\'.poster-fallback\');if(s){s.style.display=\'flex\';this.style.display=\'none\';}">'
+      +'<div class="poster-fallback" style="display:none"><div class="pt">'+title.slice(0,18)+'</div></div>';
+  }
+  return '<div class="poster-fallback"><div class="pt">'+title.slice(0,18)+'</div></div>';
+}
 function card(m,idx){
   const curMode=state.page==="adult"?state.adultMode:state.mode;
   const top=idx===0&&curMode==="trending"?`<span class="movie-top">TOP 1</span>`:"";
@@ -1062,6 +1101,21 @@ function detail(id){
   }
 }
 
+
+function tickUnlockTimer(){
+  var el=document.getElementById("unlockTimer");
+  if(!el) return;
+  var exp=Number(el.getAttribute("data-exp")||0);
+  var left=Math.max(0, exp-Date.now());
+  var h=Math.floor(left/3600000), m=Math.floor((left%3600000)/60000), s=Math.floor((left%60000)/1000);
+  var pad=function(n){return String(n).padStart(2,"0")};
+  el.textContent=pad(h)+":"+pad(m)+":"+pad(s);
+  if(left<=0 && state.page==="detail"){ render(false); }
+}
+if(!window.__unlockTimerIv){
+  window.__unlockTimerIv=setInterval(tickUnlockTimer, 1000);
+}
+
 function detailView(){
   loadSharedSettings();
   const m=movies.find(x=>String(x.id)===String(state.detailId));if(!m)return moviesPage();
@@ -1070,84 +1124,121 @@ function detailView(){
   const hours=Number(cfg.unlockHours)||15;
   const title=(m.title||"").split("|")[0].trim();
   const unlocked=isMovieUnlocked(m.id);
+  const isAdult=!!m.adult;
+  const backPage=isAdult?"adult":"movies";
+  const pageLabel=isAdult?(t("Adult")+" · "+t("Movie")):t("Movie");
+  const clicks=Number(m.clicks||m.views||0);
+
+  // shared poster header
+  function posterBlock(){
+    return `<div class="ps-poster">
+      <div class="ps-poster-img">${posterHTML(m,"full")}</div>
+      <div class="ps-badge">${isAdult?"18+":t("Movie")}</div>
+      <div class="ps-dur">★ ${m.rating||8} · ${m.year||""}</div>
+    </div>
+    <div class="ps-share-row">
+      <button type="button" class="ps-share-btn" onclick="shareMovie(${JSON.stringify(String(m.id))})">
+        <span class="ps-ico">↗</span> ${t("Share")} · Telegram
+      </button>
+    </div>
+    <h1 class="ps-title">${title.replace(/</g,"&lt;")}</h1>
+    <div class="ps-sub">${(m.genre||m.category||"").toString().replace(/</g,"")} · ${m.year||""}</div>`;
+  }
 
   if(unlocked){
     const n=serverCount();
     let servers="";
     for(let i=1;i<=n;i++){
-      servers+=`<button type="button" class="server-btn" onclick='openServer(${JSON.stringify(String(m.id))},${i})'>
-        <span class="srv-ico">⬇</span>
-        <span class="srv-meta"><b>${t("Server")} ${i}</b><small>${t("Download / Watch")}</small></span>
-        <span class="srv-go">›</span>
+      const url = m["server"+i]||m["server"+i+"_link"]||m["s"+i]||"";
+      if(!url && i>1) continue;
+      servers+=`<button type="button" class="ps-dl-btn" onclick='openServer(${JSON.stringify(String(m.id))},${i})'>
+        <span class="ps-dl-ico">⬇</span>
+        <span><b>${t("Server")} ${i}</b><small>${t("Download / Watch")}</small></span>
+        <span class="ps-dl-go">›</span>
       </button>`;
     }
-    const exp=Number(localStorage.getItem(unlockKey(m.id))||0);
+    if(!servers){
+      servers=`<button type="button" class="ps-dl-btn primary" onclick='openServer(${JSON.stringify(String(m.id))},1)'>
+        <span class="ps-dl-ico">⬇</span>
+        <span><b>${t("Download Now")}</b><small>${t("Watch or download")}</small></span>
+        <span class="ps-dl-go">›</span>
+      </button>`;
+    }
+    // expiry from userData or local
+    let exp=0;
+    try{
+      if(userData&&userData.unlocks) exp=Number(userData.unlocks[String(m.id)]||0);
+      if(!exp) exp=Number(localStorage.getItem(unlockKey(m.id))||0);
+    }catch(e){}
     const leftMs=Math.max(0,exp-Date.now());
     const leftH=Math.floor(leftMs/3600000);
     const leftM=Math.floor((leftMs%3600000)/60000);
-    return pageBackBar(t("Movie"))+`
-    <div class="unlock-page unlocked-page">
-      <div class="unlock-notice ok">
-        <div class="bell">🔓</div>
-        <div>
-          <div class="un-title">${t("UNLOCKED")}</div>
-          <div class="un-sub">${t("Available for")} ${leftH}h ${leftM}m</div>
-          <div class="muted">${t("Watch or download from any server below.")}</div>
+    const leftS=Math.floor((leftMs%60000)/1000);
+    const pad=n=>String(n).padStart(2,"0");
+    const timerStr=pad(leftH)+":"+pad(leftM)+":"+pad(leftS);
+    return pageBackBar(pageLabel)+`
+    <div class="ps-page unlocked">
+      ${posterBlock()}
+      <div class="ps-unlock-card ok">
+        <div class="ps-ok-head">
+          <span class="ps-dot ok"></span>
+          <b>${t("Content unlocked successfully")}</b>
         </div>
+        <div class="ps-metrics">
+          <div class="ps-m need"><span class="ps-m-ico">🔑</span><span class="ps-m-lbl">${t("Required")}</span><b>${cost}</b></div>
+          <div class="ps-m myp"><span class="ps-m-ico">🪙</span><span class="ps-m-lbl">${t("My Points")}</span><b>${state.points||0}</b></div>
+          <div class="ps-m rem"><span class="ps-m-ico">⏳</span><span class="ps-m-lbl">${t("Remaining")}</span><b>0</b></div>
+        </div>
+        <div class="ps-progress">
+          <div class="ps-bar"><i style="width:100%"></i></div>
+          <div class="ps-prog-txt">${t("Progress")}: ${cost}/${cost}</div>
+        </div>
+        <div class="ps-timer-box">
+          <div class="ps-timer-lbl">⏱ ${t("Unlock time remaining")}</div>
+          <div class="ps-timer" id="unlockTimer" data-exp="${exp}">${timerStr}</div>
+          <div class="ps-timer-sub">${t("This content stays unlocked for a limited time.")}</div>
+        </div>
+        <div class="ps-dl-list">${servers}</div>
       </div>
-      <div class="demo-player" onclick="playDemoVideo(${m.id})">
-        <div class="demo-poster">${posterHTML(m)}</div>
-        <div class="demo-play-btn">▶</div>
-        <div class="demo-label">${t("Demo / Preview")}</div>
-      </div>
-      <div class="unlock-actions-top">
-        <button type="button" class="share-only" onclick="shareMovie(${m.id})">↗ ${t("Share")}</button>
-      </div>
-      <div class="unlock-title">${title}</div>
-      <div class="unlock-sub">${m.genre||""} • ${m.year||""}</div>
-      <div class="pf-section">📡 ${t("Download Servers")}</div>
-      <div class="server-list">${servers}</div>
-      <button type="button" class="btn-more" onclick="nav('${m.adult?'adult':'movies'}')">🎬 ${t("More Watching")} ›</button>
+      <button type="button" class="ps-more" onclick="nav('${backPage}')">🎬 ${t("More Watching")} ›</button>
     </div>`;
   }
 
   const prog=Math.min(cost, getUnlockProgress(m.id) || state.unlockProgress || 0);
   state.unlockProgress=prog;
   const rem=Math.max(0,cost-prog);
-  const my=state.points;
-  return pageBackBar(t("Movie"))+`
-  <div class="unlock-page">
-    <div class="unlock-notice">
-      <div class="bell">🔔</div>
+  const my=Number(state.points||0);
+  const pct=Math.min(100,(prog/Math.max(1,cost))*100);
+  return pageBackBar(pageLabel)+`
+  <div class="ps-page">
+    <div class="ps-notice">
+      <div class="ps-bell">🔔</div>
       <div>
-        <div class="un-title">${t("UNLOCK NOTICE")}</div>
-        <div class="un-sub">${t("MOVIE CONTENT")}</div>
-        <div class="muted">${t("Unlock this content using ads or points.")}</div>
+        <div class="ps-n-title">${t("UNLOCK NOTICE")}</div>
+        <div class="ps-n-sub">${isAdult?t("ADULT CONTENT"):t("MOVIE CONTENT")}</div>
+        <div class="ps-n-desc">${t("Unlock this content using ads or points.")}</div>
       </div>
     </div>
-    <div class="unlock-poster">${posterHTML(m)}</div>
-    <div class="unlock-actions-top">
-      <button type="button" class="share-only" onclick="shareMovie(${m.id})">↗ ${t("Share")}</button>
+    ${posterBlock()}
+    <div class="ps-unlock-card">
+      <div class="ps-ok-head">
+        <span class="ps-dot"></span>
+        <b>${t("Unlock this content using ads or points.")}</b>
+      </div>
+      <div class="ps-metrics">
+        <div class="ps-m need"><span class="ps-m-ico">🔑</span><span class="ps-m-lbl">${t("Required")}</span><b>${cost}</b></div>
+        <div class="ps-m myp"><span class="ps-m-ico">🪙</span><span class="ps-m-lbl">${t("My Points")}</span><b>${my}</b></div>
+        <div class="ps-m rem"><span class="ps-m-ico">⏳</span><span class="ps-m-lbl">${t("Remaining")}</span><b>${rem}</b></div>
+      </div>
+      <div class="ps-progress">
+        <div class="ps-bar"><i style="width:${pct}%"></i></div>
+        <div class="ps-prog-txt">${t("Progress")}: ${prog}/${cost} · ${t("Ads needed")}: ${adsNeed} · ${hours}h</div>
+      </div>
+      <div class="ps-hint">${t("Unlock with points or ads")}</div>
+      <button type="button" class="ps-btn lock" onclick="unlockWithAds()">🔒 ${t("Unlock Video")}</button>
+      <button type="button" class="ps-btn points" onclick="usePointsForUnlock()">🪙 ${t("Use My Points")}</button>
     </div>
-    <div class="unlock-title">${title}</div>
-    <div class="unlock-sub">${m.genre||""} • ${m.year||""}</div>
-    <div class="points-box">
-      <div class="pb-label">● ${t("Unlock this content using ads or points.")}</div>
-      <div class="points-row">
-        <div class="pc need"><span>${t("Need")}</span><b>${cost}</b></div>
-        <div class="pc myp"><span>${t("My Points")}</span><b>${my}</b></div>
-        <div class="pc rem"><span>${t("Remaining")}</span><b>${rem}</b></div>
-      </div>
-      <div class="progress-wrap">
-        <div class="progress-bar"><i style="width:${Math.min(100,(prog/Math.max(1,cost))*100)}%"></i></div>
-        <div class="progress-text">${t("Progress")}: ${prog}/${cost}<br>${t("Ads needed")}: ${adsNeed} · ${t("Unlock duration")}: ${hours}h</div>
-      </div>
-      <div class="unlock-actions">
-        <button type="button" class="btn-unlock lock" onclick="unlockWithAds()">🔒 ${t("Unlock Video")}</button>
-        <button type="button" class="btn-unlock points" onclick="usePointsForUnlock()">🪙 ${t("Use My Points")}</button>
-      </div>
-    </div>
-    <button type="button" class="btn-more" onclick="nav(state.page==='adult'||(movies.find(x=>x.id===state.detailId)||{}).adult?'adult':'movies')">🎬 ${t("More Watching")} ›</button>
+    <button type="button" class="ps-more" onclick="nav('${backPage}')">🎬 ${t("More Watching")} ›</button>
   </div>`;
 }
 
@@ -1161,7 +1252,7 @@ function usePointsForUnlock(){
   const need=Math.max(0,cost-prog);
   if(need<=0){
     const h=markMovieUnlocked(id);
-    toast(t("Unlocked for")+" "+h+" "+t("hours"));
+    toast(t("Content unlocked."));
     render(false);
     return;
   }
@@ -1173,7 +1264,7 @@ function usePointsForUnlock(){
   save();
   setUnlockProgress(id,cost);
   const h=markMovieUnlocked(id);
-  toast(t("Unlocked for")+" "+h+" "+t("hours")+" · -"+need+" "+t("Points"));
+  toast(t("Content unlocked.")+" · -"+need+" "+t("Points"));
   render(false);
 }
 function unlockWithAds(){watchAd("unlock")}
@@ -1931,25 +2022,31 @@ function handleStartParam(){
     }
     if(!sp) return false;
     sp=String(sp).trim();
-    // movie_123 → open that movie detail
+        // movie_<id> → open that movie (id can be number or string like m_123)
     if(/^movie_/i.test(sp)){
-      const id=Number(sp.replace(/^movie_/i,""));
-      if(id&&!isNaN(id)){
-        state.detailId=id;
-        state.page="detail";
-        state.history=[];
-        try{localStorage.setItem("cinehub4_page","detail")}catch(e){}
-        return true;
-      }
-    }
-    // plain number also treated as movie id
-    if(/^\d+$/.test(sp)){
-      const id=Number(sp);
+      const id=String(sp.replace(/^movie_/i,"")).trim();
       if(id){
         state.detailId=id;
         state.page="detail";
         state.history=[];
-        try{localStorage.setItem("cinehub4_page","detail")}catch(e){}
+        try{
+          localStorage.setItem("cinehub4_page","detail");
+          sessionStorage.setItem("cinehub4_detail",id);
+        }catch(e){}
+        return true;
+      }
+    }
+    // plain id (digits or m_xxx / manual_xxx)
+    if(/^[\w\-]+$/.test(sp) && !/^ref_/i.test(sp)){
+      const id=String(sp).trim();
+      if(id && (movies.some(function(m){return String(m.id)===id;}) || /^\d+$/.test(id) || /^m_/.test(id) || /^manual_/.test(id))){
+        state.detailId=id;
+        state.page="detail";
+        state.history=[];
+        try{
+          localStorage.setItem("cinehub4_page","detail");
+          sessionStorage.setItem("cinehub4_detail",id);
+        }catch(e){}
         return true;
       }
     }
