@@ -217,6 +217,51 @@ function copyMovieLink(id){
     toast("Copy error: "+(e&&e.message?e.message:e));
   }
 }
+
+function resolveMovieByParam(rawId){
+  var id=String(rawId||"").trim();
+  if(!id) return null;
+  var list=movies||[];
+  var m=list.find(function(x){ return String(x.id)===id; });
+  if(m) return m;
+  // tmdb_572802 / t_572802 / plain tmdb number
+  var tid=id.replace(/^tmdb_/i,"").replace(/^t_/i,"");
+  if(tid){
+    m=list.find(function(x){
+      return String(x.tmdb_id)===String(tid)
+        || String(x.id)===String(tid)
+        || String(x.id)==="tmdb_"+tid
+        || String(x.id)==="t_"+tid;
+    });
+    if(m) return m;
+  }
+  m=list.find(function(x){ return String(x.tmdb_id)===id; });
+  return m||null;
+}
+function openSharedMovie(id){
+  id=String(id||"").trim();
+  if(!id) return false;
+  var found=resolveMovieByParam(id);
+  var realId=found?String(found.id):id;
+  var isAdult=found?!!found.adult:false;
+  // If list not loaded yet, still remember and open detail when ready
+  try{
+    sessionStorage.setItem("cinehub4_detail", realId);
+    localStorage.setItem("cinehub4_page", isAdult && !state.adultOK ? "adult" : "detail");
+  }catch(e){}
+  if(isAdult && !state.adultOK){
+    state.pendingAdultDetail=realId;
+    state.detailId=realId;
+    state.page="adult";
+  }else{
+    state.pendingAdultDetail=null;
+    state.detailId=realId;
+    state.page="detail";
+    state.history=[];
+  }
+  return true;
+}
+
 function shareMovie(id){
   try{
     var mid = String(id||"").trim();
@@ -439,17 +484,9 @@ function loadMoviesFromFB(){
       if(typeof handleStartParam==="function") handleStartParam();
       var pending=sessionStorage.getItem("cinehub4_detail")||state.detailId||"";
       if(pending){
-        var found = movies.find(function(m){return String(m.id)===String(pending);});
-        if(found){
-          if(found.adult && !state.adultOK){
-            state.pendingAdultDetail = String(pending);
-            state.detailId = String(pending);
-            state.page = "adult";
-          } else {
-            state.detailId = String(pending);
-            state.page = "detail";
-          }
-        }
+        openSharedMovie(pending);
+      } else if(typeof handleStartParam==="function"){
+        handleStartParam();
       }
     }catch(e){}
     safeRender(false);
@@ -465,16 +502,8 @@ function loadMoviesFromFB(){
           try{
             if(typeof handleStartParam==="function") handleStartParam();
             var pending=sessionStorage.getItem("cinehub4_detail")||state.detailId||"";
-            if(pending && movies.some(function(m){return String(m.id)===String(pending);})){
-              var found=movies.find(function(m){return String(m.id)===String(pending);});
-              if(found && found.adult && !state.adultOK){
-                state.pendingAdultDetail=String(pending);
-                state.page="adult";
-              } else {
-                state.detailId=String(pending);
-                state.page="detail";
-              }
-            }
+            if(pending){ openSharedMovie(pending); }
+            else if(typeof handleStartParam==="function"){ handleStartParam(); }
           }catch(e){}
           safeRender(false);
         }
@@ -2628,24 +2657,15 @@ function setupAdminButton(){
     const btn=document.getElementById("adminPanelBtn");
     const wrap=document.getElementById("adminPanelWrap");
     if(!btn && !wrap) return;
-    // ONLY show for server-verified admins (Script Properties ADMIN_IDS)
-    if(isAdminUser()){
-      if(wrap){ wrap.style.display="block"; }
-      if(btn){
-        btn.classList.remove("hidden");
-        btn.style.display="flex";
-        btn.onclick=function(e){
-          e.preventDefault();
-          location.href="admin.html";
-        };
-      }
-    }else{
-      if(wrap){ wrap.style.display="none"; }
-      if(btn){
-        btn.classList.add("hidden");
-        btn.style.display="none";
-        btn.onclick=null;
-      }
+    // Always show entry point — real auth is on admin.html (ADMIN_IDS server check)
+    if(wrap){ wrap.style.display="block"; }
+    if(btn){
+      btn.classList.remove("hidden");
+      btn.style.display="flex";
+      btn.onclick=function(e){
+        e.preventDefault();
+        location.href="admin.html";
+      };
     }
   }catch(e){}
 }
@@ -2756,40 +2776,17 @@ function handleStartParam(){
     }
     if(!sp) return false;
     sp=String(sp).trim();
-        // movie_<id> → open that movie (id can be number or string like m_123)
+    // movie_<id> → open unlock/detail (or adult gate first)
     if(/^movie_/i.test(sp)){
       const id=String(sp.replace(/^movie_/i,"")).trim();
-      if(id){
-        var mm = (movies||[]).find(function(x){ return String(x.id)===String(id); });
-        if(mm && mm.adult && !state.adultOK){
-          state.pendingAdultDetail = id;
-          state.detailId = id;
-          state.page = "adult";
-          try{ localStorage.setItem("cinehub4_page","adult"); sessionStorage.setItem("cinehub4_detail",id); }catch(e){}
-          return true;
-        }
-        state.detailId=id;
-        state.page="detail";
-        state.history=[];
-        try{
-          localStorage.setItem("cinehub4_page","detail");
-          sessionStorage.setItem("cinehub4_detail",id);
-        }catch(e){}
-        return true;
-      }
+      if(id) return openSharedMovie(id);
+      return false;
     }
-    // plain id (digits or m_xxx / manual_xxx)
+    // plain id / tmdb id
     if(/^[\w\-]+$/.test(sp) && !/^ref_/i.test(sp)){
       const id=String(sp).trim();
-      if(id && (movies.some(function(m){return String(m.id)===id;}) || /^\d+$/.test(id) || /^m_/.test(id) || /^manual_/.test(id))){
-        state.detailId=id;
-        state.page="detail";
-        state.history=[];
-        try{
-          localStorage.setItem("cinehub4_page","detail");
-          sessionStorage.setItem("cinehub4_detail",id);
-        }catch(e){}
-        return true;
+      if(id && (resolveMovieByParam(id) || /^\d+$/.test(id) || /^m_/.test(id) || /^manual_/.test(id) || /^tmdb_/i.test(id))){
+        return openSharedMovie(id);
       }
     }
     // ref_USERID — store referrer for bonus (bot/backend usually handles)
@@ -2802,15 +2799,20 @@ function handleStartParam(){
 handleStartParam();
 // Telegram sometimes fills start_param a moment later
 setTimeout(function(){
-  if(handleStartParam() && state.page==="detail"){
+  if(handleStartParam() && (state.page==="detail"||state.page==="adult")){
     try{render(false)}catch(e){}
   }
 },400);
 setTimeout(function(){
-  if(handleStartParam() && state.page==="detail"){
+  if(handleStartParam() && (state.page==="detail"||state.page==="adult")){
     try{render(false)}catch(e){}
   }
 },1200);
+setTimeout(function(){
+  if(handleStartParam() && (state.page==="detail"||state.page==="adult")){
+    try{render(false)}catch(e){}
+  }
+},2500);
 bindLeaveGuard();
 
 function killSplash(){
@@ -2837,10 +2839,21 @@ function killSplash(){
   function paintNow(){
     window.__cinehub_forcePaint = true;
     try{
-      // Always land on movies on cold open
+      // Re-apply share deep-link BEFORE any default home redirect
+      try{ if(typeof handleStartParam==="function") handleStartParam(); }catch(e0){}
+      var hasDeep=false;
+      try{
+        if(state.page==="detail"||state.page==="adult") hasDeep=true;
+        if(state.detailId||state.pendingAdultDetail) hasDeep=true;
+        if(sessionStorage.getItem("cinehub4_detail")) hasDeep=true;
+        var tg=window.Telegram&&window.Telegram.WebApp;
+        var sp=(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.start_param)||"";
+        if(/^movie_/i.test(sp)) hasDeep=true;
+      }catch(e1){}
       if(!sessionStorage.getItem("cinehub4_booted")){
-        state.page = "movies";
         sessionStorage.setItem("cinehub4_booted","1");
+        // Only default to home when there is NO share/deep link
+        if(!hasDeep){ state.page = "movies"; }
       }
       render(false);
     }catch(e){

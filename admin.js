@@ -385,12 +385,23 @@ function adminLogin(){
       return;
     }
 
+    var finished=false;
+    var tmo=setTimeout(function(){
+      if(finished) return;
+      finished=true;
+      clearAdminFlags();
+      setGateStatus("❌ টাইমআউট (18s). Code.gs → Deploy → New version করেছেন? apiBaseUrl ঠিক আছে?", true);
+      finishBtn();
+    }, 18000);
     fetch(api,{
       method:"POST",
       headers:{"Content-Type":"text/plain;charset=utf-8"},
       body:JSON.stringify({action:"adminCheck",initData:initData}),
       redirect:"follow"
     }).then(function(r){ return r.text(); }).then(function(txt){
+      if(finished) return;
+      finished=true;
+      clearTimeout(tmo);
       var res=null;
       try{ res=JSON.parse(txt); }catch(e){
         clearAdminFlags();
@@ -418,6 +429,9 @@ function adminLogin(){
       );
       finishBtn();
     }).catch(function(err){
+      if(finished) return;
+      finished=true;
+      try{ clearTimeout(tmo); }catch(x){}
       clearAdminFlags();
       setGateStatus("❌ Network: "+(err&&err.message?err.message:err), true);
       finishBtn();
