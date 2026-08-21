@@ -281,7 +281,7 @@ function shareRefLink(){
 }
 function openLink(u){if(!u)return;try{window.Telegram?.WebApp?.openTelegramLink?.(u)||window.Telegram?.WebApp?.openLink?.(u)||window.open(u,"_blank")}catch(e){window.open(u,"_blank")}}
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
-const defaults={appName:"Cine Hub4",botUsername:"@Cinehub4bot",telegramBotLink:"https://t.me/Cinehub4bot",miniAppName:"Hub4",miniAppLink:"https://t.me/Cinehub4bot/Hub4",telegramChannelLink:"",howToWatchVideo:"",watchTutorialVideo:"",howToWatchText:"Unlock this content using ads or points.",unlockCost:5,unlockHours:15,adsForUnlock:5,downloadServers:3,adReward:2,dailyAdLimit:20,joinBonus:10,referralReward:20,categories:["All Movies","Bangla Moves","Hollywood Movie Hindi"],adultCategories:["All","Adult Movie","Anime"],tickerText:"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ",adultTickerText:"18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ",libraryBadge:"MOVIE ZONE",libraryTitle:"Cinema Library",libraryDesc:"Curated movies, web series and premium entertainment updates.",adultLibraryBadge:"ADULT ZONE",adultLibraryTitle:"Adult Library",adultLibraryDesc:"Curated 18+ content and premium entertainment updates.",howToWatchLabel:"▶ How to Watch",adultHowToWatchLabel:"▶ How to Watch",newMoviesLabel:"New Movies",newMoviesSub:"LATEST UPLOADS",trendingLabel:"Trending",trendingSub:"MOST WATCHED",adultNewLabel:"New Movies",adultNewSub:"LATEST UPLOADS",adultTrendingLabel:"Trending",adultTrendingSub:"MOST WATCHED",packages:[
+const defaults={appName:"Cine Hub4",botUsername:"@Cinehub4bot",telegramBotLink:"https://t.me/Cinehub4bot",miniAppName:"Hub4",miniAppLink:"https://t.me/Cinehub4bot/Hub4",telegramChannelLink:"",howToWatchVideo:"",watchTutorialVideo:"",howToWatchText:"Unlock this content using ads or points.",unlockCost:5,unlockHours:15,adsForUnlock:5,adultUnlockCost:3,adultAdsForUnlock:5,adultUnlockHours:15,downloadServers:3,adReward:2,dailyAdLimit:20,joinBonus:10,referralReward:20,categories:["All Movies","Bangla Moves","Hollywood Movie Hindi"],adultCategories:["All","Adult Movie","Anime"],tickerText:"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ",adultTickerText:"18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ",libraryBadge:"MOVIE ZONE",libraryTitle:"Cinema Library",libraryDesc:"Curated movies, web series and premium entertainment updates.",adultLibraryBadge:"ADULT ZONE",adultLibraryTitle:"Adult Library",adultLibraryDesc:"Curated 18+ content and premium entertainment updates.",howToWatchLabel:"▶ How to Watch",adultHowToWatchLabel:"▶ How to Watch",newMoviesLabel:"New Movies",newMoviesSub:"LATEST UPLOADS",trendingLabel:"Trending",trendingSub:"MOST WATCHED",adultNewLabel:"New Movies",adultNewSub:"LATEST UPLOADS",adultTrendingLabel:"Trending",adultTrendingSub:"MOST WATCHED",packages:[
     {name:"Basic Package",price:0.99,points:110,tag:"SMART CHOICE"},
     {name:"Standard Package",price:4.99,points:550,tag:"STARTER"},
     {name:"Premium Package",price:9.99,points:1200,tag:"BEST VALUE"},
@@ -594,12 +594,12 @@ function card(m,idx){
       ${top}
       ${rating?`<span class="movie-rating">★ ${rating}</span>`:""}
       ${posterHTML(m)}
-      ${dur?`<span class="movie-dur">${dur}</span>`:""}
+      ${dur?`<span class="movie-dur"><span class="movie-dur-ico">⏱</span>${dur}</span>`:""}
     </div>
     <div class="movie-body">
-      <div class="mtitle">${title}</div>
-      <div class="mmeta">
-        <button type="button" class="share-btn" onclick='event.stopPropagation();shareMovie(${sid})'>↗ ${t("Share")}</button>
+      <div class="movie-body-row">
+        <div class="mtitle">${title}</div>
+        <button type="button" class="share-btn share-btn-round" onclick='event.stopPropagation();shareMovie(${sid})' aria-label="Share">↗</button>
       </div>
     </div>
   </article>`;
@@ -1352,7 +1352,8 @@ function persistUnlockMaps_(){
 }
 function markMovieUnlocked(id){
   loadSharedSettings();
-  const hours=Number(cfg.unlockHours)||15;
+  const rules=getUnlockRules(id);
+  const hours=rules.hours;
   const exp=Date.now()+hours*3600*1000;
   if(!userData) userData={};
   if(!userData.unlocks) userData.unlocks={};
@@ -1366,8 +1367,30 @@ function markMovieUnlocked(id){
     try{window.CineHubFB.setUnlock(null, id, hours)}catch(e){}
     persistUnlockMaps_();
   }
-  state.unlockProgress=Number(cfg.unlockCost)||5;
+  state.unlockProgress=rules.cost;
   return hours;
+}
+/** Unlock rules: movie vs adult separate (admin controlled) */
+function getUnlockRules(movieOrAdult){
+  var isAdult = false;
+  if(typeof movieOrAdult === "boolean") isAdult = movieOrAdult;
+  else if(movieOrAdult && typeof movieOrAdult === "object") isAdult = !!movieOrAdult.adult;
+  else if(movieOrAdult != null){
+    var mm = movies.find(function(x){ return String(x.id)===String(movieOrAdult); });
+    isAdult = !!(mm && mm.adult);
+  }
+  if(isAdult){
+    return {
+      cost: Math.max(1, Number(cfg.adultUnlockCost != null ? cfg.adultUnlockCost : 3) || 3),
+      adsNeed: Math.max(1, Number(cfg.adultAdsForUnlock != null ? cfg.adultAdsForUnlock : 5) || 5),
+      hours: Math.max(1, Number(cfg.adultUnlockHours != null ? cfg.adultUnlockHours : (cfg.unlockHours||15)) || 15)
+    };
+  }
+  return {
+    cost: Math.max(1, Number(cfg.unlockCost)||5),
+    adsNeed: Math.max(1, Number(cfg.adsForUnlock)||5),
+    hours: Math.max(1, Number(cfg.unlockHours)||15)
+  };
 }
 /** Points contributed toward unlockCost — Firebase */
 function getUnlockProgress(id){
@@ -1400,7 +1423,7 @@ function getAdUnlockProgress(id){
 }
 function setAdUnlockProgress(id,n){
   loadSharedSettings();
-  const need=Math.max(1, Number(cfg.adsForUnlock)||5);
+  const need=getUnlockRules(id).adsNeed;
   const v=Math.max(0,Math.min(need,Number(n)||0));
   if(!userData) userData={};
   if(!userData.unlock_ad_prog) userData.unlock_ad_prog={};
@@ -1410,8 +1433,7 @@ function setAdUnlockProgress(id,n){
 }
 function tryCompleteUnlock(id){
   loadSharedSettings();
-  const cost=Math.max(1, Number(cfg.unlockCost)||5);
-  const adsNeed=Math.max(1, Number(cfg.adsForUnlock)||5);
+  const _ur=getUnlockRules(id); const cost=_ur.cost; const adsNeed=_ur.adsNeed;
   const p=getUnlockProgress(id);
   const a=getAdUnlockProgress(id);
   if(p>=cost || a>=adsNeed){
@@ -1465,12 +1487,13 @@ if(!window.__unlockTimerIv){
 function detailView(){
   loadSharedSettings();
   const m=movies.find(x=>String(x.id)===String(state.detailId));if(!m)return moviesPage();
-  const cost=Number(cfg.unlockCost)||5;
-  const adsNeed=Number(cfg.adsForUnlock)||cost;
-  const hours=Number(cfg.unlockHours)||15;
+  const isAdult=!!m.adult;
+  const rules=getUnlockRules(m);
+  const cost=rules.cost;
+  const adsNeed=rules.adsNeed;
+  const hours=rules.hours;
   const title=(m.title||"").split("|")[0].trim();
   const unlocked=isMovieUnlocked(m.id);
-  const isAdult=!!m.adult;
   const backPage=isAdult?"adult":"movies";
   const pageLabel=isAdult?(t("Adult")+" · "+t("Movie")):t("Movie");
   const clicks=Number(m.clicks||m.views||0);
@@ -1568,10 +1591,6 @@ function detailView(){
           <div class="ps-m myp"><span class="ps-m-ico ps-i-coin" aria-hidden="true"></span><span class="ps-m-lbl">${t("My Points")}</span><b>${state.points||0}</b></div>
           <div class="ps-m rem"><span class="ps-m-ico ps-i-time" aria-hidden="true"></span><span class="ps-m-lbl">${t("Remaining")}</span><b>0</b></div>
         </div>
-        <div class="ps-progress">
-          <div class="ps-bar"><i style="width:100%"></i></div>
-          <div class="ps-prog-txt">${t("Progress")}: ${cost}/${cost}</div>
-        </div>
         <div class="ps-timer-box">
           <div class="ps-timer-lbl">${t("Unlock time remaining")}</div>
           <div class="ps-timer" id="unlockTimer" data-exp="${exp}">${timerStr}</div>
@@ -1613,9 +1632,15 @@ function detailView(){
         <div class="ps-m myp"><span class="ps-m-ico ps-i-coin" aria-hidden="true"></span><span class="ps-m-lbl">${t("My Points")}</span><b>${my}</b></div>
         <div class="ps-m rem"><span class="ps-m-ico ps-i-time" aria-hidden="true"></span><span class="ps-m-lbl">${t("Remaining")}</span><b>${rem}</b></div>
       </div>
-      <div class="ps-progress">
-        <div class="ps-bar"><i style="width:${pct}%"></i></div>
-        <div class="ps-prog-txt">${t("Points")}: ${prog}/${cost} · ${t("Ads")}: ${adProg}/${adsNeed}</div>
+      <div class="ps-progress ps-progress-split">
+        <div class="ps-prog-line">
+          <div class="ps-prog-lbl">${t("Points")}: ${prog}/${cost}</div>
+          <div class="ps-bar"><i style="width:${pctPts}%"></i></div>
+        </div>
+        <div class="ps-prog-line">
+          <div class="ps-prog-lbl">${t("Ads")}: ${adProg}/${adsNeed}</div>
+          <div class="ps-bar ps-bar-ads"><i style="width:${pctAds}%"></i></div>
+        </div>
       </div>
       <div class="ps-hint">${t("Unlock with points or ads")}</div>
       <button type="button" class="ps-btn lock" onclick="unlockWithAds()">${t("Unlock Video")}</button>
@@ -1630,7 +1655,7 @@ function usePointsForUnlock(){
   const id=state.detailId;
   if(!id){toast(t("Open a movie first"));return}
   if(isMovieUnlocked(id)){toast(t("Already unlocked"));render(false);return}
-  const cost=Math.max(1, Number(cfg.unlockCost)||5);
+  const cost=getUnlockRules(id).cost;
   let prog=getUnlockProgress(id);
   const need=Math.max(0, cost-prog);
   if(need<=0){
@@ -2121,26 +2146,91 @@ function doSearch(){
   state.query=q?q.value:state.query||"";
   state.page="search";
   localStorage.setItem("cinehub4_page","search");
-  render(true);
+  // Live update without heavy page-enter animation
+  render(false);
 }
-
+function liveSearchInput(el){
+  try{
+    state.query = el ? String(el.value||"") : "";
+    state.page = "search";
+    // Keep focus: only re-render results container if present
+    var box = document.getElementById("searchResults");
+    if(box){
+      box.innerHTML = searchResultsHTML();
+      return;
+    }
+    render(false);
+    setTimeout(function(){
+      var inp=document.getElementById("q");
+      if(inp){ try{ inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);}catch(e){} }
+    }, 30);
+  }catch(e){ doSearch(); }
+}
+function movieMatchesQuery(m, q){
+  if(!q) return true;
+  q = String(q).toLowerCase().trim();
+  if(!q) return true;
+  var title = String((m&&m.title)||"").toLowerCase();
+  var genre = String((m&&m.genre)||"").toLowerCase();
+  var cat = String((m&&m.category)||"").toLowerCase();
+  var year = String((m&&m.year)||"");
+  // one character match + flexible (ignore spaces)
+  var compact = title.replace(/\s+/g,"");
+  var qCompact = q.replace(/\s+/g,"");
+  return title.includes(q) || compact.includes(qCompact) || genre.includes(q) || cat.includes(q) || year.includes(q);
+}
+function searchResultsHTML(){
+  var q = (state.query||"").toLowerCase().trim();
+  var list = (movies||[]).filter(function(m){ return !m.adult; });
+  if(q) list = list.filter(function(m){ return movieMatchesQuery(m, q); });
+  // Prefer stronger title prefix matches first
+  if(q){
+    list = list.slice().sort(function(a,b){
+      var ta=String(a.title||"").toLowerCase(), tb=String(b.title||"").toLowerCase();
+      var pa=ta.indexOf(q), pb=tb.indexOf(q);
+      if(pa!==pb) return (pa<0?999:pa)-(pb<0?999:pb);
+      return ta.localeCompare(tb);
+    });
+  }
+  if(!list.length){
+    return q
+      ? `<div class="empty search-empty">${t("No movies found")}</div>`
+      : `<div class="empty search-empty muted">${t("Search movies...")}</div>`;
+  }
+  return list.map(function(m){ return searchResultRow(m); }).join("");
+}
+function searchResultRow(m){
+  var title = String((m.title||"").split("|")[0]).trim().replace(/</g,"");
+  var sid = JSON.stringify(String(m.id));
+  var poster = (m.poster||m.poster_path||"").replace(/"/g,"&quot;");
+  var thumb = poster
+    ? `<img class="sr-thumb" src="${poster}" alt="" loading="lazy" onerror="this.classList.add('broken')">`
+    : `<div class="sr-thumb sr-thumb-fallback">🎬</div>`;
+  var kind = m.adult ? "ADULT" : "MOVIE";
+  return `<button type="button" class="sr-row" onclick='detail(${sid})'>
+    ${thumb}
+    <div class="sr-meta">
+      <div class="sr-title">${title}</div>
+      <div class="sr-kind">${kind}</div>
+    </div>
+  </button>`;
+}
 function searchPage(){
-  const q=(state.query||"").toLowerCase();
-  let list=movies.filter(m=>!m.adult);
-  if(q) list=list.filter(m=>((m.title||"")+(m.genre||"")+(m.category||"")).toLowerCase().includes(q));
   return `<div class="search-top">
     <button type="button" class="menu-ham" id="hamBtn">☰</button>
     <div class="search-bar-wrap">
-      <input id="q" type="search" placeholder="${t("Search movies...")}" value="${(state.query||"").replace(/"/g,"&quot;")}" onkeydown="if(event.key==='Enter')doSearch()">
+      <input id="q" type="search" placeholder="${t("Search movies...")}" value="${(state.query||"").replace(/"/g,"&quot;")}"
+        oninput="liveSearchInput(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();doSearch();}">
       <button type="button" class="mic-btn" id="micBtn" title="Voice search" aria-label="Voice search">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0" stroke="currentColor" stroke-width="2"/><path d="M12 18v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
       <button type="button" class="search-go" onclick="doSearch()" aria-label="Search">🔍</button>
     </div>
   </div>
-  <div class="section-title"><b>${t("Results")}</b><span>${list.length}</span></div>
-  ${list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No movies found")}</div>`}`;
+  <div id="searchResults" class="search-results">${searchResultsHTML()}</div>`;
 }
+window.liveSearchInput = liveSearchInput;
+window.doSearch = doSearch;
 
 
 
@@ -2391,7 +2481,14 @@ if(window.__cinehub_blocked){ return; }
 /* Skip paints while splash is covering the screen (prevents open-time jerk) */
 if(window.__cinehub_splashUp && !window.__cinehub_forcePaint){ window.__cinehub_needPaint=true; return; }
 try{const views={movies:moviesPage,search:searchPage,series,adult,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate && !state.firstPaint && !window.__cinehub_noAnim){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>{
-  b.classList.toggle("active",b.dataset.page===state.page||(state.page==="detail"&&b.dataset.page==="movies"));
+  (function(){
+  var navPage = state.page;
+  if(state.page==="detail"){
+    var dm = movies.find(function(x){ return String(x.id)===String(state.detailId); });
+    navPage = (dm && dm.adult) ? "adult" : "movies";
+  }
+  b.classList.toggle("active", b.dataset.page===state.page || b.dataset.page===navPage);
+})();
   if(b.dataset.page==="adult"){
     const off = (cfg.adultEnabled===false || cfg.adultLibraryEnabled===false);
     b.style.display = off ? "none" : "";

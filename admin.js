@@ -884,6 +884,14 @@ function points(){return `<div class="toolbar"><div><h2 style="margin:0;font-siz
       <div class="field"><label>Download servers count (1–10)</label><input id="downloadServersP" type="number" min="1" max="10" value="${A.settings.downloadServers||3}"></div>
     </div>
   </div>
+  <div class="card" style="border:1px solid #f43f5e44"><h3>🔞 Adult Unlock Rules (আলাদা)</h3>
+    <div class="muted smalltext" style="margin-bottom:10px">শুধু ১৮+ কন্টেন্ট — Movie Unlock থেকে আলাদা</div>
+    <div class="form-grid">
+      <div class="field"><label>Points to unlock 1 adult</label><input id="adultUnlockCost" type="number" value="${A.settings.adultUnlockCost!=null?A.settings.adultUnlockCost:3}"></div>
+      <div class="field"><label>Ads to unlock 1 adult</label><input id="adultAdsForUnlock" type="number" value="${A.settings.adultAdsForUnlock!=null?A.settings.adultAdsForUnlock:5}"></div>
+      <div class="field"><label>Adult unlock hours</label><input id="adultUnlockHours" type="number" value="${A.settings.adultUnlockHours!=null?A.settings.adultUnlockHours:(A.settings.unlockHours||15)}"></div>
+    </div>
+  </div>
   <div class="card"><h3>🎁 Earn Points</h3>
     <div class="form-grid">
       <div class="field"><label>Points per ad watched</label><input id="adRewardP" type="number" value="${A.settings.adReward}"></div>
@@ -929,13 +937,16 @@ function savePoints(){
   A.settings.dailyAdLimit=Math.max(0, Number(($('#dailyLimitP')||{}).value)||20);
   A.settings.dailyUnlockLimit=Math.max(0, Number(($('#dailyUnlockLimit')||{}).value)||0);
   A.settings.adsForUnlock=Math.max(1, Number(($('#adsForUnlockP')||{}).value)||5);
+  A.settings.adultUnlockCost=Math.max(1, Number(($('#adultUnlockCost')||{}).value)||3);
+  A.settings.adultAdsForUnlock=Math.max(1, Number(($('#adultAdsForUnlock')||{}).value)||5);
+  A.settings.adultUnlockHours=Math.max(1, Number(($('#adultUnlockHours')||{}).value)||15);
   A.settings.downloadServers=Math.max(1,Math.min(10, Number(($('#downloadServersP')||{}).value)||3));
   A.settings.joinBonus=Math.max(0, Number(($('#bonus')||{}).value)||10);
   A.settings.newUserBonus=A.settings.joinBonus;
   A.settings.referralReward=Math.max(0, Number(($('#ref')||{}).value)||20);
   save();
   render();
-  toast("✓ Unlock: "+A.settings.unlockCost+" pts / "+A.settings.adsForUnlock+" ads / "+A.settings.unlockHours+"h → Firebase");
+  toast("✓ Movie "+A.settings.unlockCost+"pts/"+A.settings.adsForUnlock+"ads · Adult "+A.settings.adultUnlockCost+"pts/"+A.settings.adultAdsForUnlock+"ads → Firebase");
 }
 function ads(){
   ensureAdSlots();
@@ -1370,21 +1381,48 @@ function adult(){
   <button type="button" class="btn primary" onclick="openAdultMovie()">＋ Add</button></div>
   <div class="movie-cards">${cards}</div>
 </div>
-<div class="card" style="margin-top:14px"><h3>Adult Page Text</h3><div class="muted smalltext">Labels on the Adult page.</div><div class="form-grid" style="margin-top:12px"><div class="field"><label>Badge</label><input id="aLibBadge" value="${A.settings.adultLibraryBadge||''}"></div><div class="field"><label>Title</label><input id="aLibTitle" value="${A.settings.adultLibraryTitle||''}"></div><div class="field"><label>Description</label><input id="aLibDesc" value="${A.settings.adultLibraryDesc||''}"></div><div class="field"><label>Ticker Text</label><input id="aTicker" value="${A.settings.adultTickerText||''}"></div><div class="field"><label>New Label</label><input id="aNewLabel" value="${A.settings.adultNewLabel||''}"></div><div class="field"><label>New Sub</label><input id="aNewSub" value="${A.settings.adultNewSub||''}"></div><div class="field"><label>Trending Label</label><input id="aTrendLabel" value="${A.settings.adultTrendingLabel||''}"></div><div class="field"><label>Trending Sub</label><input id="aTrendSub" value="${A.settings.adultTrendingSub||''}"></div></div>
+<div class="card" style="margin-top:14px"><h3>Adult Page Text (EN + বাংলা)</h3><div class="muted smalltext">মুভির মতো — ইংরেজি ও বাংলা আলাদা। ইউজার ভাষা অনুযায়ী দেখাবে।</div>
+<div class="form-grid" style="margin-top:12px">
+  <div class="field"><label>Badge (EN)</label><input id="aLibBadge" value="${A.settings.adultLibraryBadge||''}"></div>
+  <div class="field"><label>ব্যাজ (বাংলা)</label><input id="aLibBadgeBn" value="${A.settings.adultLibraryBadgeBn||''}" placeholder="অ্যাডাল্ট জোন"></div>
+  <div class="field"><label>Title (EN)</label><input id="aLibTitle" value="${A.settings.adultLibraryTitle||''}"></div>
+  <div class="field"><label>টাইটেল (বাংলা)</label><input id="aLibTitleBn" value="${A.settings.adultLibraryTitleBn||''}" placeholder="অ্যাডাল্ট লাইব্রেরি"></div>
+  <div class="field" style="grid-column:1/-1"><label>Description (EN)</label><input id="aLibDesc" value="${A.settings.adultLibraryDesc||''}"></div>
+  <div class="field" style="grid-column:1/-1"><label>বর্ণনা (বাংলা)</label><input id="aLibDescBn" value="${A.settings.adultLibraryDescBn||''}"></div>
+  <div class="field" style="grid-column:1/-1"><label>Ticker (EN)</label><input id="aTicker" value="${A.settings.adultTickerText||''}"></div>
+  <div class="field" style="grid-column:1/-1"><label>টিকার (বাংলা)</label><input id="aTickerBn" value="${A.settings.adultTickerTextBn||''}"></div>
+  <div class="field"><label>New Label (EN)</label><input id="aNewLabel" value="${A.settings.adultNewLabel||''}"></div>
+  <div class="field"><label>নতুন লেবেল (বাংলা)</label><input id="aNewLabelBn" value="${A.settings.adultNewLabelBn||''}"></div>
+  <div class="field"><label>New Sub (EN)</label><input id="aNewSub" value="${A.settings.adultNewSub||''}"></div>
+  <div class="field"><label>নতুন সাব (বাংলা)</label><input id="aNewSubBn" value="${A.settings.adultNewSubBn||''}"></div>
+  <div class="field"><label>Trending Label (EN)</label><input id="aTrendLabel" value="${A.settings.adultTrendingLabel||''}"></div>
+  <div class="field"><label>ট্রেন্ডিং (বাংলা)</label><input id="aTrendLabelBn" value="${A.settings.adultTrendingLabelBn||''}"></div>
+  <div class="field"><label>Trending Sub (EN)</label><input id="aTrendSub" value="${A.settings.adultTrendingSub||''}"></div>
+  <div class="field"><label>ট্রেন্ডিং সাব (বাংলা)</label><input id="aTrendSubBn" value="${A.settings.adultTrendingSubBn||''}"></div>
+</div>
 <button class="btn primary" style="margin-top:12px;width:100%" onclick="saveAdultTexts()">Save Adult Texts → Firebase</button></div>`;
 }
 
 function saveAdultTexts(){
-  A.settings.adultLibraryBadge=(($('#aLibBadge')||{}).value||'').trim();
-  A.settings.adultLibraryTitle=(($('#aLibTitle')||{}).value||'').trim();
-  A.settings.adultLibraryDesc=(($('#aLibDesc')||{}).value||'').trim();
-  A.settings.adultTickerText=(($('#aTicker')||{}).value||'').trim();
-  A.settings.adultNewLabel=(($('#aNewLabel')||{}).value||'').trim();
-  A.settings.adultNewSub=(($('#aNewSub')||{}).value||'').trim();
-  A.settings.adultTrendingLabel=(($('#aTrendLabel')||{}).value||'').trim();
-  A.settings.adultTrendingSub=(($('#aTrendSub')||{}).value||'').trim();
+  function gv(id){ return (($('#'+id)||{}).value||'').trim(); }
+  A.settings.adultLibraryBadge=gv('aLibBadge');
+  A.settings.adultLibraryBadgeBn=gv('aLibBadgeBn');
+  A.settings.adultLibraryTitle=gv('aLibTitle');
+  A.settings.adultLibraryTitleBn=gv('aLibTitleBn');
+  A.settings.adultLibraryDesc=gv('aLibDesc');
+  A.settings.adultLibraryDescBn=gv('aLibDescBn');
+  A.settings.adultTickerText=gv('aTicker');
+  A.settings.adultTickerTextBn=gv('aTickerBn');
+  A.settings.adultNewLabel=gv('aNewLabel');
+  A.settings.adultNewLabelBn=gv('aNewLabelBn');
+  A.settings.adultNewSub=gv('aNewSub');
+  A.settings.adultNewSubBn=gv('aNewSubBn');
+  A.settings.adultTrendingLabel=gv('aTrendLabel');
+  A.settings.adultTrendingLabelBn=gv('aTrendLabelBn');
+  A.settings.adultTrendingSub=gv('aTrendSub');
+  A.settings.adultTrendingSubBn=gv('aTrendSubBn');
   save();
-  toast('✓ Adult টেক্সট Firebase-এ সেভ');
+  toast('✓ Adult টেক্সট (EN+BN) Firebase-এ সেভ');
 }
 
 function adultMovieRows(ms){
