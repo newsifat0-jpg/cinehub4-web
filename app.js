@@ -205,8 +205,12 @@ function copyMovieLink(id){
   try{
     var mid = String(id||"").trim();
     if(!mid){ toast("ID missing"); return; }
+    var m = (typeof movies!=="undefined" && movies) ? movies.find(function(x){ return String(x.id)===mid; }) : null;
+    var title = m ? String(m.title||"").split("|")[0].trim() : "Movie";
     var link = movieShareLink(mid);
-    if(!link){ toast("Link empty — set Mini App link in Settings"); return; }
+    if(!link){ toast("Link empty — set Mini App link in Admin → Settings"); return; }
+    // Always show sheet so user can see + copy (Telegram WebView clipboard often blocked)
+    showLinkSheet(link, title);
     hardCopy(link, function(){ toast(t("Link copied")); });
   }catch(e){
     console.error(e);
@@ -220,13 +224,10 @@ function shareMovie(id){
     var m = (typeof movies!=="undefined" && movies) ? movies.find(function(x){ return String(x.id)===mid; }) : null;
     var title = m ? String(m.title||"").split("|")[0].trim() : "Movie";
     var link = movieShareLink(mid);
-    if(!link){ toast("Link empty — set Mini App link in Settings"); return; }
-    var ok = openTgShare(link, title + " — Cine Hub4");
-    if(!ok){
-      showLinkSheet(link, title);
-    } else {
-      toast(t("Share"));
-    }
+    if(!link){ toast("Link empty — set Mini App link in Admin → Settings"); return; }
+    // Show sheet first (always works), then try Telegram share
+    showLinkSheet(link, title);
+    openTgShare(link, title + " — Cine Hub4");
   }catch(e){
     console.error(e);
     toast("Share error: "+(e&&e.message?e.message:e));
@@ -2003,8 +2004,10 @@ function bindDrawer(){
 }
 function isAdminUser(){
   try{
-    // Only trust flags set after successful server adminCheck this session
     if(window.__IS_ADMIN===true) return true;
+    try{
+      if(sessionStorage.getItem("cinehub4_is_admin")==="1") return true;
+    }catch(e){}
     const ids=(window.__ADMIN_IDS||[]);
     const tg=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initDataUnsafe&&window.Telegram.WebApp.initDataUnsafe.user;
     const uid=tg&&tg.id!=null?String(tg.id):"";
@@ -2040,7 +2043,7 @@ function loadAdminIdsApp(){
         if(!uid && data.debugId) uid=String(data.debugId);
         window.__ADMIN_IDS=uid?[uid]:["1"];
         window.__IS_ADMIN=true;
-        try{ sessionStorage.setItem("cinehub4_is_admin","1"); }catch(e){}
+        try{ sessionStorage.setItem("cinehub4_is_admin","1"); localStorage.setItem("cinehub4_admin_session","1"); }catch(e){}
         try{ setupAdminButton(); }catch(e){}
         try{ if(state.page==="profile") render(false); }catch(e){}
       }else{

@@ -1572,23 +1572,30 @@ function saveMovie(id){
   if(window.__savingMovie){toast('Already saving…');return;}
   id=(id===0||id===null||id===undefined||id==='')?null:id;
   const old=id!=null?A.movies.find(m=>String(m.id)===String(id)):null;
-  const isAdult=$('#mAdult').value==='1';
-  let cat=$('#mCat').value;
+  const isAdult=adultVal==='1'||($('#mAdult')&&$('#mAdult').value==='1');
+  let cat=catVal||(($('#mCat')&&$('#mCat').value)||'');
   if(isAdult){
     const ac=(A.settings.adultCategories||[]).filter(x=>catEn(x)!=='All');
     if(ac.length&&!ac.some(function(x){return catEn(x)===cat;}))cat=catEn(ac[0]);
   }
-  const s1=($('#s1')||{}).value?$('#s1').value.trim():'';
-  const s2=($('#s2')||{}).value?$('#s2').value.trim():'';
-  const s3=($('#s3')||{}).value?$('#s3').value.trim():'';
+  function gv(id){ var el=document.getElementById(id); return el ? String(el.value||'').trim() : ''; }
+  const s1=gv('s1');
+  const s2=gv('s2');
+  const s3=gv('s3');
+  const titleVal=gv('mTitle')||'Untitled Movie';
+  const posterVal=gv('mPoster');
+  const catVal=gv('mCat');
+  const adultVal=gv('mAdult');
+  const yearVal=gv('mYear');
+  const ratingVal=gv('mRating');
   const x={
     id:id!=null?String(id):("m_"+Date.now()),
-    title:($('#mTitle').value||'Untitled Movie').trim(),
+    title:titleVal,
     type:isAdult?'Adult':'Movie',
-    year:+$('#mYear').value||new Date().getFullYear(),
-    rating:+$('#mRating').value||8,
-    category:cat||'All Movies',
-    poster:($('#mPoster').value||'').trim(),
+    year:+yearVal||new Date().getFullYear(),
+    rating:+ratingVal||8,
+    category:cat||catVal||'All Movies',
+    poster:posterVal,
     server1:s1, server2:s2, server3:s3,
     server1_link:s1, server2_link:s2, server3_link:s3,
     s1:s1, s2:s2, s3:s3,
@@ -1712,24 +1719,51 @@ function saveTask(idx){
 function openAdBlock(){showModal(`<div class="modal-head"><h2>Add Ad Block</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Ad Block Name</label><input id="extraAdName" placeholder="e.g. Home Reward"></div><div class="field"><label>Ad Block ID</label><input id="extraAdId" placeholder="43222"></div></div><button class="btn primary" style="margin-top:15px" onclick="saveExtraAd()">Add Ad Block</button>`)}
 function saveExtraAd(){const n=$('#extraAdName').value.trim(),id=$('#extraAdId').value.trim();if(!n||!id)return;A.settings.adBlocks.extra=A.settings.adBlocks.extra||{};A.settings.adBlocks.extra[n]=id;save();closeModal();render();toast('Ad block added')}
 function openAdultMovie(id=null){const m=id!=null&&id!==0&&id!==''?A.movies.find(x=>String(x.id)===String(id)):null;const cats=(A.settings.adultCategories||[]).filter(x=>catEn(x)!=='All');const idArg=m?JSON.stringify(String(m.id)):'null';showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Adult Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="adultTitle" value="${(m?.title||'').replace(/"/g,'&quot;')}" placeholder="Adult title"></div><div class="field"><label>Year</label><input id="adultYear" type="number" value="${m?.year||new Date().getFullYear()}"></div><div class="field"><label>Category</label><select id="adultCat">${cats.map(c=>{const k=catEn(c);return `<option ${m?.category===k?'selected':''}>${k}</option>`}).join('')}</select></div><div class="field"><label>Rating</label><input id="adultRating" type="number" step=".1" value="${m?.rating||0}"></div><div class="field"><label>Poster URL</label><input id="adultPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="adultS1" value="${(m?.server1||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="adultS2" value="${(m?.server2||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="adultS3" value="${(m?.server3||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div></div><button class="btn primary" style="margin-top:15px" onclick="saveAdultMovie(${idArg})">Save Adult Movie</button>`)}
-function saveAdultMovie(id){id=(id===0||id===null||id===undefined||id==='')?null:id;const old=id!=null?A.movies.find(m=>String(m.id)===String(id)):null;const t=(($('#adultTitle')||{}).value||'').trim();if(!t){toast('Title required');return;}const x={id:id!=null?String(id):("manual_"+Date.now()),title:t,type:'Adult',year:+$('#adultYear').value||new Date().getFullYear(),rating:+$('#adultRating').value||0,category:$('#adultCat').value,adult:true,poster:$('#adultPoster').value.trim(),server1:$('#adultS1').value.trim(),server2:$('#adultS2').value.trim(),server3:$('#adultS3').value.trim(),server1_link:$('#adultS1').value.trim(),server2_link:$('#adultS2').value.trim(),server3_link:$('#adultS3').value.trim(),clicks:old?.clicks||0,downloads:old?.downloads||0,status:'Published',manual_movie:true,added_time:old?.added_time||Date.now()};toast('Saving...');if(window.CineHubFB){window.CineHubFB.saveMovie(x).then(function(saved){if(id!=null){A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);}else if(!A.movies.some(m=>String(m.id)===String(saved&&saved.id))){A.movies.unshift(saved);}save(true);closeModal();render();toast('✓ Adult মুভি Firebase-এ সেভ')}).catch(function(e){console.error(e);toast('⚠ Adult সেভ ব্যর্থ: '+(e&&e.message?e.message:e)+' — Code.gs Deploy চেক করো')})}else{if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?x:m);else A.movies.unshift(x);save();closeModal();render();toast('✓ Adult মুভি Firebase-এ সেভ')}}
+function saveAdultMovie(id){
+  id=(id===0||id===null||id===undefined||id==='')?null:id;
+  const old=id!=null?A.movies.find(m=>String(m.id)===String(id)):null;
+  function gv(i){var e=document.getElementById(i);return e?String(e.value||'').trim():'';}
+  const t=gv('adultTitle');
+  if(!t){toast('Title required');return;}
+  const s1=gv('adultS1'),s2=gv('adultS2'),s3=gv('adultS3');
+  const x={
+    id:id!=null?String(id):("manual_"+Date.now()),
+    title:t,type:'Adult',
+    year:+gv('adultYear')||new Date().getFullYear(),
+    rating:+gv('adultRating')||0,
+    category:gv('adultCat')||'All',
+    adult:true,
+    poster:gv('adultPoster'),
+    server1:s1,server2:s2,server3:s3,
+    server1_link:s1,server2_link:s2,server3_link:s3,
+    s1:s1,s2:s2,s3:s3,s1on:true,s2on:true,s3on:true,
+    clicks:old?.clicks||0,downloads:old?.downloads||0,views:old?.views||0,
+    status:'Published',manual_movie:true,source:'manual',
+    added_time:old?.added_time||Date.now()
+  };
+toast('Saving...');if(window.CineHubFB){window.CineHubFB.saveMovie(x).then(function(saved){if(id!=null){A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);}else if(!A.movies.some(m=>String(m.id)===String(saved&&saved.id))){A.movies.unshift(saved);}save(true);closeModal();render();toast('✓ Adult মুভি Firebase-এ সেভ')}).catch(function(e){console.error(e);toast('⚠ Adult সেভ ব্যর্থ: '+(e&&e.message?e.message:e)+' — Code.gs Deploy চেক করো')})}else{if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?x:m);else A.movies.unshift(x);save();closeModal();render();toast('✓ Adult মুভি Firebase-এ সেভ')}}
 function editAdultMovie(id){openAdultMovie(id)}
 function showModal(body){
   var m = document.getElementById('modal');
   if(!m){
     m = document.createElement('div');
     m.id = 'modal';
-    m.className = 'modal hidden';
-    m.onclick = function(e){ if(e.target===m) closeModal(); };
     document.body.appendChild(m);
   }
-  m.innerHTML = '<div class="modal-box">'+body+'</div>';
+  m.className = 'modal-backdrop';
+  m.onclick = function(e){ if(e.target===m) closeModal(); };
+  m.innerHTML = '<div class="modal-box" onclick="event.stopPropagation()">'+body+'</div>';
+  m.style.display = 'flex';
   m.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
 function closeModal(){
   var m = document.getElementById('modal');
-  if(m){ m.classList.add('hidden'); m.innerHTML=''; }
+  if(m){
+    m.classList.add('hidden');
+    m.style.display = 'none';
+    m.innerHTML = '';
+  }
   document.body.style.overflow = '';
 }
 function render(){
@@ -1907,3 +1941,14 @@ function importTmdbMovie(tmdbId, cached){
     }
   });
 }
+
+window.saveMovie=saveMovie;
+window.saveAdultMovie=saveAdultMovie;
+window.openMovie=openMovie;
+window.openAdultMovie=openAdultMovie;
+window.saveCategory=saveCategory;
+window.saveAdultCategory=saveAdultCategory;
+window.editCategory=editCategory;
+window.deleteCategory=deleteCategory;
+window.showModal=showModal;
+window.closeModal=closeModal;
