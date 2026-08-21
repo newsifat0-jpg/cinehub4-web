@@ -45,6 +45,9 @@ window.CINEHUB4_LANG = (() => {
     "Stay here": "এখানে থাকুন",
     "Leave": "বের হোন",
     "Do you want to leave?": "আপনি কি বের হতে চান?",
+    "Account Blocked": "অ্যাকাউন্ট ব্লক করা হয়েছে",
+    "Your account has been blocked by the admin. You cannot use this app right now.": "অ্যাডমিন আপনার অ্যাকাউন্ট ব্লক করেছেন। এখন এই অ্যাপ ব্যবহার করতে পারবেন না।",
+    "Contact admin if you think this is a mistake.": "ভুলবশত ব্লক হয়ে থাকলে অ্যাডমিনের সাথে যোগাযোগ করুন।",
 
     // Home / library
     "New Movies": "নতুন মুভি",

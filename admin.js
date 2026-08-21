@@ -690,14 +690,16 @@ function users(){
   });
   var cards = list.length ? list.map(function(u){
     var id = String(u.id||"");
-    var name = String(u.name || u.username || ("User "+id)).replace(/</g,"");
+    var displayName = u.name || ([u.first_name||"", u.last_name||""].join(" ").trim()) || u.username || ("User "+id);
+    var uname = u.username ? ("@"+String(u.username).replace(/^@/,"")) : "";
+    var name = String(displayName).replace(/</g,"");
     var unlocks = u.unlocks ? Object.keys(u.unlocks).length : 0;
     var ads = u.ads_today || u.ads || 0;
     var st = u.blocked ? "Blocked" : "Active";
     var idJs = id.replace(/'/g,"\\'");
     return '<div class="user-card">'+
       '<div class="pay-card-head">'+
-        '<div><b>'+name+'</b><div class="muted smalltext">ID: '+id+'</div></div>'+
+        '<div><b>'+name+'</b><div class="muted smalltext">ID: '+id+(uname?(" · "+uname):"")+'</div></div>'+
         '<span class="badge '+(st==="Blocked"?"red":"green")+'">'+st+'</span>'+
       '</div>'+
       '<div class="pay-meta">'+
@@ -711,7 +713,7 @@ function users(){
         '<button type="button" class="btn" onclick="toggleBlockUser(\''+idJs+'\')">'+(u.blocked?"Unblock":"Block")+'</button>'+
         '<button type="button" class="btn danger" onclick="adminDeleteUser(\''+idJs+'\')">Delete</button>'+
       '</div></div>';
-  }).join("") : '<div class="muted" style="padding:20px;text-align:center">No users yet — mini app খুললে এখানে আসবে</div>';
+  }).join("") : '<div class="muted" style="padding:20px;text-align:center">No users yet — mini app খুললে এখানে আসবে (real Firebase data)</div>';
   return '<div class="toolbar"><div><h2 style="margin:0">Users</h2><div class="muted smalltext">Total: '+list.length+' · Firebase users collection</div></div>'+
     '<button type="button" class="btn" onclick="window.__usersLoaded=false;render()">↻ Refresh</button></div>'+
     '<input class="search" id="userSearch" placeholder="Search user ID / name..." oninput="render()" style="width:100%;max-width:100%;margin-bottom:12px">'+
@@ -720,8 +722,11 @@ function users(){
 function openUserDetail(uid){
   var u = (A.userList||[]).find(function(x){ return String(x.id)===String(uid); }) || {};
   var unlocks = u.unlocks ? Object.keys(u.unlocks) : [];
+  var displayName = u.name || ([u.first_name||"", u.last_name||""].join(" ").trim()) || u.username || "—";
+  var uname = u.username ? ("@"+String(u.username).replace(/^@/,"")) : "—";
   showModal('<div class="modal-head"><h2>User Details</h2><button class="btn" onclick="closeModal()">×</button></div>'+
-    '<div class="pay-meta-row"><span>Name</span><b>'+String(u.name||u.username||"—").replace(/</g,"")+'</b></div>'+
+    '<div class="pay-meta-row"><span>Name</span><b>'+String(displayName).replace(/</g,"")+'</b></div>'+
+    '<div class="pay-meta-row"><span>Username</span><b>'+String(uname).replace(/</g,"")+'</b></div>'+
     '<div class="pay-meta-row"><span>Telegram ID</span><b>'+String(uid).replace(/</g,"")+'</b></div>'+
     '<div class="pay-meta-row"><span>Points</span><b>'+(u.points||0)+'</b></div>'+
     '<div class="pay-meta-row"><span>Referrals</span><b>'+(u.refs||u.referralCount||0)+'</b></div>'+
@@ -1588,11 +1593,13 @@ function saveMovie(id){
     const ac=(A.settings.adultCategories||[]).filter(x=>catEn(x)!=='All');
     if(ac.length&&!ac.some(function(x){return catEn(x)===cat;}))cat=catEn(ac[0]);
   }
+  // Always keep stable id when editing so we never create duplicates
+  var stableId = id!=null ? String(id) : (old && old.id ? String(old.id) : ("m_" + Date.now()));
   const x={
-    id:id!=null?String(id):(old&&old.id?String(old.id):("m_"+Date.now())),
+    id: stableId,
     title:titleVal,
     type:isAdult?'Adult':'Movie',
-    year:+yearVal||new Date().getFullYear(),
+    year: String(+yearVal||new Date().getFullYear()),
     rating:+ratingVal||8,
     category:cat||'All Movies',
     poster:posterVal,
@@ -1607,30 +1614,51 @@ function saveMovie(id){
     tmdb_id:old?.tmdb_id||'',
     added_time:old?.added_time||Date.now()
   };
-  toast('Saving...');
+  toast('Saving to Firebase…');
   if(!window.CineHubFB){
     if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?x:m);else A.movies.unshift(x);
     save(true);closeModal();render();toast(isAdult?'✓ Adult মুভি সেভ (local fallback)':'✓ মুভি সেভ (local fallback)');
     return;
   }
-  const tmo=setTimeout(function(){toast('Still saving… check network / Deploy');},8000);
+  // Must have Telegram initData for admin write
+  var idata = '';
+  try { idata = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData || ''; } catch(e){}
+  if (!idata || idata.length < 20) {
+    toast('⚠ Telegram initData নেই — বট থেকে মিনি অ্যাপ আবার খুলে Admin এ ঢোকো');
+    return;
+  }
+  const tmo=setTimeout(function(){toast('Still saving… Code.gs Deploy নতুন করে করেছো?');},10000);
   window.__savingMovie=true;
   window.CineHubFB.saveMovie(x).then(function(saved){
     window.__savingMovie=false; clearTimeout(tmo);
-    if(id!=null){A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);}else if(!A.movies.some(m=>String(m.id)===String(saved&&saved.id))){A.movies.unshift(saved);}
-    save(true);closeModal();render();
-    toast(isAdult?'✓ Adult মুভি Firebase-এ সেভ হয়েছে':'✓ মুভি Firebase-এ সেভ হয়েছে');
+    var sid = String((saved && saved.id) || stableId);
+    // Replace or insert by stable id
+    var found = false;
+    A.movies = (A.movies||[]).map(function(m){
+      if (String(m.id) === sid || String(m.id) === String(stableId)) { found = true; return Object.assign({}, saved||x, {id: sid}); }
+      return m;
+    });
+    if (!found) A.movies.unshift(Object.assign({}, saved||x, {id: sid}));
+    save(true); closeModal(); render();
+    toast(isAdult?'✓ Adult মুভি Firebase-এ সেভ':'✓ মুভি Firebase-এ সেভ · Server links OK');
   }).catch(function(e){
     window.__savingMovie=false; clearTimeout(tmo);
-    console.error(e);
-    toast('Save failed: '+(e&&e.message?e.message:String(e)));
+    console.error('saveMovie', e);
+    var msg = (e && e.message) ? e.message : String(e);
+    if (msg.indexOf('Admin') >= 0 || msg.indexOf('Unauthorized') >= 0) {
+      toast('Save failed: Admin auth — Script Properties এ ADMIN_IDS চেক করো ও বট থেকে আবার খোলো');
+    } else if (msg.indexOf('private key') >= 0 || msg.indexOf('Firebase') >= 0) {
+      toast('Save failed: Firebase key — FIREBASE_PRIVATE_KEY Script Properties চেক করো');
+    } else {
+      toast('Save failed: ' + msg);
+    }
   });
 }
 function editMovie(id){openMovie(id)}
 function deleteMovie(id){
   id=String(id||"");
   if(!id){toast("No movie id");return;}
-  if(!confirm("Firebase থেকে এই মুভি স্থায়ীভাবে ডিলিট করবে?")) return;
+  if(!confirm("Firebase থেকে এই মুভি স্থায়ীভাবে ডিলিট করবে?\nID: "+id)) return;
   toast("ডিলিট হচ্ছে…");
   if(window.CineHubFB && window.CineHubFB.deleteMovie){
     window.CineHubFB.deleteMovie(id).then(function(){
@@ -1639,7 +1667,8 @@ function deleteMovie(id){
       toast("✓ Firebase থেকে মুভি ডিলিট হয়েছে");
     }).catch(function(e){
       console.error(e);
-      toast("Delete failed: "+(e&&e.message?e.message:e)+" — open Admin as Telegram admin & redeploy Code.gs");
+      var msg = (e && e.message) ? e.message : String(e);
+      toast("Delete failed: "+msg+" — Admin হিসেবে বট থেকে খুলে Code.gs Redeploy করো");
     });
   } else {
     A.movies=(A.movies||[]).filter(function(m){return String(m.id)!==id;});

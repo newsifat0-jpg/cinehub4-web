@@ -328,16 +328,80 @@ function loadMoviesFromFB(){
     }
   },1800);
 }
+function isUserBlocked(){
+  try{
+    if(!userData) return false;
+    var b = userData.blocked;
+    return b === true || b === 1 || b === "true" || b === "1" || b === "yes";
+  }catch(e){ return false; }
+}
+function showBlockedScreen(){
+  window.__cinehub_blocked = true;
+  var old = document.getElementById("blockedOverlay");
+  if(old) old.remove();
+  var ov = document.createElement("div");
+  ov.id = "blockedOverlay";
+  ov.className = "blocked-overlay";
+  ov.innerHTML =
+    '<div class="blocked-card">'+
+      '<div class="blocked-ico" aria-hidden="true">⛔</div>'+
+      '<h2 class="blocked-title">'+t("Account Blocked")+'</h2>'+
+      '<p class="blocked-msg">'+t("Your account has been blocked by the admin. You cannot use this app right now.")+'</p>'+
+      '<p class="blocked-sub">'+t("Contact admin if you think this is a mistake.")+'</p>'+
+    '</div>';
+  document.body.appendChild(ov);
+  try{
+    var app = document.getElementById("app");
+    if(app) app.style.visibility = "hidden";
+    var splash = document.getElementById("appSplash");
+    if(splash){ splash.className = "gone"; splash.style.display = "none"; }
+  }catch(e){}
+  // Poll so Unblock appears without forcing user to restart
+  if(!window.__blockPoll){
+    window.__blockPoll = setInterval(function(){
+      if(!window.CineHubFB || !window.CineHubFB.loadUser) return;
+      window.CineHubFB.loadUser().then(function(u){
+        userData = u || userData;
+        if(!isUserBlocked()){
+          hideBlockedScreen();
+          state.points = Number(userData && userData.points) || 1;
+          safeRender(false);
+        }
+      }).catch(function(){});
+    }, 12000);
+  }
+}
+function hideBlockedScreen(){
+  window.__cinehub_blocked = false;
+  var old = document.getElementById("blockedOverlay");
+  if(old) old.remove();
+  try{
+    var app = document.getElementById("app");
+    if(app) app.style.visibility = "";
+  }catch(e){}
+  if(window.__blockPoll){
+    clearInterval(window.__blockPoll);
+    window.__blockPoll = null;
+  }
+}
 function loadUserFromFB(){
   if(!window.CineHubFB){state.userLoaded=true;tryApplyReferralLocal();return}
   window.CineHubFB.loadUser().then(function(u){
     userData = u || userData;
     state.points = Number(userData.points) || 1;
     state.userLoaded = true;
-    // Sync referral count shown on profile
+    // Fresh user after admin delete → clear local "already joined" flags so they act like new
     try{
-      if(userData.refs!=null) localStorage.setItem("cinehub4_refs",String(userData.refs));
+      if(userData && !userData.join_bonus_given){
+        localStorage.removeItem("cinehub4_join_bonus_given");
+      }
+      if(userData && userData.refs!=null) localStorage.setItem("cinehub4_refs",String(userData.refs));
     }catch(e){}
+    if(isUserBlocked()){
+      showBlockedScreen();
+      return;
+    }
+    hideBlockedScreen();
     applyReferralReward().finally(function(){ safeRender(false); });
   }).catch(function(){ state.userLoaded=true; tryApplyReferralLocal(); });
 }
@@ -1018,6 +1082,38 @@ function copyWalletAddr(){
   if(!a)return;
   try{navigator.clipboard.writeText(a);toast(t("Address copied"))}catch(e){toast(a)}
 }
+function compressProofImage_(dataUrl, maxSide, quality){
+  return new Promise(function(resolve){
+    try{
+      if(!dataUrl || dataUrl.indexOf("data:image")!==0){ resolve(dataUrl||""); return; }
+      var img = new Image();
+      img.onload = function(){
+        try{
+          var w = img.width, h = img.height;
+          var scale = 1;
+          if (Math.max(w,h) > maxSide) scale = maxSide / Math.max(w,h);
+          var cw = Math.max(1, Math.round(w * scale));
+          var ch = Math.max(1, Math.round(h * scale));
+          var canvas = document.createElement("canvas");
+          canvas.width = cw; canvas.height = ch;
+          var ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, cw, ch);
+          var out = canvas.toDataURL("image/jpeg", quality || 0.72);
+          // If still huge, compress harder
+          if (out.length > 400000) {
+            out = canvas.toDataURL("image/jpeg", 0.5);
+          }
+          if (out.length > 400000) {
+            out = canvas.toDataURL("image/jpeg", 0.35);
+          }
+          resolve(out);
+        }catch(e){ resolve(dataUrl); }
+      };
+      img.onerror = function(){ resolve(dataUrl); };
+      img.src = dataUrl;
+    }catch(e){ resolve(dataUrl||""); }
+  });
+}
 function submitPayment(){
   const order=state.buyOrder;if(!order)return;
   const txid=(document.getElementById("payTxid")||{}).value||"";
@@ -1029,16 +1125,12 @@ function submitPayment(){
     const user=tg?((tg.first_name||"")+(tg.last_name?" "+tg.last_name:"")):("User "+(localStorage.getItem("cinehub4_uid")||""));
     const uid=String(tg?.id||localStorage.getItem("cinehub4_uid")||"");
     const now=new Date();
-    // Keep screenshot under ~400KB to avoid Firebase/GAS limits
-    if(proofData && proofData.length > 450000){
-      proofData = "";
-      proofName = (proofName||"screenshot") + " (too large — re-send smaller image)";
-    }
     const paymentObj={
       user:user,
       userId:uid,
       uid:uid,
-      username:user,
+      username: tg && tg.username ? String(tg.username) : user,
+      first_name: tg && tg.first_name ? String(tg.first_name) : "",
       pkg:order.name,
       usdt:order.price,
       points:order.points,
@@ -1056,21 +1148,36 @@ function submitPayment(){
       created:now.toISOString()
     };
     if(window.CineHubFB){
-      window.CineHubFB.addPayment(paymentObj).catch(function(e){console.error(e)});
+      window.CineHubFB.addPayment(paymentObj).then(function(){
+        toast(t("Payment request submitted"));
+      }).catch(function(e){
+        console.error(e);
+        toast("Payment save failed: "+(e&&e.message?e.message:e));
+      });
     } else {
       const list=JSON.parse(localStorage.getItem("cinehub4_payments")||"[]");
       list.push(Object.assign({id:Date.now()},paymentObj));
       localStorage.setItem("cinehub4_payments",JSON.stringify(list));
+      toast(t("Payment request submitted"));
     }
     state.buyStep=null;state.buyOrder=null;state.selectedWallet=null;
-    toast(t("Payment request submitted"));
     nav("profile");
   };
   try{
     if(fileInput&&fileInput.files&&fileInput.files[0]){
       proofName=fileInput.files[0].name;
       const reader=new FileReader();
-      reader.onload=function(e){proofData=e.target.result||"";finish()};
+      reader.onload=function(e){
+        var raw = e.target.result || "";
+        compressProofImage_(raw, 1000, 0.7).then(function(compressed){
+          proofData = compressed || "";
+          if (proofData && proofData.length > 450000) {
+            proofData = "";
+            proofName = (proofName||"screenshot") + " (too large)";
+          }
+          finish();
+        });
+      };
       reader.onerror=function(){finish()};
       reader.readAsDataURL(fileInput.files[0]);
       return;
@@ -1296,11 +1403,11 @@ function detailView(){
       <div class="ps-dur">★ ${m.rating||8} · ${m.year||""}</div>
     </div>
     <div class="ps-share-row">
-      <button type="button" class="ps-share-btn ps-copy" onclick="copyMovieLink(${JSON.stringify(String(m.id))})">
+      <button type="button" class="ps-share-btn ps-copy" onclick='copyMovieLink(${JSON.stringify(String(m.id))})'>
         <span class="ps-ico-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
         ${t("Copy Link")}
       </button>
-      <button type="button" class="ps-share-btn ps-send" onclick="shareMovie(${JSON.stringify(String(m.id))})">
+      <button type="button" class="ps-share-btn ps-send" onclick='shareMovie(${JSON.stringify(String(m.id))})'>
         <span class="ps-ico-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></span>
         ${t("Share")}
       </button>
@@ -2109,7 +2216,10 @@ setTimeout(function(){ loadPublicAppConfig(false); }, 8000);
 setInterval(function(){ loadPublicAppConfig(false); }, 60000);
 try{
   document.addEventListener("visibilitychange", function(){
-    if(document.visibilityState==="visible") loadPublicAppConfig(false);
+    if(document.visibilityState==="visible"){
+      loadPublicAppConfig(false);
+      if(window.__cinehub_blocked) loadUserFromFB();
+    }
   });
 }catch(e){}
 function setupAdminButton(){
@@ -2173,6 +2283,8 @@ function bindHomeStickyScroll(){
 }
 
 function render(animate=false){
+/* Blocked users never see normal UI */
+if(window.__cinehub_blocked){ return; }
 /* Skip paints while splash is covering the screen (prevents open-time jerk) */
 if(window.__cinehub_splashUp && !window.__cinehub_forcePaint){ window.__cinehub_needPaint=true; return; }
 try{const views={movies:moviesPage,search:searchPage,series,adult,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate && !state.firstPaint && !window.__cinehub_noAnim){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>{

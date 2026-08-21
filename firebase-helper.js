@@ -143,7 +143,22 @@
     incClicks:function(id){return api("incClicks",{id:String(id)});},
     loadConfig:function(){return api("loadPublicConfig");},
     saveConfig:function(data){return api("saveConfig",{data:data});},
-    loadUser:function(uid){return api("loadUser",{uid:String(uid||getUid())});},
+    loadUser:function(uid){
+      var profile = {};
+      try {
+        var u = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user;
+        if (u) {
+          profile = {
+            first_name: u.first_name || "",
+            last_name: u.last_name || "",
+            username: u.username || "",
+            photo_url: u.photo_url || "",
+            language_code: u.language_code || ""
+          };
+        }
+      } catch (e) {}
+      return api("loadUser",{uid:String(uid||getUid()), profile: profile});
+    },
     processReferral:function(refFrom,config){return api("processReferral",{refFrom:String(refFrom||""),config:config||{}});},
     checkChannelMember:function(channel){return api("checkChannelMember",{channel:String(channel||"")});},
     saveUser:function(uid,data){return api("saveUser",{uid:String(uid||getUid()),data:data});},
