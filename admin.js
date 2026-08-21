@@ -1572,13 +1572,7 @@ function saveMovie(id){
   if(window.__savingMovie){toast('Already saving…');return;}
   id=(id===0||id===null||id===undefined||id==='')?null:id;
   const old=id!=null?A.movies.find(m=>String(m.id)===String(id)):null;
-  const isAdult=adultVal==='1'||($('#mAdult')&&$('#mAdult').value==='1');
-  let cat=catVal||(($('#mCat')&&$('#mCat').value)||'');
-  if(isAdult){
-    const ac=(A.settings.adultCategories||[]).filter(x=>catEn(x)!=='All');
-    if(ac.length&&!ac.some(function(x){return catEn(x)===cat;}))cat=catEn(ac[0]);
-  }
-  function gv(id){ var el=document.getElementById(id); return el ? String(el.value||'').trim() : ''; }
+  function gv(elId){ var el=document.getElementById(elId); return el ? String(el.value||'').trim() : ''; }
   const s1=gv('s1');
   const s2=gv('s2');
   const s3=gv('s3');
@@ -1588,21 +1582,29 @@ function saveMovie(id){
   const adultVal=gv('mAdult');
   const yearVal=gv('mYear');
   const ratingVal=gv('mRating');
+  const isAdult = adultVal === '1';
+  let cat = catVal || 'All Movies';
+  if(isAdult){
+    const ac=(A.settings.adultCategories||[]).filter(x=>catEn(x)!=='All');
+    if(ac.length&&!ac.some(function(x){return catEn(x)===cat;}))cat=catEn(ac[0]);
+  }
   const x={
-    id:id!=null?String(id):("m_"+Date.now()),
+    id:id!=null?String(id):(old&&old.id?String(old.id):("m_"+Date.now())),
     title:titleVal,
     type:isAdult?'Adult':'Movie',
     year:+yearVal||new Date().getFullYear(),
     rating:+ratingVal||8,
-    category:cat||catVal||'All Movies',
+    category:cat||'All Movies',
     poster:posterVal,
     server1:s1, server2:s2, server3:s3,
     server1_link:s1, server2_link:s2, server3_link:s3,
     s1:s1, s2:s2, s3:s3,
     s1on:true, s2on:true, s3on:true,
+    server1_status:true, server2_status:true, server3_status:true,
     adult:isAdult,
     clicks:old?.clicks||0, downloads:old?.downloads||0, views:old?.views||0,
-    status:'Published', manual_movie:true, source:'manual',
+    status:'Published', manual_movie:true, source:old?.source||'manual',
+    tmdb_id:old?.tmdb_id||'',
     added_time:old?.added_time||Date.now()
   };
   toast('Saving...');
