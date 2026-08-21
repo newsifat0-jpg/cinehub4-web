@@ -947,3 +947,34 @@ img.poster-full{
   letter-spacing:.01em;
 }
 
+
+/* Share / copy sheet (Telegram WebView fallback) */
+.share-sheet{
+  position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);
+  display:flex;align-items:flex-end;justify-content:center;
+  padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom));
+}
+.share-sheet-card{
+  width:100%;max-width:420px;background:#12182a;border:1px solid #2a3a5c;
+  border-radius:18px 18px 14px 14px;padding:16px;box-shadow:0 -8px 40px rgba(0,0,0,.4);
+}
+.share-sheet-title{font-size:14px;font-weight:800;color:#e2e8f0;margin-bottom:10px}
+.share-sheet-input{
+  width:100%;box-sizing:border-box;border-radius:12px;border:1px solid #334155;
+  background:#0b1220;color:#93c5fd;padding:12px;font-size:12px;margin-bottom:12px;
+}
+.share-sheet-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.share-sheet-btn{
+  border:1px solid #334155;background:#1e293b;color:#e2e8f0;
+  border-radius:12px;padding:12px 8px;font-size:12px;font-weight:700;cursor:pointer;
+}
+.share-sheet-btn.primary{background:linear-gradient(135deg,#1d4ed8,#6366f1);border-color:transparent;color:#fff}
+.share-sheet-btn.ghost{background:transparent}
+.toast{
+  position:fixed;left:50%;bottom:88px;transform:translateX(-50%) translateY(12px);
+  background:#0f172a;color:#fff;border:1px solid #334155;border-radius:12px;
+  padding:10px 16px;font-size:13px;font-weight:700;z-index:100000;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
+  max-width:90vw;text-align:center;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}

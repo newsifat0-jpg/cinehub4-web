@@ -70,80 +70,173 @@ function buildMiniAppLink(startParam){
 function telegramShare(text,url){
   nativeShare({text:text,url:url});
 }
-function nativeShare(opts){
-  const title = (opts && opts.title) || "Cine Hub4";
-  const text = (opts && opts.text) || "";
-  const url = (opts && opts.url) || buildMiniAppLink();
-  // Prefer Telegram share sheet
+function ensureToastEl(){
+  var x = document.getElementById("toast");
+  if(x) return x;
+  x = document.createElement("div");
+  x.id = "toast";
+  x.className = "toast";
+  document.body.appendChild(x);
+  return x;
+}
+function toast(msg){
   try{
-    if(window.Telegram && window.Telegram.WebApp){
-      const shareUrl = "https://t.me/share/url?url=" + encodeURIComponent(url) + "&text=" + encodeURIComponent(text || title);
-      if(typeof window.Telegram.WebApp.openTelegramLink === "function"){
-        window.Telegram.WebApp.openTelegramLink(shareUrl);
-        return true;
-      }
-      if(typeof window.Telegram.WebApp.openLink === "function"){
-        window.Telegram.WebApp.openLink(shareUrl, {try_instant_view:false});
-        return true;
-      }
-    }
-  }catch(e){ console.warn("tg share", e); }
-  // Web Share API
-  try{
-    if(navigator.share){
-      navigator.share({title:title, text:text, url:url}).catch(function(){});
-      return true;
-    }
-  }catch(e){}
-  // Fallback: open share URL
-  try{ window.open("https://t.me/share/url?url="+encodeURIComponent(url)+"&text="+encodeURIComponent(text||title), "_blank"); return true; }catch(e){}
-  return false;
+    var x = ensureToastEl();
+    x.textContent = String(msg||"");
+    x.classList.add("show");
+    clearTimeout(window.__toastT);
+    window.__toastT = setTimeout(function(){ x.classList.remove("show"); }, 2200);
+  }catch(e){ try{ console.log(msg); }catch(e2){} }
 }
 function movieShareLink(id){
-  const mid = String(id||"").trim();
-  const param = ("movie_"+mid).replace(/[^A-Za-z0-9_\-]/g,"").slice(0,64);
+  var mid = String(id||"").trim();
+  var param = ("movie_"+mid).replace(/[^A-Za-z0-9_\-]/g,"").slice(0,64);
   return buildMiniAppLink(param);
 }
-function copyMovieLink(id){
-  const mid = String(id||"").trim();
-  if(!mid){ toast(t("Movie")+" ID missing"); return; }
-  const m = movies.find(function(x){ return String(x.id)===mid; });
-  const title = m ? (m.title||"").split("|")[0].trim() : "Movie";
-  const link = movieShareLink(mid);
-  function ok(){ toast(t("Link copied")); }
-  function fail(){
-    try{
-      const ta = document.createElement("textarea");
-      ta.value = link;
-      ta.style.cssText = "position:fixed;left:-9999px;top:0";
-      document.body.appendChild(ta);
-      ta.focus(); ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      ok();
-    }catch(e){ toast(link); }
+function showLinkSheet(link, title){
+  // Always-visible fallback so user can long-press copy
+  var old = document.getElementById("shareSheet");
+  if(old) old.remove();
+  var sheet = document.createElement("div");
+  sheet.id = "shareSheet";
+  sheet.className = "share-sheet";
+  sheet.innerHTML =
+    '<div class="share-sheet-card">'+
+      '<div class="share-sheet-title">'+(title||"Link")+'</div>'+
+      '<input class="share-sheet-input" id="shareSheetInput" type="text" readonly value="">'+
+      '<div class="share-sheet-actions">'+
+        '<button type="button" class="share-sheet-btn" id="shareSheetCopy">Copy</button>'+
+        '<button type="button" class="share-sheet-btn primary" id="shareSheetShare">Share</button>'+
+        '<button type="button" class="share-sheet-btn ghost" id="shareSheetClose">Close</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(sheet);
+  var inp = document.getElementById("shareSheetInput");
+  if(inp){ inp.value = link; try{ inp.focus(); inp.select(); }catch(e){} }
+  document.getElementById("shareSheetClose").onclick = function(){ sheet.remove(); };
+  sheet.onclick = function(e){ if(e.target===sheet) sheet.remove(); };
+  document.getElementById("shareSheetCopy").onclick = function(){
+    hardCopy(link, function(){ toast(t("Link copied")); sheet.remove(); });
+  };
+  document.getElementById("shareSheetShare").onclick = function(){
+    openTgShare(link, title||"Cine Hub4");
+  };
+}
+function hardCopy(text, onOk){
+  var done = false;
+  function success(){
+    if(done) return;
+    done = true;
+    if(onOk) onOk();
+    else toast(t("Link copied"));
   }
+  // 1) modern clipboard
   try{
     if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(link).then(ok).catch(fail);
-    } else fail();
-  }catch(e){ fail(); }
-}
-function shareMovie(id){
-  const mid = String(id||"").trim();
-  if(!mid){ toast(t("Movie")+" ID missing"); return; }
-  const m = movies.find(function(x){ return String(x.id)===mid; });
-  const title = m ? (m.title||"").split("|")[0].trim() : "Movie";
-  const link = movieShareLink(mid);
-  const text = title + " — Cine Hub4";
-  const ok = nativeShare({title: title+" | Cine Hub4", text: text, url: link});
-  if(!ok){
-    // last resort copy
-    copyMovieLink(mid);
-  } else {
-    toast(t("Share"));
+      navigator.clipboard.writeText(text).then(success).catch(function(){ fallback(); });
+      // also try fallback after short delay if promise hangs
+      setTimeout(function(){ if(!done) fallback(); }, 400);
+      return;
+    }
+  }catch(e){}
+  fallback();
+  function fallback(){
+    if(done) return;
+    try{
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly","");
+      ta.style.cssText = "position:fixed;top:0;left:0;width:90%;height:40px;opacity:0.01;z-index:99999;";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      var ok = false;
+      try{ ok = document.execCommand("copy"); }catch(e){}
+      document.body.removeChild(ta);
+      if(ok){ success(); return; }
+    }catch(e){}
+    // 2) Telegram popup with link
+    try{
+      if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup){
+        window.Telegram.WebApp.showPopup({
+          title: "Copy Link",
+          message: text,
+          buttons: [{type:"close"}]
+        });
+        toast(t("Link copied")+" — long-press to copy");
+        done = true;
+        return;
+      }
+    }catch(e){}
+    // 3) show sheet
+    showLinkSheet(text, "Copy Link");
   }
 }
+function openTgShare(url, text){
+  var shareUrl = "https://t.me/share/url?url=" + encodeURIComponent(url) + "&text=" + encodeURIComponent(text||"");
+  try{
+    var tg = window.Telegram && window.Telegram.WebApp;
+    if(tg){
+      if(typeof tg.openTelegramLink === "function"){
+        tg.openTelegramLink(shareUrl);
+        return true;
+      }
+      if(typeof tg.openLink === "function"){
+        tg.openLink(shareUrl);
+        return true;
+      }
+    }
+  }catch(e){ console.warn(e); }
+  try{
+    window.location.href = shareUrl;
+    return true;
+  }catch(e){}
+  return false;
+}
+function nativeShare(opts){
+  opts = opts || {};
+  var title = opts.title || "Cine Hub4";
+  var text = opts.text || title;
+  var url = opts.url || buildMiniAppLink();
+  return openTgShare(url, text);
+}
+function copyMovieLink(id){
+  try{
+    var mid = String(id||"").trim();
+    if(!mid){ toast("ID missing"); return; }
+    var link = movieShareLink(mid);
+    if(!link){ toast("Link empty — set Mini App link in Settings"); return; }
+    hardCopy(link, function(){ toast(t("Link copied")); });
+  }catch(e){
+    console.error(e);
+    toast("Copy error: "+(e&&e.message?e.message:e));
+  }
+}
+function shareMovie(id){
+  try{
+    var mid = String(id||"").trim();
+    if(!mid){ toast("ID missing"); return; }
+    var m = (typeof movies!=="undefined" && movies) ? movies.find(function(x){ return String(x.id)===mid; }) : null;
+    var title = m ? String(m.title||"").split("|")[0].trim() : "Movie";
+    var link = movieShareLink(mid);
+    if(!link){ toast("Link empty — set Mini App link in Settings"); return; }
+    var ok = openTgShare(link, title + " — Cine Hub4");
+    if(!ok){
+      showLinkSheet(link, title);
+    } else {
+      toast(t("Share"));
+    }
+  }catch(e){
+    console.error(e);
+    toast("Share error: "+(e&&e.message?e.message:e));
+  }
+}
+// Expose globally (Telegram WebView onclick)
+window.copyMovieLink = copyMovieLink;
+window.shareMovie = shareMovie;
+window.nativeShare = nativeShare;
+window.movieShareLink = movieShareLink;
 
 function shareRef(){shareRefLink()}
 function shareRefLink(){
@@ -287,7 +380,7 @@ function tryApplyReferralLocal(){
   }catch(e){}
 }
 setTimeout(function(){loadMoviesFromFB();loadUserFromFB()},150);
-function toast(t){const x=$("#toast");if(!x)return;x.textContent=t;x.classList.add("show");setTimeout(()=>x.classList.remove("show"),1600)}
+/* toast redefined below */
 function showPageTransition(cb,opts){
   opts=opts||{};
   const el=document.getElementById("pageTransition");
