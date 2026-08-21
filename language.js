@@ -75,6 +75,10 @@ window.CINEHUB4_LANG = (() => {
     "Ad closed": "অ্যাড বন্ধ",
     "Link opened — wait for timer": "লিংক খোলা হয়েছে — টাইমার শেষ হওয়া পর্যন্ত অপেক্ষা করুন",
 
+    
+    "Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ": "প্রিয় কনটেন্ট শেয়ার করুন ও পয়েন্ট দিয়ে আনলক করুন 🚀 • নিয়মিত নতুন মুভি ও সিরিজ • অ্যাড দেখে বা পয়েন্ট দিয়ে আনলক করুন • ",
+    "18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ": "১৮+ অ্যাডাল্ট জোন • নিয়মিত নতুন অ্যাডাল্ট কনটেন্ট • অ্যাড দেখে বা পয়েন্ট দিয়ে আনলক করুন • ",
+
     "Buy Premium Points": "প্রিমিয়াম পয়েন্ট কিনুন",
     "Select a package or enter custom USDT amount, then submit your payment proof for admin approval.": "একটি প্যাকেজ বেছে নিন অথবা কাস্টম USDT দিন, তারপর অ্যাডমিন অনুমোদনের জন্য পেমেন্ট প্রুফ জমা দিন।",
     "How to Buy Points": "কীভাবে পয়েন্ট কিনবেন",

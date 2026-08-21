@@ -376,7 +376,10 @@ function shareMovie(id){
     var poster = m ? String(m.poster||m.poster_path||"") : "";
     var link = movieShareLink(mid);
     if(!link){ toast("Link empty — set Mini App link in Admin → Settings"); return; }
-    var text = title + "\n🎬 Cine Hub4\n" + link;
+    var blurb = langIsBn()
+      ? "Cine Hub4-এ দেখুন ও ডাউনলোড করুন — একদম সহজ, ফ্রি অভিজ্ঞতা।"
+      : "Watch & download on Cine Hub4 — simple, free, and fast.";
+    var text = title + "\n\n" + blurb + "\n" + link;
     showSocialShareSheet({ title: title, link: link, text: text, poster: poster, adult: !!(m&&m.adult) });
   }catch(e){
     console.error(e);
@@ -526,11 +529,15 @@ function shareRefLink(){
   const el=document.getElementById("refLinkText");
   const shown=(el&&el.textContent?el.textContent.trim():"");
   if(shown && /t\.me\/.+\/.+[?&]startapp=/i.test(shown)) link=shown;
-  nativeShare({title:"Cine Hub4 Referral", text:"Join me on Cine Hub4 and earn points!", url:link});
+  var refMsg = langIsBn()
+    ? "Cine Hub4-এ যোগ দিন — মুভি ও সিরিজ দেখুন, সহজে ডাউনলোড করুন, একদম ফ্রি!"
+    : "Join Cine Hub4 — stream movies & series, download easily, completely free!";
+  var shareBody = refMsg + "\n" + link;
+  nativeShare({title: langIsBn() ? "Cine Hub4 আমন্ত্রণ" : "Cine Hub4 Invite", text: shareBody, url: link});
 }
 function openLink(u){if(!u)return;try{window.Telegram?.WebApp?.openTelegramLink?.(u)||window.Telegram?.WebApp?.openLink?.(u)||window.open(u,"_blank")}catch(e){window.open(u,"_blank")}}
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
-const defaults={appName:"Cine Hub4",botUsername:"@Cinehub4bot",telegramBotLink:"https://t.me/Cinehub4bot",miniAppName:"Hub4",miniAppLink:"https://t.me/Cinehub4bot/Hub4",telegramChannelLink:"",howToWatchVideo:"",watchTutorialVideo:"",howToWatchText:"Unlock this content using ads or points.",unlockCost:5,unlockHours:15,adsForUnlock:5,adultUnlockCost:3,adultAdsForUnlock:5,adultUnlockHours:15,downloadServers:3,adReward:2,dailyAdLimit:20,joinBonus:10,referralReward:20,categories:["All Movies","Bangla Moves","Hollywood Movie Hindi"],adultCategories:["All","Adult Movie","Anime"],tickerText:"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ",adultTickerText:"18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ",libraryBadge:"MOVIE ZONE",libraryTitle:"Cinema Library",libraryDesc:"Curated movies, web series and premium entertainment updates.",adultLibraryBadge:"ADULT ZONE",adultLibraryTitle:"Adult Library",adultLibraryDesc:"Curated 18+ content and premium entertainment updates.",howToWatchLabel:"▶ How to Watch",adultHowToWatchLabel:"▶ How to Watch",newMoviesLabel:"New Movies",newMoviesSub:"LATEST UPLOADS",trendingLabel:"Trending",trendingSub:"MOST WATCHED",adultNewLabel:"New Movies",adultNewSub:"LATEST UPLOADS",adultTrendingLabel:"Trending",adultTrendingSub:"MOST WATCHED",packages:[
+const defaults={appName:"Cine Hub4",botUsername:"@Cinehub4bot",telegramBotLink:"https://t.me/Cinehub4bot",miniAppName:"Hub4",miniAppLink:"https://t.me/Cinehub4bot/Hub4",telegramChannelLink:"",howToWatchVideo:"",watchTutorialVideo:"",howToWatchText:"Unlock this content using ads or points.",unlockCost:5,unlockHours:15,adsForUnlock:5,adultUnlockCost:3,adultAdsForUnlock:5,adultUnlockHours:15,downloadServers:3,adReward:2,dailyAdLimit:20,joinBonus:10,referralReward:20,categories:["All Movies","Bangla Moves","Hollywood Movie Hindi"],adultCategories:["All","Adult Movie","Anime"],tickerText:"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ",adultTickerText:"18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ",tickerTextBn:"প্রিয় কনটেন্ট শেয়ার করুন ও পয়েন্ট দিয়ে আনলক করুন 🚀 • নিয়মিত নতুন মুভি ও সিরিজ • অ্যাড দেখে বা পয়েন্ট দিয়ে আনলক করুন • ",adultTickerTextBn:"১৮+ অ্যাডাল্ট জোন • নিয়মিত নতুন অ্যাডাল্ট কনটেন্ট • অ্যাড দেখে বা পয়েন্ট দিয়ে আনলক করুন • ",libraryBadge:"MOVIE ZONE",libraryTitle:"Cinema Library",libraryDesc:"Curated movies, web series and premium entertainment updates.",adultLibraryBadge:"ADULT ZONE",adultLibraryTitle:"Adult Library",adultLibraryDesc:"Curated 18+ content and premium entertainment updates.",howToWatchLabel:"▶ How to Watch",adultHowToWatchLabel:"▶ How to Watch",newMoviesLabel:"New Movies",newMoviesSub:"LATEST UPLOADS",trendingLabel:"Trending",trendingSub:"MOST WATCHED",adultNewLabel:"New Movies",adultNewSub:"LATEST UPLOADS",adultTrendingLabel:"Trending",adultTrendingSub:"MOST WATCHED",packages:[
     {name:"Basic Package",price:0.99,points:110,tag:"SMART CHOICE"},
     {name:"Standard Package",price:4.99,points:550,tag:"STARTER"},
     {name:"Premium Package",price:9.99,points:1200,tag:"BEST VALUE"},
@@ -888,8 +895,10 @@ function libCard(){
   return `<div class="lib-card lib-card-sm"><div class="lib-badge"><i></i> ${cfg.libraryBadge||"MOVIE ZONE"}</div><h2>${title}</h2><p class="lib-desc">${cfg.libraryDesc||"Curated movies, web series and premium entertainment updates."}</p><button type="button" class="how-btn" onclick="howToEarn()"><span class="how-btn-ico">${ico("play",16)}</span><span>${(cfg.howToWatchLabel||t("How to Watch")).replace(/^▶\s*/,"")}</span></button></div>`;
 }
 function ticker(){
-  const t=cfg.tickerText||"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ";
-  return `<div class="ticker"><span>${t}${t}</span></div>`;
+  const raw=cfg.tickerText||"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ";
+  const bn=cfg.tickerTextBn||"প্রিয় কনটেন্ট শেয়ার করুন ও পয়েন্ট দিয়ে আনলক করুন 🚀 • নিয়মিত নতুন মুভি ও সিরিজ • অ্যাড দেখে বা পয়েন্ট দিয়ে আনলক করুন • ";
+  const tx=loc(raw, bn);
+  return `<div class="ticker"><span>${tx}${tx}</span></div>`;
 }
 /** Banner under scrolling ticker — Adsgram Task or image (admin controlled) */
 function bannerSlot(zone){
@@ -1001,7 +1010,8 @@ function libCardAdult(){
 }
 function tickerAdult(){
   const raw=cfg.adultTickerText||"18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ";
-  const tx=loc(raw, cfg.adultTickerTextBn);
+  const bn=cfg.adultTickerTextBn||"১৮+ অ্যাডাল্ট জোন • নিয়মিত নতুন অ্যাডাল্ট কনটেন্ট • অ্যাড দেখে বা পয়েন্ট দিয়ে আনলক করুন • ";
+  const tx=loc(raw, bn);
   return `<div class="ticker"><span>${tx}${tx}</span></div>`;
 }
 function listForAdult(){let list=movies.filter(m=>m.adult);if(state.adultCategory&&state.adultCategory!=="All"){list=list.filter(m=>(m.category||"").toLowerCase()===state.adultCategory.toLowerCase())}if(state.adultMode==="trending")list=list.slice().sort((a,b)=>(b.views||b.clicks||0)-(a.views||a.clicks||0));else list=list.slice().sort((a,b)=>b.id-a.id);return list}
@@ -1017,8 +1027,8 @@ function adult(){
         <div class="gate-icon">${ico("shield",36)}</div>
         <h2>${t("Adult Access Confirmation")}</h2>
         <p>${t("This section is reserved for mature viewers. Please confirm that you are 18 or older before entering the Adult Zone.")}</p>
-        <div class="gate-note">${ico("check",14)} ${t("I confirm that I am 18 or older")}</div>
-        <div class="gate-note muted">${ico("shield",12)} ${t("Your choice is remembered for this session only")}</div>
+        <div class="gate-note gate-note-row">${ico("check",14)}<span>${t("I confirm that I am 18 or older")}</span></div>
+        <div class="gate-note gate-note-row muted">${ico("shield",12)}<span>${t("Your choice is remembered for this session only")}</span></div>
         <div class="gate-actions">
           <button type="button" class="gate-yes" onclick="confirmAdult()">${t("Yes, Enter")}</button>
           <button type="button" class="gate-no" onclick="nav('movies')">${t("No, Watch Movie")}</button>
