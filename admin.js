@@ -275,11 +275,16 @@ function openAdmin(){
   var app=document.getElementById("adminApp");
   if(gate){
     gate.classList.add("hidden");
-    gate.style.cssText="display:none!important";
+    gate.setAttribute("hidden","hidden");
+    gate.style.setProperty("display","none","important");
   }
   if(app){
     app.classList.remove("hidden");
-    app.style.cssText="display:block!important;min-height:100vh;visibility:visible;opacity:1";
+    app.removeAttribute("hidden");
+    app.style.setProperty("display","block","important");
+    app.style.setProperty("min-height","100vh","important");
+    app.style.setProperty("visibility","visible","important");
+    app.style.setProperty("opacity","1","important");
   }
   // Ensure sidebar + nav visible
   var sb=document.querySelector(".sidebar");
@@ -301,12 +306,11 @@ function openAdmin(){
             A.settings=Object.assign({}, A.settings||{}, c);
             A.settings.adBlocks=Object.assign({}, (DEFAULT&&DEFAULT.adBlocks)||{}, A.settings.adBlocks||{});
             if(typeof ensureAdSlots==="function") ensureAdSlots();
-            // Normalize categories so dropdown never shows [object Object]
             A.settings.categories = normalizeCategories(A.settings.categories && A.settings.categories.length ? A.settings.categories : ((DEFAULT&&DEFAULT.categories)||[]));
             A.settings.adultCategories = normalizeCategories(A.settings.adultCategories && A.settings.adultCategories.length ? A.settings.adultCategories : ((DEFAULT&&DEFAULT.adultCategories)||[]));
             try{ ensureBilingualSettings(); }catch(e2){}
             localStorage.setItem("cinehub4_settings", JSON.stringify(A.settings));
-          }catch(e){}
+          }catch(e){ console.warn("merge config", e); }
           try{ render(); }catch(e){ console.error(e); }
         }
       }).catch(function(e){ console.warn("loadConfig",e); });
@@ -315,9 +319,11 @@ function openAdmin(){
   try{ render(); }catch(e){
     console.error("render",e);
     var box=document.getElementById("content");
-    if(box) box.innerHTML='<div class="card"><p>Render error: '+String(e&&e.message||e)+'</p><button class="btn" onclick="location.reload()">Reload</button></div>';
+    if(box) box.innerHTML='<div class="card"><p>Render error: '+String(e&&e.message||e)+'</p><button type="button" class="btn" onclick="location.reload()">Reload</button></div>';
   }
 }
+window.openAdmin=openAdmin;
+window.openGateNow=openGateNow;
 
 function setGateStatus(msg, isError){
   var el=document.getElementById("adminGateStatus");
@@ -455,8 +461,15 @@ function boot(){
   var inp=document.getElementById("adminIdInput");
   if(inp&&tgId) inp.value=tgId;
   setGateStatus("ID: "+(tgId||"—")+" — শুধু ADMIN_IDS-এ থাকা অ্যাকাউন্ট ঢুকতে পারবে", false);
+  // Bind Enter button every boot
+  try{
+    var b=document.getElementById("btnEnterAdmin")||document.querySelector("#adminGate .btn.primary");
+    if(b){
+      b.onclick=function(e){ try{e&&e.preventDefault();}catch(x){} adminLogin(); };
+    }
+  }catch(e){}
   // Always re-verify with server (never trust old session alone)
-  loadAdminIdsFromFB(false);
+  try{ loadAdminIdsFromFB(false); }catch(e){ console.warn(e); }
 }
 function sectionTitle(s){const map={dashboard:'Dashboard',movies:'Movies',categories:'Categories',users:'Users',points:'Points & Unlocks',ads:'Ads & Ad IDs',tasks:'Daily Tasks',payments:'Payments',adult:'Adult Library',requests:'Movie Requests',content:'Links & Videos',broadcast:'Broadcast',settings:'Settings'};return map[s]||s}
 function closeSidebar(){const sb=document.querySelector('.sidebar');if(sb)sb.classList.remove('open');const bd=document.getElementById('sideBackdrop');if(bd)bd.classList.add('hidden')}

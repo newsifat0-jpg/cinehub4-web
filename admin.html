@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#070a12">
   <title>Cine Hub4 • Admin Control Center</title>
-  <link rel="stylesheet" href="admin.css?v=20260821fix17">
+  <link rel="stylesheet" href="admin.css?v=20260821fix18">
   <script src="language.js?v=20260820fix2"></script>
 </head>
 <body>
@@ -18,7 +18,7 @@
       <p class="muted smalltext" id="adminGateStatus" style="margin:10px 0 16px">
         শুধু Script Properties → ADMIN_IDS-এ থাকা Telegram ID দিয়ে ঢোকা যাবে।
       </p>
-      <button class="btn primary" style="width:100%;padding:14px;font-size:15px" onclick="adminLogin()">
+      <button type="button" id="btnEnterAdmin" class="btn primary" style="width:100%;padding:14px;font-size:15px">
         Enter Admin Panel
       </button>
       <small>Open from Telegram Mini App · Server verifies ADMIN_IDS · Firebase synced</small>
@@ -38,23 +38,23 @@
         <div><b>Super Admin</b><small>Telegram verified</small></div>
       </div>
       <nav id="sideNav">
-        <button data-section="dashboard" class="active">⌂ <span>Dashboard</span></button>
-        <button data-section="movies">🎬 <span>Movies</span></button>
-        <button data-section="categories">▦ <span>Categories</span></button>
-        <button data-section="users">♙ <span>Users</span></button>
-        <button data-section="points">◈ <span>Points & Unlocks</span></button>
-        <button data-section="ads">◉ <span>Ads & Ad IDs</span></button>
-        <button data-section="tasks">✓ <span>Daily Tasks</span></button>
-        <button data-section="payments">৳ <span>Payments</span><em id="payBadge" style="display:none">0</em></button>
-        <button data-section="adult">18+ <span>Adult Library</span></button>
-        <button data-section="requests">✉ <span>Movie Requests</span><em id="reqBadge" style="display:none">0</em></button>
-        <button data-section="content">🔗 <span>Links & Videos</span></button>
-        <button data-section="broadcast">↗ <span>Broadcast</span></button>
-        <button data-section="settings">⚙ <span>Settings</span></button>
+        <button type="button" data-section="dashboard" class="active">⌂ <span>Dashboard</span></button>
+        <button type="button" data-section="movies">🎬 <span>Movies</span></button>
+        <button type="button" data-section="categories">▦ <span>Categories</span></button>
+        <button type="button" data-section="users">♙ <span>Users</span></button>
+        <button type="button" data-section="points">◈ <span>Points & Unlocks</span></button>
+        <button type="button" data-section="ads">◉ <span>Ads & Ad IDs</span></button>
+        <button type="button" data-section="tasks">✓ <span>Daily Tasks</span></button>
+        <button type="button" data-section="payments">৳ <span>Payments</span><em id="payBadge" style="display:none">0</em></button>
+        <button type="button" data-section="adult">18+ <span>Adult Library</span></button>
+        <button type="button" data-section="requests">✉ <span>Movie Requests</span><em id="reqBadge" style="display:none">0</em></button>
+        <button type="button" data-section="content">🔗 <span>Links & Videos</span></button>
+        <button type="button" data-section="broadcast">↗ <span>Broadcast</span></button>
+        <button type="button" data-section="settings">⚙ <span>Settings</span></button>
       </nav>
       <div class="side-bottom">
-        <button id="openUser">↗ Open User App</button>
-        <button id="logout">⇥ Sign out</button>
+        <button type="button" id="openUser">↗ Open User App</button>
+        <button type="button" id="logout">⇥ Sign out</button>
       </div>
     </aside>
     <main class="main">
@@ -73,7 +73,7 @@
     </main>
   </div>
 
-  <!-- Global toast + modal MUST exist before admin.js?v=20260821fix17"toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="modal" class="modal hidden" onclick="if(event.target===this)closeModal()"></div>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -81,6 +81,20 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="config.js?v=20260821adminfix"></script>
   <script src="firebase-helper.js?v=20260821final"></script>
-  <script src="admin.js?v=20260821fix17"></script>
+  <script src="admin.js?v=20260821fix18"></script>
+  <script>
+    // Hard bind Enter button (survives any earlier onclick loss)
+    document.addEventListener("DOMContentLoaded", function(){
+      var b = document.getElementById("btnEnterAdmin");
+      if(b){
+        b.addEventListener("click", function(e){
+          e.preventDefault();
+          if(typeof window.adminLogin === "function") window.adminLogin();
+          else if(typeof adminLogin === "function") adminLogin();
+          else alert("adminLogin missing — admin.js load failed");
+        });
+      }
+    });
+  </script>
 </body>
 </html>
