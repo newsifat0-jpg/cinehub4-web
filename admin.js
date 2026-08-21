@@ -79,21 +79,35 @@ const DEFAULT={
   themeBg:"#0a0c14"
 };
 const A={section:"dashboard",settings:{...DEFAULT,...JSON.parse(localStorage.getItem("cinehub4_settings")||"{}")},movies:[],users:0,points:0,adultEnabled:true,moviesLoaded:false,payments:[],requests:[],userList:[],statsLoaded:false};
-/* Load movies from Firebase */
+/* Load movies from Firebase — prefer secure API, fallback client listen */
+function applyMoviesList_(list){
+  var raw=list||[];
+  var seen={}, out=[];
+  raw.forEach(function(m){
+    var id=String(m&&m.id||"");
+    if(!id||seen[id]) return;
+    seen[id]=1; out.push(m);
+  });
+  A.movies=out;
+  A.moviesLoaded=true;
+  try{render()}catch(e){console.error(e)}
+}
 function loadAdminMovies(){
   if(!window.CineHubFB){A.moviesLoaded=true;try{render()}catch(e){}return}
-  window.CineHubFB.listenMovies(function(list){
-    var raw=list||[];
-    var seen={}, out=[];
-    raw.forEach(function(m){
-      var id=String(m.id||"");
-      if(!id||seen[id]) return;
-      seen[id]=1; out.push(m);
+  // 1) API list (service account — same as save path)
+  if(window.CineHubFB.loadMoviesApi){
+    window.CineHubFB.loadMoviesApi().then(function(list){
+      if(Array.isArray(list)) applyMoviesList_(list);
+    }).catch(function(e){ console.warn("loadMoviesApi", e); });
+  }
+  // 2) Live client snapshot (read rules allow)
+  try{
+    window.CineHubFB.listenMovies(function(list){
+      // Don't wipe a richer local list during an active save
+      if(window.__savingMovie) return;
+      applyMoviesList_(list);
     });
-    A.movies=out;
-    A.moviesLoaded=true;
-    try{render()}catch(e){console.error(e)}
-  });
+  }catch(e){}
 }
 setTimeout(loadAdminMovies,200);
 A.settings.adBlocks={...DEFAULT.adBlocks,...(A.settings.adBlocks||{})};
@@ -104,30 +118,60 @@ ensureAdSlots();A.settings.categories=A.settings.categories||DEFAULT.categories;
 /* —— Bilingual helpers (EN + BN) —— */
 function catEn(c){
   if(c==null) return "";
-  if(typeof c==="string") return c;
+  if(typeof c==="string") return c.trim();
+  if(typeof c==="number") return String(c);
   if(typeof c==="object"){
-    var v = c.en!=null ? c.en : (c.name!=null ? c.name : (c.title!=null ? c.title : ""));
-    if(typeof v==="object" && v) v = v.en||v.name||"";
-    return String(v||"");
+    var v = c.en!=null ? c.en : (c.name!=null ? c.name : (c.title!=null ? c.title : (c.label!=null ? c.label : "")));
+    // unwrap nested objects (Firestore sometimes nests)
+    var guard=0;
+    while(v && typeof v==="object" && guard++<5){
+      v = v.en!=null ? v.en : (v.name!=null ? v.name : (v.title!=null ? v.title : ""));
+    }
+    var s = String(v==null?"":v).trim();
+    if(s==="[object Object]") return "";
+    return s;
   }
-  return String(c);
+  var out=String(c).trim();
+  return out==="[object Object]" ? "" : out;
 }
 function catBn(c){
   if(c==null) return "";
   if(typeof c==="string") return "";
   if(typeof c==="object"){
     var v = c.bn!=null ? c.bn : (c.nameBn!=null ? c.nameBn : "");
-    if(typeof v==="object" && v) v = v.bn||"";
-    return String(v||"");
+    var guard=0;
+    while(v && typeof v==="object" && guard++<5){
+      v = v.bn!=null ? v.bn : (v.name!=null ? v.name : "");
+    }
+    var s = String(v==null?"":v).trim();
+    return s==="[object Object]" ? "" : s;
   }
   return "";
 }
 function catLabelAdmin(c){ var e=catEn(c), b=catBn(c); return b? (e+" · "+b) : e; }
 function normalizeCategories(list){
-  if(!Array.isArray(list)) return [];
-  return list.map(function(c){
-    if(c && typeof c==="object") return {en:String(c.en||c.name||"").trim(), bn:String(c.bn||"").trim()};
-    return {en:String(c||"").trim(), bn:""};
+  // Accept array OR plain object map from Firestore
+  if(list==null) return [];
+  var arr = list;
+  if(!Array.isArray(arr)){
+    if(typeof arr==="object"){
+      arr = Object.keys(arr).sort(function(a,b){
+        var na=Number(a), nb=Number(b);
+        if(!isNaN(na)&&!isNaN(nb)) return na-nb;
+        return String(a).localeCompare(String(b));
+      }).map(function(k){ return arr[k]; });
+    } else {
+      return [];
+    }
+  }
+  return arr.map(function(c){
+    if(c && typeof c==="object"){
+      var en=catEn(c); var bn=catBn(c);
+      return {en:en, bn:bn};
+    }
+    var s=String(c==null?"":c).trim();
+    if(!s || s==="[object Object]") return {en:"", bn:""};
+    return {en:s, bn:""};
   }).filter(function(c){ return c.en; });
 }
 function ensureBilingualSettings(){
@@ -257,8 +301,10 @@ function openAdmin(){
             A.settings=Object.assign({}, A.settings||{}, c);
             A.settings.adBlocks=Object.assign({}, (DEFAULT&&DEFAULT.adBlocks)||{}, A.settings.adBlocks||{});
             if(typeof ensureAdSlots==="function") ensureAdSlots();
-            A.settings.categories=A.settings.categories||(DEFAULT&&DEFAULT.categories)||[];
-            A.settings.adultCategories=(A.settings.adultCategories&&A.settings.adultCategories.length)?A.settings.adultCategories:((DEFAULT&&DEFAULT.adultCategories)||[]);
+            // Normalize categories so dropdown never shows [object Object]
+            A.settings.categories = normalizeCategories(A.settings.categories && A.settings.categories.length ? A.settings.categories : ((DEFAULT&&DEFAULT.categories)||[]));
+            A.settings.adultCategories = normalizeCategories(A.settings.adultCategories && A.settings.adultCategories.length ? A.settings.adultCategories : ((DEFAULT&&DEFAULT.adultCategories)||[]));
+            try{ ensureBilingualSettings(); }catch(e2){}
             localStorage.setItem("cinehub4_settings", JSON.stringify(A.settings));
           }catch(e){}
           try{ render(); }catch(e){ console.error(e); }
@@ -1578,17 +1624,27 @@ function saveAllSettings(){
 
 function saveBrand(){A.settings.appName=$('#appName').value.trim()||'Cine Hub4';A.settings.botUsername=$('#botUser').value.trim();save();toast('Brand saved. Refresh user app to see it')}
 function catOptionsHtml(isAdult, selected){
+  try{ ensureBilingualSettings(); }catch(e){}
   var src = isAdult ? (A.settings.adultCategories||[]) : (A.settings.categories||[]);
-  var cats = src.map(function(c){ return catEn(c); }).filter(Boolean);
+  if(!Array.isArray(src)){
+    src = normalizeCategories(src);
+    if(isAdult) A.settings.adultCategories = src; else A.settings.categories = src;
+  }
+  var cats = src.map(function(c){ return catEn(c); }).filter(function(s){ return s && s!=="[object Object]"; });
+  // unique
+  var seen={}; cats = cats.filter(function(c){ if(seen[c]) return false; seen[c]=1; return true; });
   if(isAdult){
     cats = cats.filter(function(c){ return c !== "All"; });
     if(!cats.length) cats = ["Adult Movie"];
   } else {
     if(cats.indexOf("All Movies") < 0) cats.unshift("All Movies");
   }
+  selected = catEn(selected) || String(selected||"");
+  if(selected==="[object Object]") selected="";
   if(selected && cats.indexOf(selected) < 0) cats.unshift(selected);
   return cats.map(function(c){
-    return '<option'+(selected===c?' selected':'')+'>'+String(c).replace(/</g,'')+'</option>';
+    var safe=String(c).replace(/</g,"").replace(/"/g,"&quot;");
+    return '<option value="'+safe+'"'+(selected===c?' selected':'')+'>'+safe+'</option>';
   }).join('');
 }
 function syncMovieCatOptions(){
@@ -1614,19 +1670,37 @@ function openMovie(id=null){
         <option value="1" ${isAdult?'selected':''}>Yes — adult library</option>
       </select>
     </div>
-    <div class="field"><label>Category</label><select id="mCat">${catOptionsHtml(isAdult, m?.category||'')}</select></div>
+    <div class="field"><label>Category</label><select id="mCat">${catOptionsHtml(isAdult, catEn(m&&m.category)||'')}</select></div>
     <div class="field"><label>Rating</label><input id="mRating" type="number" step=".1" value="${m?.rating||8}"></div>
     <div class="field"><label>Poster URL</label><input id="mPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
     <div class="field" style="grid-column:1/-1"><label>Server 1 URL</label><input id="s1" value="${(m?.server1||m?.server1_link||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
     <div class="field" style="grid-column:1/-1"><label>Server 2 URL</label><input id="s2" value="${(m?.server2||m?.server2_link||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
     <div class="field" style="grid-column:1/-1"><label>Server 3 URL</label><input id="s3" value="${(m?.server3||m?.server3_link||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
   </div>
-  <button class="btn primary" style="margin-top:15px;width:100%" onclick="saveMovie(${idArg})">💾 Save Movie</button>`);
+  <button type="button" class="btn primary" id="btnSaveMovie" style="margin-top:15px;width:100%" data-movie-id="${m ? String(m.id).replace(/"/g,'&quot;') : ''}">💾 Save Movie</button>`);
+  // Reliable click binding (avoids silent inline-onclick failures)
+  setTimeout(function(){
+    var btn=document.getElementById('btnSaveMovie');
+    if(!btn) return;
+    btn.onclick=function(ev){
+      try{ if(ev){ev.preventDefault();ev.stopPropagation();} }catch(e){}
+      var mid=btn.getAttribute('data-movie-id')||'';
+      saveMovie(mid ? mid : null);
+    };
+  }, 30);
 }
 function saveMovie(id){
-  if(window.__savingMovie){toast('Already saving…');return;}
-  id=(id===0||id===null||id===undefined||id==='')?null:id;
-  const old=id!=null?A.movies.find(m=>String(m.id)===String(id)):null;
+  try{
+  // Never block forever — auto-clear stuck flag after 20s
+  if(window.__savingMovie){
+    if(window.__savingMovieSince && (Date.now()-window.__savingMovieSince)<20000){
+      toast('Already saving… wait');
+      return;
+    }
+    window.__savingMovie=false;
+  }
+  id=(id===0||id===null||id===undefined||id==='')?null:String(id);
+  const old=id!=null?A.movies.find(function(m){return String(m.id)===String(id);}):null;
   function gv(elId){ var el=document.getElementById(elId); return el ? String(el.value||'').trim() : ''; }
   const s1=gv('s1');
   const s2=gv('s2');
@@ -1638,12 +1712,15 @@ function saveMovie(id){
   const yearVal=gv('mYear');
   const ratingVal=gv('mRating');
   const isAdult = adultVal === '1';
-  let cat = catVal || 'All Movies';
+  let cat = catEn(catVal) || catVal || 'All Movies';
+  if(cat==='[object Object]') cat='All Movies';
   if(isAdult){
-    const ac=(A.settings.adultCategories||[]).filter(x=>catEn(x)!=='All');
-    if(ac.length&&!ac.some(function(x){return catEn(x)===cat;}))cat=catEn(ac[0]);
+    var acRaw=A.settings.adultCategories||[];
+    if(!Array.isArray(acRaw)) acRaw=normalizeCategories(acRaw);
+    const ac=acRaw.filter(function(x){return catEn(x)!=='All';});
+    if(ac.length&&!ac.some(function(x){return catEn(x)===cat;})) cat=catEn(ac[0])||'Adult Movie';
   }
-  // Always keep stable id when editing so we never create duplicates
+  // Stable id: keep existing doc id when editing (TMDB / manual / adult)
   var stableId = id!=null ? String(id) : (old && old.id ? String(old.id) : ("m_" + Date.now()));
   const x={
     id: stableId,
@@ -1659,50 +1736,78 @@ function saveMovie(id){
     s1on:true, s2on:true, s3on:true,
     server1_status:true, server2_status:true, server3_status:true,
     adult:isAdult,
-    clicks:old?.clicks||0, downloads:old?.downloads||0, views:old?.views||0,
-    status:'Published', manual_movie:true, source:old?.source||'manual',
-    tmdb_id:old?.tmdb_id||'',
-    added_time:old?.added_time||Date.now()
+    clicks:(old&&old.clicks)||0, downloads:(old&&old.downloads)||0, views:(old&&old.views)||0,
+    status:'Published', manual_movie: !(old&&old.tmdb_id), source:(old&&old.source)||'manual',
+    tmdb_id:(old&&old.tmdb_id)||'',
+    runtime:(old&&old.runtime)||0,
+    overview:(old&&old.overview)||'',
+    added_time:(old&&old.added_time)||Date.now(),
+    updated_time: Date.now()
   };
   toast('Saving to Firebase…');
-  if(!window.CineHubFB){
-    if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?x:m);else A.movies.unshift(x);
-    save(true);closeModal();render();toast(isAdult?'✓ Adult মুভি সেভ (local fallback)':'✓ মুভি সেভ (local fallback)');
+  if(!window.CineHubFB || !window.CineHubFB.saveMovie){
+    if(id!=null)A.movies=A.movies.map(function(m){return String(m.id)===String(id)?x:m;});else A.movies.unshift(x);
+    try{save(true);}catch(e){}
+    closeModal();render();
+    toast('✓ মুভি সেভ (local — API missing)');
     return;
   }
-  // Must have Telegram initData for admin write
   var idata = '';
   try { idata = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData || ''; } catch(e){}
   if (!idata || idata.length < 20) {
     toast('⚠ Telegram initData নেই — বট থেকে মিনি অ্যাপ আবার খুলে Admin এ ঢোকো');
     return;
   }
-  const tmo=setTimeout(function(){toast('Still saving… Code.gs Deploy নতুন করে করেছো?');},10000);
+  const tmo=setTimeout(function(){toast('Still saving… Code.gs New version Deploy করেছো?');},8000);
   window.__savingMovie=true;
+  window.__savingMovieSince=Date.now();
   window.CineHubFB.saveMovie(x).then(function(saved){
     window.__savingMovie=false; clearTimeout(tmo);
     var sid = String((saved && saved.id) || stableId);
-    // Replace or insert by stable id
+    var merged = Object.assign({}, x, saved||{}, {
+      id: sid, title: titleVal, server1:s1, server2:s2, server3:s3,
+      server1_link:s1, server2_link:s2, server3_link:s3, s1:s1, s2:s2, s3:s3,
+      category:cat, rating:+ratingVal||8,
+      year:String(+yearVal||new Date().getFullYear()),
+      poster:posterVal, adult:isAdult, tmdb_id:x.tmdb_id
+    });
     var found = false;
     A.movies = (A.movies||[]).map(function(m){
-      if (String(m.id) === sid || String(m.id) === String(stableId)) { found = true; return Object.assign({}, saved||x, {id: sid}); }
+      if (String(m.id) === sid || String(m.id) === String(stableId)) { found = true; return merged; }
       return m;
     });
-    if (!found) A.movies.unshift(Object.assign({}, saved||x, {id: sid}));
-    save(true); closeModal(); render();
-    toast(isAdult?'✓ Adult মুভি Firebase-এ সেভ':'✓ মুভি Firebase-এ সেভ · Server links OK');
+    if (!found) A.movies.unshift(merged);
+    try{save(true);}catch(e){}
+    closeModal(); render();
+    toast(isAdult?'✓ Adult মুভি সেভ হয়েছে':'✓ মুভি সেভ হয়েছে');
+    try{
+      if(window.CineHubFB.loadMoviesApi){
+        window.CineHubFB.loadMoviesApi().then(function(list){
+          if(Array.isArray(list) && list.length){
+            var seen={}, out=[];
+            list.forEach(function(m){ var id2=String(m.id||""); if(!id2||seen[id2])return; seen[id2]=1; out.push(m); });
+            A.movies=out; A.moviesLoaded=true; render();
+          }
+        }).catch(function(){});
+      }
+    }catch(e){}
   }).catch(function(e){
     window.__savingMovie=false; clearTimeout(tmo);
     console.error('saveMovie', e);
     var msg = (e && e.message) ? e.message : String(e);
     if (msg.indexOf('Admin') >= 0 || msg.indexOf('Unauthorized') >= 0) {
-      toast('Save failed: Admin auth — Script Properties এ ADMIN_IDS চেক করো ও বট থেকে আবার খোলো');
-    } else if (msg.indexOf('private key') >= 0 || msg.indexOf('Firebase') >= 0) {
-      toast('Save failed: Firebase key — FIREBASE_PRIVATE_KEY Script Properties চেক করো');
+      toast('Save failed: Admin auth — ADMIN_IDS / বট থেকে আবার খোলো');
+    } else if (msg.indexOf('private key') >= 0 || msg.indexOf('Firebase') >= 0 || msg.indexOf('Firestore') >= 0) {
+      toast('Save failed: Firebase — Script Properties key চেক করো');
     } else {
       toast('Save failed: ' + msg);
     }
   });
+  }catch(err){
+    window.__savingMovie=false;
+    console.error('saveMovie sync', err);
+    toast('Save error: '+(err&&err.message?err.message:err));
+  }
 }
 function editMovie(id){openMovie(id)}
 function deleteMovie(id){
@@ -1799,7 +1904,15 @@ function saveTask(idx){
 }
 function openAdBlock(){showModal(`<div class="modal-head"><h2>Add Ad Block</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Ad Block Name</label><input id="extraAdName" placeholder="e.g. Home Reward"></div><div class="field"><label>Ad Block ID</label><input id="extraAdId" placeholder="43222"></div></div><button class="btn primary" style="margin-top:15px" onclick="saveExtraAd()">Add Ad Block</button>`)}
 function saveExtraAd(){const n=$('#extraAdName').value.trim(),id=$('#extraAdId').value.trim();if(!n||!id)return;A.settings.adBlocks.extra=A.settings.adBlocks.extra||{};A.settings.adBlocks.extra[n]=id;save();closeModal();render();toast('Ad block added')}
-function openAdultMovie(id=null){const m=id!=null&&id!==0&&id!==''?A.movies.find(x=>String(x.id)===String(id)):null;const cats=(A.settings.adultCategories||[]).filter(x=>catEn(x)!=='All');const idArg=m?JSON.stringify(String(m.id)):'null';showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Adult Movie</h2><button class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="adultTitle" value="${(m?.title||'').replace(/"/g,'&quot;')}" placeholder="Adult title"></div><div class="field"><label>Year</label><input id="adultYear" type="number" value="${m?.year||new Date().getFullYear()}"></div><div class="field"><label>Category</label><select id="adultCat">${cats.map(c=>{const k=catEn(c);return `<option ${m?.category===k?'selected':''}>${k}</option>`}).join('')}</select></div><div class="field"><label>Rating</label><input id="adultRating" type="number" step=".1" value="${m?.rating||0}"></div><div class="field"><label>Poster URL</label><input id="adultPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="adultS1" value="${(m?.server1||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="adultS2" value="${(m?.server2||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="adultS3" value="${(m?.server3||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div></div><button class="btn primary" style="margin-top:15px" onclick="saveAdultMovie(${idArg})">Save Adult Movie</button>`)}
+function openAdultMovie(id=null){
+  const m=id!=null&&id!==0&&id!==''?A.movies.find(x=>String(x.id)===String(id)):null;
+  var catsRaw=A.settings.adultCategories||[];
+  if(!Array.isArray(catsRaw)) catsRaw=normalizeCategories(catsRaw);
+  const cats=catsRaw.filter(x=>catEn(x)!=='All' && catEn(x));
+  const catOpts=(cats.length?cats:[{en:'Adult Movie'}]).map(c=>{const k=catEn(c);return '<option value="'+k.replace(/"/g,'&quot;')+'"'+(m&&catEn(m.category)===k?' selected':'')+'>'+k.replace(/</g,'')+'</option>';}).join('');
+  showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Adult Movie</h2><button type="button" class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="adultTitle" value="${(m?.title||'').replace(/"/g,'&quot;')}" placeholder="Adult title"></div><div class="field"><label>Year</label><input id="adultYear" type="number" value="${m?.year||new Date().getFullYear()}"></div><div class="field"><label>Category</label><select id="adultCat">${catOpts}</select></div><div class="field"><label>Rating</label><input id="adultRating" type="number" step=".1" value="${m?.rating||0}"></div><div class="field"><label>Poster URL</label><input id="adultPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="adultS1" value="${(m?.server1||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="adultS2" value="${(m?.server2||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="adultS3" value="${(m?.server3||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div></div><button type="button" class="btn primary" id="btnSaveAdult" style="margin-top:15px;width:100%" data-movie-id="${m?String(m.id).replace(/"/g,'&quot;'):''}">Save Adult Movie</button>`);
+  setTimeout(function(){var b=document.getElementById('btnSaveAdult');if(!b)return;b.onclick=function(ev){try{ev&&ev.preventDefault();}catch(e){}var mid=b.getAttribute('data-movie-id')||'';saveAdultMovie(mid||null);};},30);
+}
 function saveAdultMovie(id){
   id=(id===0||id===null||id===undefined||id==='')?null:id;
   const old=id!=null?A.movies.find(m=>String(m.id)===String(id)):null;
@@ -1973,17 +2086,19 @@ function importTmdbByIndex(i){
   importTmdbMovie(m.tmdb_id, m);
 }
 function importTmdbMovie(tmdbId, cached){
-  toast('Importing…');
-  // Prefer client save with search result data (avoids broken FIREBASE_PRIVATE_KEY on backend)
+  try{
+  toast('TMDB Importing…');
+  if(!window.CineHubFB){ toast('API missing — firebase-helper.js চেক করো'); return; }
   function fromCache(m){
+    var tid = String((m&&m.tmdb_id) || tmdbId || "");
     return {
-      id: "tmdb_" + String(m.tmdb_id || tmdbId),
-      tmdb_id: String(m.tmdb_id || tmdbId),
-      title: m.title || "Untitled",
-      year: m.year || "",
-      poster: m.poster || "",
-      overview: m.overview || "",
-      rating: Number(m.rating) || 0,
+      id: "tmdb_" + tid,
+      tmdb_id: tid,
+      title: (m&&m.title) || "Untitled",
+      year: (m&&m.year) || "",
+      poster: (m&&m.poster) || "",
+      overview: (m&&m.overview) || "",
+      rating: Number((m&&m.rating) || 0) || 0,
       category: "All Movies",
       type: "Movie",
       adult: false,
@@ -1991,36 +2106,44 @@ function importTmdbMovie(tmdbId, cached){
       source: "tmdb",
       manual_movie: false,
       server1: "", server2: "", server3: "",
+      s1: "", s2: "", s3: "",
       clicks: 0, downloads: 0, views: 0,
       added_time: Date.now()
     };
   }
   function afterSaved(saved){
-    A.movies = A.movies.filter(function(x){return String(x.id)!==String(saved.id)});
-    A.movies.unshift(saved);
-    save(true);
+    if(!saved){ toast('Import failed: empty response'); return; }
+    var sid = String(saved.id || ("tmdb_" + tmdbId));
+    var row = Object.assign({}, fromCache(cached||{tmdb_id:tmdbId}), saved, {id:sid});
+    A.movies = (A.movies||[]).filter(function(x){return String(x.id)!==sid;});
+    A.movies.unshift(row);
+    try{save(true);}catch(e){}
     closeModal();
     render();
-    toast('Imported — add Server links');
-    setTimeout(function(){ openMovie(String(saved.id)); }, 250);
+    toast('✓ TMDB ইমপোর্ট হয়েছে — Server লিংক দাও');
+    setTimeout(function(){ try{ openMovie(sid); }catch(e){} }, 300);
   }
   if(cached && cached.title){
     window.CineHubFB.saveMovie(fromCache(cached)).then(afterSaved).catch(function(e){
-      toast('Import failed: '+(e&&e.message?e.message:e));
+      toast('TMDB save failed: '+(e&&e.message?e.message:e));
     });
     return;
   }
-  // fallback API path
-  window.CineHubFB.importTmdbMovie(String(tmdbId)).then(afterSaved).catch(function(e){
-    // last resort: minimal client doc
-    if(window.CineHubFB && window.CineHubFB.saveMovie){
+  if(window.CineHubFB.importTmdbMovie){
+    window.CineHubFB.importTmdbMovie(String(tmdbId)).then(afterSaved).catch(function(e){
       window.CineHubFB.saveMovie(fromCache({tmdb_id:tmdbId,title:"TMDB "+tmdbId})).then(afterSaved).catch(function(e2){
-        toast('Import failed: '+(e&&e.message?e.message:e));
+        toast('TMDB failed: '+(e&&e.message?e.message:e));
       });
-    } else {
-      toast('Import failed: '+(e&&e.message?e.message:e));
-    }
-  });
+    });
+  } else {
+    window.CineHubFB.saveMovie(fromCache({tmdb_id:tmdbId,title:"TMDB "+tmdbId})).then(afterSaved).catch(function(e){
+      toast('TMDB failed: '+(e&&e.message?e.message:e));
+    });
+  }
+  }catch(err){
+    console.error(err);
+    toast('TMDB error: '+(err&&err.message?err.message:err));
+  }
 }
 
 window.saveMovie=saveMovie;

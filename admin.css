@@ -306,7 +306,7 @@ input.search:focus,input:focus,select:focus,textarea:focus{
 .toast,.admin-toast{
   position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(8px);
   background:#1e293b;color:#fff;padding:12px 20px;border-radius:12px;
-  font-size:13px;font-weight:600;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.4);
+  font-size:13px;font-weight:600;z-index:10050 !important;box-shadow:0 8px 32px rgba(0,0,0,.4);
   border:1px solid var(--line2);max-width:90vw;text-align:center;
   opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
 }
@@ -445,7 +445,7 @@ input.search:focus,input:focus,select:focus,textarea:focus{
 .toast{
   position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);
   background:#0f172a;color:#fff;border:1px solid #334155;padding:12px 18px;border-radius:12px;
-  font-size:13px;font-weight:600;z-index:9999;opacity:0;pointer-events:none;
+  font-size:13px;font-weight:600;z-index:10050 !important;opacity:0;pointer-events:none;
   box-shadow:0 12px 40px #000a;max-width:90vw;text-align:center;
   transition:opacity .25s, transform .25s;
 }
