@@ -225,13 +225,42 @@ function shareMovie(id){
     var title = m ? String(m.title||"").split("|")[0].trim() : "Movie";
     var link = movieShareLink(mid);
     if(!link){ toast("Link empty — set Mini App link in Admin → Settings"); return; }
-    // Show sheet first (always works), then try Telegram share
+    var text = title + " — Cine Hub4";
+    // 1) System share sheet (WhatsApp, Facebook, Messenger, etc. when OS supports it)
+    try{
+      if(navigator.share){
+        navigator.share({ title: title, text: text, url: link }).then(function(){
+          toast(t("Share"));
+        }).catch(function(){
+          showLinkSheet(link, title);
+          openTgShare(link, text);
+        });
+        return;
+      }
+    }catch(e){}
+    // 2) Fallback: link sheet + Telegram share
     showLinkSheet(link, title);
-    openTgShare(link, title + " — Cine Hub4");
+    openTgShare(link, text);
   }catch(e){
     console.error(e);
     toast("Share error: "+(e&&e.message?e.message:e));
   }
+}
+function movieDurationLabel(m){
+  if(!m) return "";
+  var rt = Number(m.runtime || 0);
+  if(rt > 0){
+    var h = Math.floor(rt / 60), min = rt % 60;
+    if(h > 0) return h + "h" + (min ? (" " + min + "m") : "");
+    return min + "m";
+  }
+  var d = String(m.duration || "").replace(/^4K\s*/i,"").trim();
+  return d;
+}
+function movieRatingLabel(m){
+  var r = Number(m && (m.rating != null ? m.rating : m.vote_average));
+  if(!r || isNaN(r)) return "";
+  return (Math.round(r * 10) / 10).toFixed(1);
 }
 // Expose globally (Telegram WebView onclick)
 window.copyMovieLink = copyMovieLink;
@@ -269,18 +298,22 @@ let movies=[];
 let userData={points:1,unlocks:{},ads_today:0,ads_day:"",language:"en",refs:0};
 const state={page:(sessionStorage.getItem("cinehub4_page")||"movies"),adultOK:false,points:1,query:"",category:"All Movies",mode:"new",adultCategory:"All",adultMode:"new",history:JSON.parse(sessionStorage.getItem("cinehub4_history")||"[]"),unlockProgress:0,buyStep:null,buyOrder:null,moviesLoaded:false,userLoaded:false,firstPaint:true};
 function save(){
-  // points & unlocks go to Firebase users/{uid}
+  // ALL user progress → Firebase only (no local source of truth)
   if(window.CineHubFB){
+    if(userData){
+      userData.points = state.points;
+    }
     window.CineHubFB.updateUserField(null,{
-      points: state.points,
-      unlocks: userData.unlocks || {},
-      ads_today: userData.ads_today || 0,
-      ads_day: userData.ads_day || "",
-      language: userData.language || "en",
-      refs: userData.refs || 0
-    });
-  } else {
-    localStorage.setItem("cinehub4_points",state.points);
+      points: Number(state.points) || 0,
+      unlocks: (userData && userData.unlocks) || {},
+      ads_today: Number((userData && userData.ads_today) || 0),
+      ads_day: (userData && userData.ads_day) || "",
+      ads_total: Number((userData && userData.ads_total) || 0),
+      language: (userData && userData.language) || "en",
+      refs: Number((userData && userData.refs) || 0),
+      referred_by: (userData && userData.referred_by) || null,
+      updated_at: Date.now()
+    }).catch(function(e){ console.warn("save user", e); });
   }
 }
 /* Boot flag: while splash is up, queue one paint only — no intermediate jerks */
@@ -387,15 +420,22 @@ function hideBlockedScreen(){
 function loadUserFromFB(){
   if(!window.CineHubFB){state.userLoaded=true;tryApplyReferralLocal();return}
   window.CineHubFB.loadUser().then(function(u){
-    userData = u || userData;
-    state.points = Number(userData.points) || 1;
+    // Firebase is the only source of truth for user progress (multi-device)
+    userData = Object.assign({
+      points:1, unlocks:{}, ads_today:0, ads_total:0, refs:0,
+      task_progress:{}, unlock_prog:{}, unlock_ad_prog:{}
+    }, u || {});
+    if(!userData.task_progress || typeof userData.task_progress!=="object") userData.task_progress={};
+    if(!userData.unlock_prog || typeof userData.unlock_prog!=="object") userData.unlock_prog={};
+    if(!userData.unlock_ad_prog || typeof userData.unlock_ad_prog!=="object") userData.unlock_ad_prog={};
+    if(!userData.unlocks || typeof userData.unlocks!=="object") userData.unlocks={};
+    state.points = Number(userData.points) || 0;
+    if(!state.points && state.points!==0) state.points = 1;
     state.userLoaded = true;
-    // Fresh user after admin delete → clear local "already joined" flags so they act like new
     try{
       if(userData && !userData.join_bonus_given){
         localStorage.removeItem("cinehub4_join_bonus_given");
       }
-      if(userData && userData.refs!=null) localStorage.setItem("cinehub4_refs",String(userData.refs));
     }catch(e){}
     if(isUserBlocked()){
       showBlockedScreen();
@@ -403,7 +443,11 @@ function loadUserFromFB(){
     }
     hideBlockedScreen();
     applyReferralReward().finally(function(){ safeRender(false); });
-  }).catch(function(){ state.userLoaded=true; tryApplyReferralLocal(); });
+  }).catch(function(e){
+    console.warn("loadUser failed", e);
+    state.userLoaded=true;
+    safeRender(false);
+  });
 }
 /** Credit join bonus + referrer reward (server). Falls back local if API missing. */
 function applyReferralReward(){
@@ -542,13 +586,16 @@ function posterHTML(m, mode){
 function card(m,idx){
   const curMode=state.page==="adult"?state.adultMode:state.mode;
   const top=idx===0&&curMode==="trending"?`<span class="movie-top">TOP 1</span>`:"";
-  const title=(m.title||"").split("|")[0].trim();
+  const title=(m.title||"").split("|")[0].trim().replace(/</g,"");
   const sid=JSON.stringify(String(m.id));
+  const rating=movieRatingLabel(m);
+  const dur=movieDurationLabel(m);
   return `<article class="movie-card" onclick='detail(${sid})'>
     <div class="poster-wrap">
-      <span class="movie-badge">${t("Movie")}</span>${top}
+      ${top}
+      ${rating?`<span class="movie-rating">★ ${rating}</span>`:""}
       ${posterHTML(m)}
-      ${m.duration?`<span class="movie-dur">4K ${m.duration}</span>`:""}
+      ${dur?`<span class="movie-dur">${dur}</span>`:""}
     </div>
     <div class="movie-body">
       <div class="mtitle">${title}</div>
@@ -805,75 +852,80 @@ function getTasks(){
     {name:"Daily login",reward:2,limit:1,type:"login",resetHours:24,permanent:false}
   ];
 }
-/** Task progress: supports limit > 1. Shows Done only after required completions.
- *  Permanent tasks stay done forever. Others reset after tk.resetHours (default 24). */
+/** Task progress in Firebase users/{uid}.task_progress — multi-device sync */
 function taskStableId(tk,i){
-  // Always include index so two tasks never share the same progress key
   const name=String((tk&&(tk.id||tk.name))||("task")).toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,28);
   const typ=String((tk&&tk.type)||"x").toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,12);
   return "t"+String(i)+"_"+name+"_"+typ;
 }
+function getTaskProgMap(){
+  if(!userData) userData={};
+  if(!userData.task_progress || typeof userData.task_progress!=="object") userData.task_progress={};
+  return userData.task_progress;
+}
 function taskResetInfo(i,tk){
   const sid=taskStableId(tk,i);
-  const key="cinehub4_task_"+sid+"_done_at";
-  const countKey="cinehub4_task_"+sid+"_count";
-  const dayKey="cinehub4_task_"+sid+"_day";
   const limit=Math.max(1, Number(tk&&tk.limit)||1);
-  let count=Number(localStorage.getItem(countKey)||0);
+  const map=getTaskProgMap();
+  let entry=map[sid]||{};
+  let count=Number(entry.count)||0;
   if(tk && (tk.type==="share"||tk.type==="refer") && userData && userData.ref_task_count!=null){
     count=Math.max(count, Number(userData.ref_task_count)||0);
   }
-  // Permanent: never auto-reset
   if(tk && tk.permanent){
-    const done = count >= limit;
-    return {done:done,key,countKey,count,limit,sid};
+    return {done: count>=limit, count:count, limit:limit, sid:sid};
   }
-  const raw=localStorage.getItem(key);
   const mode=String((tk&&tk.resetMode)||"hours");
   const today=new Date().toDateString();
   if(mode==="midnight"){
-    const storedDay=localStorage.getItem(dayKey)||"";
-    if(storedDay && storedDay!==today){
-      localStorage.removeItem(key);
-      localStorage.removeItem(countKey);
-      localStorage.setItem(dayKey, today);
+    if(entry.day && entry.day!==today){
       count=0;
-    } else if(!storedDay){
-      localStorage.setItem(dayKey, today);
+      entry={count:0, day:today};
+      map[sid]=entry;
+    } else if(!entry.day){
+      entry.day=today;
+      map[sid]=entry;
     }
-  } else if(raw){
-    const hours=Number(tk&&tk.resetHours);
-    const h=(isFinite(hours)&&hours>0)?hours:24;
-    if((Date.now()-Number(raw))/3600000 >= h){
-      localStorage.removeItem(key);
-      localStorage.removeItem(countKey);
-      count=0;
+  } else {
+    const doneAt=Number(entry.done_at)||0;
+    if(doneAt){
+      const hours=Number(tk&&tk.resetHours);
+      const h=(isFinite(hours)&&hours>0)?hours:24;
+      if((Date.now()-doneAt)/3600000 >= h){
+        count=0;
+        entry={count:0};
+        map[sid]=entry;
+      }
     }
   }
-  // Also reset top ad counter at midnight if configured
-  const done = count >= limit;
-  return {done:done,key,countKey,count,limit,sid,dayKey};
+  return {done: count>=limit, count:count, limit:limit, sid:sid};
 }
 function markTaskProgress(i,tk){
   const st=taskResetInfo(i,tk);
   const next=st.count+1;
-  localStorage.setItem(st.countKey,String(next));
-  if(st.dayKey) localStorage.setItem(st.dayKey, new Date().toDateString());
-  if(next>=st.limit){
-    localStorage.setItem(st.key,String(Date.now()));
+  const map=getTaskProgMap();
+  const entry={
+    count: next,
+    day: new Date().toDateString()
+  };
+  if(next>=st.limit) entry.done_at=Date.now();
+  map[st.sid]=entry;
+  userData.task_progress=map;
+  if(tk && (tk.type==="share"||tk.type==="refer")){
+    userData.ref_task_count=next;
   }
-  // persist on user for cross-device (share tasks)
   try{
-    if(window.CineHubFB && tk && (tk.type==="share"||tk.type==="refer")){
-      window.CineHubFB.updateUserField(null,{ref_task_count:next});
-      if(userData) userData.ref_task_count=next;
+    if(window.CineHubFB){
+      const patch={task_progress:map, updated_at:Date.now()};
+      if(tk && (tk.type==="share"||tk.type==="refer")) patch.ref_task_count=next;
+      window.CineHubFB.updateUserField(null, patch).catch(function(){});
     }
   }catch(e){}
   return next>=st.limit;
 }
 function tasks(){
   loadSharedSettings();
-  const watched=Number((userData&&userData.ads_today)||localStorage.getItem("cinehub4_ads_today")||0);
+  const watched=Number((userData&&userData.ads_today)||0);
   const limit=Number(cfg.dailyAdLimit||20);
   const rem=Math.max(0,limit-watched);
   const list=getTasks();
@@ -1155,10 +1207,7 @@ function submitPayment(){
         toast("Payment save failed: "+(e&&e.message?e.message:e));
       });
     } else {
-      const list=JSON.parse(localStorage.getItem("cinehub4_payments")||"[]");
-      list.push(Object.assign({id:Date.now()},paymentObj));
-      localStorage.setItem("cinehub4_payments",JSON.stringify(list));
-      toast(t("Payment request submitted"));
+      toast("Payment save failed: Firebase API missing");
     }
     state.buyStep=null;state.buyOrder=null;state.selectedWallet=null;
     nav("profile");
@@ -1278,19 +1327,29 @@ function buy(){
   </div>`;
 }
 
-/* —— Unlock helpers (admin: cost / hours / ads / servers) —— */
-function unlockKey(id){return "cinehub4_unlock_"+id}
-function progressKey(id){return "cinehub4_uprog_"+id}
-function adProgressKey(id){return "cinehub4_uad_"+id}
+/* —— Unlock helpers — progress in Firebase (multi-device) —— */
 function isMovieUnlocked(id){
   try{
     if(userData && userData.unlocks){
       const exp=Number(userData.unlocks[String(id)]||0);
       if(exp>Date.now()) return true;
     }
-    const exp2=Number(localStorage.getItem(unlockKey(id))||0);
-    return exp2>Date.now();
-  }catch(e){return false}
+  }catch(e){}
+  return false;
+}
+function persistUnlockMaps_(){
+  if(!userData) return;
+  try{
+    if(window.CineHubFB){
+      window.CineHubFB.updateUserField(null,{
+        unlock_prog: userData.unlock_prog||{},
+        unlock_ad_prog: userData.unlock_ad_prog||{},
+        unlocks: userData.unlocks||{},
+        points: Number(state.points)||0,
+        updated_at: Date.now()
+      }).catch(function(){});
+    }
+  }catch(e){}
 }
 function markMovieUnlocked(id){
   loadSharedSettings();
@@ -1299,34 +1358,55 @@ function markMovieUnlocked(id){
   if(!userData) userData={};
   if(!userData.unlocks) userData.unlocks={};
   userData.unlocks[String(id)]=exp;
-  try{localStorage.setItem(unlockKey(id),String(exp))}catch(e){}
-  try{localStorage.removeItem(progressKey(id))}catch(e){}
-  try{localStorage.removeItem(adProgressKey(id))}catch(e){}
-  if(window.CineHubFB) try{window.CineHubFB.setUnlock(null, id, hours)}catch(e){}
+  // Clear in-progress counters after unlock
+  if(!userData.unlock_prog) userData.unlock_prog={};
+  if(!userData.unlock_ad_prog) userData.unlock_ad_prog={};
+  delete userData.unlock_prog[String(id)];
+  delete userData.unlock_ad_prog[String(id)];
+  if(window.CineHubFB){
+    try{window.CineHubFB.setUnlock(null, id, hours)}catch(e){}
+    persistUnlockMaps_();
+  }
   state.unlockProgress=Number(cfg.unlockCost)||5;
   return hours;
 }
-/** Points contributed toward unlockCost */
+/** Points contributed toward unlockCost — Firebase */
 function getUnlockProgress(id){
-  try{return Number(localStorage.getItem(progressKey(id))||0)}catch(e){return 0}
+  try{
+    if(userData && userData.unlock_prog){
+      return Number(userData.unlock_prog[String(id)]||0);
+    }
+  }catch(e){}
+  return 0;
 }
 function setUnlockProgress(id,n){
   loadSharedSettings();
   const cost=Math.max(1, Number(cfg.unlockCost)||5);
   const v=Math.max(0,Math.min(cost,Number(n)||0));
-  try{localStorage.setItem(progressKey(id),String(v))}catch(e){}
+  if(!userData) userData={};
+  if(!userData.unlock_prog) userData.unlock_prog={};
+  userData.unlock_prog[String(id)]=v;
   state.unlockProgress=v;
+  persistUnlockMaps_();
   return v;
 }
-/** Ads watched toward adsForUnlock */
+/** Ads watched toward adsForUnlock — Firebase */
 function getAdUnlockProgress(id){
-  try{return Number(localStorage.getItem(adProgressKey(id))||0)}catch(e){return 0}
+  try{
+    if(userData && userData.unlock_ad_prog){
+      return Number(userData.unlock_ad_prog[String(id)]||0);
+    }
+  }catch(e){}
+  return 0;
 }
 function setAdUnlockProgress(id,n){
   loadSharedSettings();
   const need=Math.max(1, Number(cfg.adsForUnlock)||5);
   const v=Math.max(0,Math.min(need,Number(n)||0));
-  try{localStorage.setItem(adProgressKey(id),String(v))}catch(e){}
+  if(!userData) userData={};
+  if(!userData.unlock_ad_prog) userData.unlock_ad_prog={};
+  userData.unlock_ad_prog[String(id)]=v;
+  persistUnlockMaps_();
   return v;
 }
 function tryCompleteUnlock(id){
@@ -1346,7 +1426,8 @@ function serverCount(){return Math.max(1,Math.min(10,Number(cfg.downloadServers)
 
 function detail(id){
   const m=movies.find(x=>String(x.id)===String(id));if(!m){console.warn("detail: movie not found",id);return;}
-  m.clicks=(m.clicks||0)+1;m.views=(m.views||m.clicks);save();
+  m.clicks=(m.clicks||0)+1;m.views=(m.views||m.clicks);
+  try{ if(window.CineHubFB && window.CineHubFB.incClicks) window.CineHubFB.incClicks(m.id); }catch(e){}
   if(state.page!=="detail"){
     state.history.push(state.page);
     if(state.history.length>30)state.history.shift();
@@ -1395,12 +1476,39 @@ function detailView(){
   const pageLabel=isAdult?(t("Adult")+" · "+t("Movie")):t("Movie");
   const clicks=Number(m.clicks||m.views||0);
 
-  // shared poster header
+  // shared poster header — TMDB meta on unlock / detail
   function posterBlock(){
+    var rating=movieRatingLabel(m);
+    var dur=movieDurationLabel(m);
+    var genre=String(m.genre||m.genres||m.category||"").replace(/</g,"");
+    var overview=String(m.overview||"").replace(/</g,"").slice(0,280);
+    var year=String(m.year||"").replace(/</g,"");
+    try{
+      // Soft refresh rating/runtime from TMDB when opening detail (max once / 6h per movie)
+      if(m.tmdb_id && window.CineHubFB && window.CineHubFB.refreshTmdbMeta){
+        var k="tmdb_meta_"+m.id;
+        var last=Number(sessionStorage.getItem(k)||0);
+        if(!last || Date.now()-last>6*3600000){
+          sessionStorage.setItem(k,String(Date.now()));
+          window.CineHubFB.refreshTmdbMeta(m.id, m.tmdb_id).then(function(upd){
+            if(!upd) return;
+            var idx=movies.findIndex(function(x){return String(x.id)===String(m.id);});
+            if(idx>=0){
+              if(upd.rating!=null) movies[idx].rating=upd.rating;
+              if(upd.runtime!=null) movies[idx].runtime=upd.runtime;
+              if(upd.overview) movies[idx].overview=upd.overview;
+              if(upd.genres) movies[idx].genres=upd.genres;
+              if(state.page==="detail" && String(state.detailId)===String(m.id)) render(false);
+            }
+          }).catch(function(){});
+        }
+      }
+    }catch(e){}
     return `<div class="ps-poster">
       <div class="ps-poster-img">${posterHTML(m,"full")}</div>
       <div class="ps-badge">${isAdult?"18+":t("Movie")}</div>
-      <div class="ps-dur">★ ${m.rating||8} · ${m.year||""}</div>
+      ${rating?`<div class="ps-rating-badge">★ ${rating}</div>`:""}
+      ${dur?`<div class="ps-dur-badge">${dur}</div>`:""}
     </div>
     <div class="ps-share-row">
       <button type="button" class="ps-share-btn ps-copy" onclick='copyMovieLink(${JSON.stringify(String(m.id))})'>
@@ -1413,7 +1521,8 @@ function detailView(){
       </button>
     </div>
     <h1 class="ps-title">${title.replace(/</g,"&lt;")}</h1>
-    <div class="ps-sub">${(m.genre||m.category||"").toString().replace(/</g,"")} · ${m.year||""}</div>`;
+    <div class="ps-sub">${[genre,year,rating?("★ "+rating):"",dur].filter(Boolean).join(" · ")}</div>
+    ${overview?`<p class="ps-overview">${overview}${String(m.overview||"").length>280?"…":""}</p>`:""}`;
   }
 
   if(unlocked){
@@ -1507,7 +1616,7 @@ function detailView(){
       </div>
       <div class="ps-progress">
         <div class="ps-bar"><i style="width:${pct}%"></i></div>
-        <div class="ps-prog-txt">${t("Points")}: ${prog}/${cost} · ${t("Ads")}: ${adProg}/${adsNeed} · ${hours}h</div>
+        <div class="ps-prog-txt">${t("Points")}: ${prog}/${cost} · ${t("Ads")}: ${adProg}/${adsNeed}</div>
       </div>
       <div class="ps-hint">${t("Unlock with points or ads")}</div>
       <button type="button" class="ps-btn lock" onclick="unlockWithAds()">${t("Unlock Video")}</button>
@@ -1906,21 +2015,18 @@ function playAdNetwork(slot, onDone){
 function resetDailyAdsIfNeeded(){
   const mode=String(cfg.dailyAdResetMode||"midnight");
   const today=new Date().toDateString();
-  const stored=localStorage.getItem("cinehub4_ads_day")||(userData&&userData.ads_day)||"";
+  const stored=(userData&&userData.ads_day)||"";
   if(mode==="midnight"){
     if(stored && stored!==today){
-      localStorage.setItem("cinehub4_ads_today","0");
-      localStorage.setItem("cinehub4_ads_day",today);
       if(userData){userData.ads_today=0;userData.ads_day=today;}
+      if(window.CineHubFB) try{window.CineHubFB.updateUserField(null,{ads_today:0,ads_day:today});}catch(e){}
     }
   } else {
-    // hours-based from first ad of cycle
-    const start=Number(localStorage.getItem("cinehub4_ads_cycle_start")||0);
+    const start=Number((userData&&userData.ads_cycle_start)||0);
     const h=Number(cfg.dailyAdResetHours||24);
     if(start && (Date.now()-start)/3600000 >= h){
-      localStorage.setItem("cinehub4_ads_today","0");
-      localStorage.setItem("cinehub4_ads_cycle_start",String(Date.now()));
-      if(userData){userData.ads_today=0;}
+      if(userData){userData.ads_today=0;userData.ads_cycle_start=Date.now();}
+      if(window.CineHubFB) try{window.CineHubFB.updateUserField(null,{ads_today:0,ads_cycle_start:Date.now()});}catch(e){}
     }
   }
 }
@@ -1934,7 +2040,7 @@ function watchAd(mode){
 
   // Daily limit only for earning modes (not unlock/adult unlock path)
   if(mode!=="unlock" && mode!=="adult"){
-    const watched=Number((userData&&userData.ads_today)||localStorage.getItem("cinehub4_ads_today")||0);
+    const watched=Number((userData&&userData.ads_today)||0);
     const limit=Number(cfg.dailyAdLimit||20);
     if(watched>=limit){toast(t("Daily ad limit reached"));return}
   }
@@ -1964,11 +2070,10 @@ function watchAd(mode){
         state.points+=Number(tk.reward||0);save();
         const finished=markTaskProgress(ti,tk);
         toast("+"+(tk.reward||0)+" points"+(finished?" · Done":""));
-        // still count toward daily ad limit
-        const watched=Number((userData&&userData.ads_today)||localStorage.getItem("cinehub4_ads_today")||0)+1;
-        if(userData){userData.ads_today=watched;userData.ads_day=new Date().toDateString();}
-        localStorage.setItem("cinehub4_ads_today",String(watched));
-        if(window.CineHubFB) try{window.CineHubFB.updateUserField(null,{ads_today:watched,ads_day:new Date().toDateString()})}catch(e){}
+        const watched=Number((userData&&userData.ads_today)||0)+1;
+        const totalAds=Number((userData&&userData.ads_total)||0)+1;
+        if(userData){userData.ads_today=watched;userData.ads_day=new Date().toDateString();userData.ads_total=totalAds;}
+        if(window.CineHubFB) try{window.CineHubFB.updateUserField(null,{ads_today:watched,ads_day:new Date().toDateString(),ads_total:totalAds,points:state.points})}catch(e){}
         render(false);
         return;
       }
@@ -1976,11 +2081,10 @@ function watchAd(mode){
     // Generic rewarded ad (points page)
     const reward=Number(cfg.adReward||2);
     state.points+=reward;
-    const watched=Number((userData&&userData.ads_today)||localStorage.getItem("cinehub4_ads_today")||0)+1;
-    if(userData){userData.ads_today=watched;userData.ads_day=new Date().toDateString();}
-    localStorage.setItem("cinehub4_ads_today",String(watched));
-    localStorage.setItem("cinehub4_ads_day",new Date().toDateString());
-    if(window.CineHubFB) window.CineHubFB.updateUserField(null,{ads_today:watched,ads_day:new Date().toDateString()});
+    const watched=Number((userData&&userData.ads_today)||0)+1;
+    const totalAds=Number((userData&&userData.ads_total)||0)+1;
+    if(userData){userData.ads_today=watched;userData.ads_day=new Date().toDateString();userData.ads_total=totalAds;}
+    if(window.CineHubFB) window.CineHubFB.updateUserField(null,{ads_today:watched,ads_day:new Date().toDateString(),ads_total:totalAds,points:state.points});
     save();
     toast("+"+reward+" "+t("points added"));
     render(false);

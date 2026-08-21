@@ -182,6 +182,9 @@
     loadFavourites:function(uid){return api("loadFavourites",{uid:String(uid||getUid())});},
     toggleFavourite:function(uid,movieId,title){return api("toggleFavourite",{uid:String(uid||getUid()),movieId:String(movieId),title:title||""});},
     searchTmdb:function(query){return api("searchTmdb",{query:String(query||"")});},
+    refreshTmdbMeta:function(movieId,tmdbId){
+      return api("refreshTmdbMeta",{movieId:String(movieId||""),tmdbId:String(tmdbId||"")});
+    },
     importTmdbMovie:function(tmdbId){
       // Backend fetches TMDB + saves; if Firebase key broken, search already has data — client will be used by admin importFromSearch
       return api("importTmdbMovie",{tmdbId:String(tmdbId||"")}).catch(function(err){

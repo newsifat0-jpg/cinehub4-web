@@ -679,14 +679,15 @@ function users(){
       });
     }
   }
-  var list = A.userList && A.userList.length ? A.userList.slice() : [];
-  if (!list.length) {
-    try { list = JSON.parse(localStorage.getItem("cinehub4_users")||"[]"); } catch(e){ list = []; }
+  var all = A.userList && A.userList.length ? A.userList.slice() : [];
+  if (!all.length) {
+    try { all = JSON.parse(localStorage.getItem("cinehub4_users")||"[]"); } catch(e){ all = []; }
   }
   var q = "";
-  try { q = String((document.getElementById("userSearch")||{}).value||"").toLowerCase(); } catch(e){}
-  if (q) list = list.filter(function(u){
-    return String(u.id||"").toLowerCase().indexOf(q)>=0 || String(u.name||u.username||"").toLowerCase().indexOf(q)>=0;
+  try { q = String((document.getElementById("userSearch")||{}).value||"").toLowerCase().trim(); } catch(e){}
+  var list = all;
+  if (q) list = all.filter(function(u){
+    return String(u.id||"").toLowerCase().indexOf(q)>=0 || String(u.name||u.username||u.first_name||"").toLowerCase().indexOf(q)>=0;
   });
   var cards = list.length ? list.map(function(u){
     var id = String(u.id||"");
@@ -713,26 +714,71 @@ function users(){
         '<button type="button" class="btn" onclick="toggleBlockUser(\''+idJs+'\')">'+(u.blocked?"Unblock":"Block")+'</button>'+
         '<button type="button" class="btn danger" onclick="adminDeleteUser(\''+idJs+'\')">Delete</button>'+
       '</div></div>';
-  }).join("") : '<div class="muted" style="padding:20px;text-align:center">No users yet — mini app খুললে এখানে আসবে (real Firebase data)</div>';
-  return '<div class="toolbar"><div><h2 style="margin:0">Users</h2><div class="muted smalltext">Total: '+list.length+' · Firebase users collection</div></div>'+
-    '<button type="button" class="btn" onclick="window.__usersLoaded=false;render()">↻ Refresh</button></div>'+
-    '<input class="search" id="userSearch" placeholder="Search user ID / name..." oninput="render()" style="width:100%;max-width:100%;margin-bottom:12px">'+
+  }).join("") : (q
+    ? '<div class="muted" style="padding:20px;text-align:center">Search এ মিলেনি · ID: '+String(q).replace(/</g,"")+'</div>'
+    : '<div class="muted" style="padding:20px;text-align:center">No users yet — mini app খুললে এখানে আসবে (real Firebase data)</div>');
+  return '<div class="toolbar"><div><h2 style="margin:0">Users</h2><div class="muted smalltext">Total: '+all.length+(q?(" · shown: "+list.length):"")+' · Firebase users collection</div></div>'+
+    '<button type="button" class="btn" onclick="window.__usersLoaded=false;A.userList=[];render()">↻ Refresh</button></div>'+
+    '<input class="search" id="userSearch" placeholder="Search user ID / name..." value="'+String(q).replace(/"/g,"&quot;")+'" oninput="render()" style="width:100%;max-width:100%;margin-bottom:12px">'+
     '<div class="pay-list">'+cards+'</div>';
+}
+function fmtDate_(v){
+  if(!v) return "—";
+  try{
+    var n = Number(v);
+    if(!n || isNaN(n)) return String(v);
+    if(n < 1e12) n = n * 1000;
+    return new Date(n).toLocaleString();
+  }catch(e){ return String(v); }
 }
 function openUserDetail(uid){
   var u = (A.userList||[]).find(function(x){ return String(x.id)===String(uid); }) || {};
   var unlocks = u.unlocks ? Object.keys(u.unlocks) : [];
   var displayName = u.name || ([u.first_name||"", u.last_name||""].join(" ").trim()) || u.username || "—";
   var uname = u.username ? ("@"+String(u.username).replace(/^@/,"")) : "—";
+  var joinAt = fmtDate_(u.created_at || u.created || u.join_date);
+  var refBy = u.referred_by || u.ref_from || "—";
+  // Who this user referred
+  var referred = [];
+  if(Array.isArray(u.referred_users) && u.referred_users.length){
+    referred = u.referred_users.map(String);
+  } else {
+    (A.userList||[]).forEach(function(x){
+      if(String(x.referred_by||"")===String(uid)) referred.push(String(x.id));
+    });
+  }
+  // Approved purchases only (reject not shown)
+  var buys = (A.payments||[]).filter(function(p){
+    var puid = String(p.userId||p.uid||p.user_id||"");
+    return puid===String(uid) && String(p.status||"")==="approved";
+  });
+  var buyHtml = buys.length ? buys.map(function(p){
+    var when = p.date || fmtDate_(p.created_at||p.ts||p.credited_at);
+    var usdt = p.usdt!=null ? p.usdt : (p.price!=null?p.price:"—");
+    var pts = p.points || p.amount || 0;
+    return '<div class="pay-meta-row"><span>'+String(when).replace(/</g,"")+'</span><b>'+pts+' pts · $'+usdt+' USDT</b></div>';
+  }).join("") : '<div class="muted smalltext">No approved purchases</div>';
+  // Ensure payments loaded for buy history
+  if(!window.__payLoaded && window.CineHubFB && window.CineHubFB.listPayments){
+    window.CineHubFB.listPayments().then(function(list){
+      A.payments = Array.isArray(list)?list:[];
+      window.__payLoaded = true;
+    }).catch(function(){});
+  }
   showModal('<div class="modal-head"><h2>User Details</h2><button class="btn" onclick="closeModal()">×</button></div>'+
     '<div class="pay-meta-row"><span>Name</span><b>'+String(displayName).replace(/</g,"")+'</b></div>'+
     '<div class="pay-meta-row"><span>Username</span><b>'+String(uname).replace(/</g,"")+'</b></div>'+
     '<div class="pay-meta-row"><span>Telegram ID</span><b>'+String(uid).replace(/</g,"")+'</b></div>'+
+    '<div class="pay-meta-row"><span>Join date</span><b>'+String(joinAt).replace(/</g,"")+'</b></div>'+
     '<div class="pay-meta-row"><span>Points</span><b>'+(u.points||0)+'</b></div>'+
-    '<div class="pay-meta-row"><span>Referrals</span><b>'+(u.refs||u.referralCount||0)+'</b></div>'+
+    '<div class="pay-meta-row"><span>Referred by</span><b>'+String(refBy).replace(/</g,"")+'</b></div>'+
+    '<div class="pay-meta-row"><span>Total referrals</span><b>'+(u.refs||referred.length||0)+'</b></div>'+
+    '<div class="pay-meta-row"><span>Referred users</span><b style="word-break:break-all">'+(referred.length?referred.join(", "):"—")+'</b></div>'+
     '<div class="pay-meta-row"><span>Ads today</span><b>'+(u.ads_today||0)+'</b></div>'+
+    '<div class="pay-meta-row"><span>Ads total</span><b>'+(u.ads_total||0)+'</b></div>'+
     '<div class="pay-meta-row"><span>Unlocks</span><b>'+unlocks.length+'</b></div>'+
     '<div class="pay-meta-row"><span>Status</span><b>'+(u.blocked?"Blocked":"Active")+'</b></div>'+
+    '<div style="margin-top:12px"><b class="muted smalltext">Approved purchases (USDT)</b></div>'+buyHtml+
     '<div class="muted smalltext" style="margin-top:10px;word-break:break-all">Unlock IDs: '+(unlocks.slice(0,20).join(", ")||"none")+'</div>'+
     '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">'+
     '<button class="btn primary" onclick="closeModal();openSetPoints(\''+String(uid).replace(/'/g,"\\'")+'\')">Edit Points</button>'+
@@ -1062,7 +1108,11 @@ function payments(){
       });
     }
   }
-  var list = (A.payments || []).slice();
+  // Show pending + approved only (rejected hidden from main list)
+  var list = (A.payments || []).filter(function(p){
+    var st = String(p.status||"pending");
+    return st !== "rejected" && st !== "deleted";
+  });
   list.sort(function(a,b){
     var rank = function(s){ return (s==="pending"||!s)?0:1; };
     var ra = rank(a.status), rb = rank(b.status);
