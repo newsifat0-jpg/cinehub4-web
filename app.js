@@ -350,20 +350,36 @@ function openSharedMovie(id){
 function applyAdultGateIfNeeded(){
   try{
     if(window.__deeplinkUserNav) return false;
-    if(state.adultOK) return false;
     var id = state.pendingAdultDetail || state.detailId || sessionStorage.getItem("cinehub4_detail") || "";
     if(!id) return false;
     var found = resolveMovieByParam(id);
-    if(!found || !found.adult) return false;
-    state.pendingAdultDetail = String(found.id);
-    state.detailId = String(found.id);
-    state.page = "adult";
-    state.history = [];
-    try{
-      sessionStorage.setItem("cinehub4_page","adult");
-      localStorage.setItem("cinehub4_page","adult");
-    }catch(e){}
-    return true;
+    if(!found) return false;
+    if(found.adult && !state.adultOK){
+      state.pendingAdultDetail = String(found.id);
+      state.detailId = String(found.id);
+      state.page = "adult";
+      state.history = [];
+      try{
+        sessionStorage.setItem("cinehub4_page","adult");
+        localStorage.setItem("cinehub4_page","adult");
+      }catch(e){}
+      return true;
+    }
+    // Non-adult shared movie arrived after the movies list loaded — make sure
+    // it actually opens the detail page instead of sitting on detailId only.
+    if(!found.adult && state.page!=="detail"){
+      state.pendingAdultDetail = null;
+      state.detailId = String(found.id);
+      state.page = "detail";
+      state.history = ["movies"];
+      try{
+        sessionStorage.setItem("cinehub4_history", JSON.stringify(state.history));
+        sessionStorage.setItem("cinehub4_page","detail");
+        localStorage.setItem("cinehub4_page","detail");
+      }catch(e){}
+      return true;
+    }
+    return false;
   }catch(e){ return false; }
 }
 
@@ -532,8 +548,7 @@ function shareRefLink(){
   var refMsg = langIsBn()
     ? "Cine Hub4-এ যোগ দিন — মুভি ও সিরিজ দেখুন, সহজে ডাউনলোড করুন, একদম ফ্রি!"
     : "Join Cine Hub4 — stream movies & series, download easily, completely free!";
-  var shareBody = refMsg + "\n" + link;
-  nativeShare({title: langIsBn() ? "Cine Hub4 আমন্ত্রণ" : "Cine Hub4 Invite", text: shareBody, url: link});
+  nativeShare({title: langIsBn() ? "Cine Hub4 আমন্ত্রণ" : "Cine Hub4 Invite", text: refMsg, url: link});
 }
 function openLink(u){if(!u)return;try{window.Telegram?.WebApp?.openTelegramLink?.(u)||window.Telegram?.WebApp?.openLink?.(u)||window.open(u,"_blank")}catch(e){window.open(u,"_blank")}}
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
