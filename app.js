@@ -238,14 +238,23 @@ function resolveMovieByParam(rawId){
   m=list.find(function(x){ return String(x.tmdb_id)===id; });
   return m||null;
 }
+function clearShareSticky(){
+  // User navigated away / opened another movie — stop forcing the shared one
+  try{
+    window.__deeplinkUserNav = true;
+    sessionStorage.removeItem("cinehub4_detail");
+  }catch(e){}
+}
 function openSharedMovie(id){
   id=String(id||"").trim();
   if(!id) return false;
+  // After user leaves the shared movie, never force it again
+  if(window.__deeplinkUserNav) return false;
   var found=resolveMovieByParam(id);
   var realId=found?String(found.id):id;
   var isAdult=found?!!found.adult:false;
-  // If list not loaded yet, still remember and open detail when ready
   try{
+    // Keep only until first successful user navigation
     sessionStorage.setItem("cinehub4_detail", realId);
     localStorage.setItem("cinehub4_page", isAdult && !state.adultOK ? "adult" : "detail");
   }catch(e){}
@@ -479,13 +488,9 @@ function loadMoviesFromFB(){
     got=true;
     movies=list||[];
     state.moviesLoaded=true;
-    // Share deep-link: open movie after list arrives
+    // Share deep-link: apply ONCE if user has not navigated away
     try{
-      if(typeof handleStartParam==="function") handleStartParam();
-      var pending=sessionStorage.getItem("cinehub4_detail")||state.detailId||"";
-      if(pending){
-        openSharedMovie(pending);
-      } else if(typeof handleStartParam==="function"){
+      if(!window.__deeplinkUserNav && typeof handleStartParam==="function"){
         handleStartParam();
       }
     }catch(e){}
@@ -500,10 +505,9 @@ function loadMoviesFromFB(){
           movies=list;
           state.moviesLoaded=true;
           try{
-            if(typeof handleStartParam==="function") handleStartParam();
-            var pending=sessionStorage.getItem("cinehub4_detail")||state.detailId||"";
-            if(pending){ openSharedMovie(pending); }
-            else if(typeof handleStartParam==="function"){ handleStartParam(); }
+            if(!window.__deeplinkUserNav && typeof handleStartParam==="function"){
+              handleStartParam();
+            }
           }catch(e){}
           safeRender(false);
         }
@@ -692,6 +696,7 @@ function nav(p,opts={}){
   showPageTransition(go);
 }
 function goBack(){
+  try{ clearShareSticky(); }catch(e){}
   // Main tabs (with no saved history) → leave dialog
   const mainTabs=["movies","home","series","adult","profile","search"];
   if(mainTabs.includes(state.page) && (!state.history || state.history.length===0)){
@@ -705,6 +710,7 @@ function goBack(){
   if(!prev) prev="movies";
   const go=function(){
     state.page=prev;
+    state.detailId=null;
     try{sessionStorage.setItem("cinehub4_page",prev);localStorage.setItem("cinehub4_page",prev)}catch(e){}
     render(true);
     try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){}
@@ -1678,6 +1684,8 @@ function tryCompleteUnlock(id){
 function serverCount(){return Math.max(1,Math.min(10,Number(cfg.downloadServers)||3))}
 
 function detail(id){
+  // Manual open wins over sticky share deep-link
+  try{ clearShareSticky(); }catch(e){}
   const m=movies.find(x=>String(x.id)===String(id));if(!m){console.warn("detail: movie not found",id);return;}
   m.clicks=(m.clicks||0)+1;m.views=(m.views||m.clicks);
   try{ if(window.CineHubFB && window.CineHubFB.incClicks) window.CineHubFB.incClicks(m.id); }catch(e){}
@@ -2760,6 +2768,7 @@ loadSharedSettings();
 
 function handleStartParam(){
   try{
+    if(window.__deeplinkUserNav) return false;
     const tg=window.Telegram&&window.Telegram.WebApp;
     let sp="";
     try{sp=(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.start_param)||""}catch(e){}
@@ -2776,17 +2785,27 @@ function handleStartParam(){
     }
     if(!sp) return false;
     sp=String(sp).trim();
+    // Same start_param already applied this session → do not force movie again
+    try{
+      if(sessionStorage.getItem("cinehub4_start_consumed")===sp) return false;
+    }catch(e){}
     // movie_<id> → open unlock/detail (or adult gate first)
     if(/^movie_/i.test(sp)){
       const id=String(sp.replace(/^movie_/i,"")).trim();
-      if(id) return openSharedMovie(id);
+      if(id){
+        var ok=openSharedMovie(id);
+        if(ok){ try{ sessionStorage.setItem("cinehub4_start_consumed", sp); }catch(e){} }
+        return ok;
+      }
       return false;
     }
     // plain id / tmdb id
     if(/^[\w\-]+$/.test(sp) && !/^ref_/i.test(sp)){
       const id=String(sp).trim();
       if(id && (resolveMovieByParam(id) || /^\d+$/.test(id) || /^m_/.test(id) || /^manual_/.test(id) || /^tmdb_/i.test(id))){
-        return openSharedMovie(id);
+        var ok2=openSharedMovie(id);
+        if(ok2){ try{ sessionStorage.setItem("cinehub4_start_consumed", sp); }catch(e){} }
+        return ok2;
       }
     }
     // ref_USERID — store referrer for bonus (bot/backend usually handles)
