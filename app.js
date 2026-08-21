@@ -248,19 +248,28 @@ function showSocialShareSheet(opts){
     ? '<div class="ss-poster"><img src="'+String(poster).replace(/"/g,"&quot;")+'" alt="" onerror="this.parentNode.style.display=\'none\'"></div>'
     : "";
   var apps = [
-    {id:"tg", name:"Telegram", icon:"✈️", color:"#2AABEE"},
-    {id:"wa", name:"WhatsApp", icon:"💬", color:"#25D366"},
-    {id:"fb", name:"Facebook", icon:"f", color:"#1877F2"},
-    {id:"msg", name:"Messenger", icon:"💭", color:"#00B2FF"},
-    {id:"x", name:"X / Twitter", icon:"𝕏", color:"#111827"},
-    {id:"tt", name:"TikTok", icon:"♪", color:"#010101"},
-    {id:"rd", name:"Reddit", icon:"◉", color:"#FF4500"},
-    {id:"sys", name:"More", icon:"⋯", color:"#6366f1"}
+    {id:"tg", name:"Telegram", color:"#2AABEE", svg:'<svg viewBox="0 0 24 24" width="22" height="22"><path fill="#fff" d="M9.6 15.4l-.4 4.2c.5 0 .8-.2 1.1-.5l2.6-2.5 5.4 4c1 .5 1.7.2 2-.9L22.8 5c.4-1.5-.5-2.1-1.5-1.7L2.4 10.1C1 10.6 1 11.4 2.1 11.7l5.1 1.6L18.2 7c.6-.4 1.1-.2.7.2L9.6 15.4z"/></svg>'},
+    {id:"wa", name:"WhatsApp", color:"#25D366", svg:'<svg viewBox="0 0 24 24" width="22" height="22"><path fill="#fff" d="M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.2-1.3A9.9 9.9 0 0012 22c5.5 0 10-4.5 10-10S17.5 2 12 2zm5.7 14.1c-.2.7-1.3 1.2-1.8 1.3-.5.1-1 .2-3.2-.7-2.7-1.1-4.4-3.9-4.5-4.1-.1-.2-1-1.3-1-2.5s.6-1.8.9-2c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2 0 .4-.1.5l-.4.5c-.1.1-.3.3-.1.6.2.3.7 1.2 1.5 1.9 1.1 1 2 1.3 2.3 1.5.3.1.5.1.7-.1l1-.1.1c.3 1.1.3 1.4 0 1.8z"/></svg>'},
+    {id:"fb", name:"Facebook", color:"#1877F2", svg:'<svg viewBox="0 0 24 24" width="22" height="22"><path fill="#fff" d="M14 9h3V6h-3c-2.2 0-4 1.8-4 4v2H7v3h3v7h3v-7h3l1-3h-4v-2c0-.6.4-1 1-1z"/></svg>'},
+    {id:"msg", name:"Messenger", color:"#00B2FF", svg:'<svg viewBox="0 0 24 24" width="22" height="22"><path fill="#fff" d="M12 2C6.5 2 2 6.2 2 11.4c0 2.9 1.4 5.4 3.7 7.1V22l3.4-1.9c.9.2 1.9.4 2.9.4 5.5 0 10-4.2 10-9.4S17.5 2 12 2zm1 12.1l-2.5-2.7-4.9 2.7 5.4-5.7 2.6 2.7 4.8-2.7-5.4 5.7z"/></svg>'},
+    {id:"x", name:"X / Twitter", color:"#0f1419", svg:'<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#fff" d="M18.2 2H21l-6.5 7.4L22 22h-6.2l-4.3-5.6L6 22H3.2l7-8L2 2h6.4l3.9 5.2L18.2 2zm-1.1 18h1.7L7 3.9H5.2L17.1 20z"/></svg>'},
+    {id:"tt", name:"TikTok", color:"#010101", svg:'<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#25F4EE" d="M16 3c.4 2.3 1.8 3.8 4 4.2v2.3c-1.5 0-2.9-.4-4-1.2v6.2A5.5 5.5 0 1110.2 9v2.3a3.2 3.2 0 103.2 3.2V3h2.6z"/><path fill="#FE2C55" d="M14.6 3c.4 2.3 1.8 3.8 4 4.2v1.5c-1.5 0-2.9-.4-4-1.2"/><path fill="#fff" d="M14.6 8.7v6.2A5.5 5.5 0 119.1 9.3v2.3a3.2 3.2 0 103.2 3.2V8.7h2.3z"/></svg>'},
+    {id:"rd", name:"Reddit", color:"#FF4500", svg:'<svg viewBox="0 0 24 24" width="22" height="22"><path fill="#fff" d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm6 10.3c0 .1 0 .2-.1.3-1 1.1-2.6 1.8-4.5 2v1.3c1.1-.1 2.2-.4 3.1-.9.2-.1.5 0 .6.2.1.2 0 .5-.2.6-1.1.6-2.4 1-3.8 1.1v.9c0 .3-.2.5-.5.5s-.5-.2-.5-.5v-.9c-1.4-.1-2.7-.5-3.8-1.1-.2-.1-.3-.4-.2-.6.1-.2.4-.3.6-.2.9.5 2 .8 3.1.9v-1.3c-1.9-.2-3.5-.9-4.5-2-.1-.1-.1-.2-.1-.3 0-.6.5-1.1 1.1-1.1.3 0 .6.1.8.3.8-.5 1.8-.9 2.9-1l.5-2.3c0-.2.2-.4.5-.4h.1c.2 0 .4.2.4.4l.5 2.3c1.1.1 2.1.5 2.9 1 .2-.2.5-.3.8-.3.6 0 1.1.5 1.1 1.1z"/></svg>'},
+    {id:"more", name:"More", color:"#6366f1", svg:'<svg viewBox="0 0 24 24" width="22" height="22"><circle fill="#fff" cx="6" cy="12" r="2"/><circle fill="#fff" cx="12" cy="12" r="2"/><circle fill="#fff" cx="18" cy="12" r="2"/></svg>'}
   ];
-  var grid = apps.map(function(a){
+  var moreApps = [
+    {id:"imo", name:"imo", color:"#1A9F29", svg:'<svg viewBox="0 0 24 24" width="20" height="20"><circle fill="#fff" cx="12" cy="12" r="8"/><text x="12" y="16" text-anchor="middle" font-size="9" font-weight="800" fill="#1A9F29">imo</text></svg>'},
+    {id:"line", name:"LINE", color:"#06C755", svg:'<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#fff" d="M12 3C7 3 3 6.4 3 10.6c0 3.7 3.3 6.8 7.7 7.4.3 0 .7.2.8.5l.5 1.7c.1.4.5.5.8.3 3.7-1.6 6.2-4.8 6.2-8.3C19 6.4 16.5 3 12 3z"/></svg>'},
+    {id:"viber", name:"Viber", color:"#7360F2", svg:'<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#fff" d="M11.4 2C6.2 2.3 2.2 6.5 2 11.7c-.1 2.6.7 5 2.3 6.9V22l3.5-1.9c1.3.5 2.7.8 4.2.8h.3C17.8 20.7 22 16.4 22 11.4 22 6.1 17.5 1.7 11.4 2zm5.3 13.3c-.2.6-1.1 1.1-1.8 1.2-.5.1-1.1.2-3.2-.7-2.5-1-4.1-3.6-4.2-3.8-.1-.2-.9-1.2-.9-2.3 0-1.1.6-1.6.8-1.9.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .5.4l.7 1.8c.1.2 0 .4-.2.5l-.3.4c-.1.1-.2.3-.1.5.3.5 1.1 1.7 2.2 2.6 1.4 1.1 2.5 1.4 2.9 1.6.3.1.5.1.7-.1l.9-1.1c.1-.2.4-.2.6-.1l1.7.8c.2.1.3.2.4.4 0 .2 0 .7-.2 1.2z"/></svg>'},
+    {id:"discord", name:"Discord", color:"#5865F2", svg:'<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#fff" d="M19.3 5.2A16 16 0 0015.5 4l-.3.6c1.5.4 2.8 1 4 1.9A13.5 13.5 0 005 6.5c1.2-.9 2.5-1.5 4-1.9L8.6 4A16 16 0 004.7 5.2C2.3 9 1.7 12.6 2 16.2A16.4 16.4 0 007 19l1-1.3a10.5 10.5 0 01-1.6-.8l.4-.3c3.1 1.4 6.5 1.4 9.5 0l.4.3c-.5.3-1 .6-1.6.8L15 19a16.4 16.4 0 005-2.8c.4-4.1-.6-7.6-2.7-11zm-9.6 8.3c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm4.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>'},
+    {id:"snap", name:"Snapchat", color:"#FFFC00", svg:'<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#111" d="M12 2c2.5 0 4.2 1.8 4.2 4.5v1.3c.6.2 1.3.2 1.8.7.4.4.3 1-.2 1.3-.6.3-1.2.7-1.2 1.2 0 1.3 1.5 2 2.7 2.5.5.2.7.7.4 1.1-.4.6-1.3 1-2 1.2-.2 1.2-.9 2.2-1.9 2.9-1.1.7-1.6 1.4-1.6 2.1 0 .3-.3.5-.6.5h-2.3c-.3 0-.6-.2-.6-.5 0-.7-.5-1.4-1.6-2.1-1-.7-1.7-1.7-1.9-2.9-.7-.2-1.6-.6-2-1.2-.3-.4-.1-.9.4-1.1 1.2-.5 2.7-1.2 2.7-2.5 0-.5-.6-.9-1.2-1.2-.5-.3-.6-.9-.2-1.3.5-.5 1.2-.5 1.8-.7V6.5C7.8 3.8 9.5 2 12 2z"/></svg>'},
+    {id:"mail", name:"Email", color:"#EA4335", svg:'<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#fff" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5L4 8V6l8 5 8-5v2z"/></svg>'}
+  ];
+  function appBtn(a){
     return '<button type="button" class="ss-app" data-app="'+a.id+'" style="--ss-c:'+a.color+'">'+
-      '<span class="ss-ico">'+a.icon+'</span><span class="ss-name">'+a.name+'</span></button>';
-  }).join("");
+      '<span class="ss-ico">'+a.svg+'</span><span class="ss-name">'+a.name+'</span></button>';
+  }
+  var grid = apps.map(appBtn).join("") + '<div id="ssMoreRow" class="ss-more-row" hidden></div>';
   sheet.innerHTML =
     '<div class="share-sheet-card ss-card">'+
       '<div class="ss-head">'+
@@ -290,35 +299,50 @@ function showSocialShareSheet(opts){
     }catch(e){}
     try{ window.open(url, "_blank"); }catch(e){ location.href = url; }
   }
-  sheet.querySelectorAll(".ss-app").forEach(function(btn){
-    btn.onclick = function(){
-      var app = btn.getAttribute("data-app");
-      var encU = encodeURIComponent(link);
-      var encT = encodeURIComponent(text);
-      if(app==="tg"){ openTgShare(link, title + " — Cine Hub4"); sheet.remove(); return; }
-      if(app==="wa"){ openExt("https://wa.me/?text="+encT); sheet.remove(); return; }
-      if(app==="fb"){ openExt("https://www.facebook.com/sharer/sharer.php?u="+encU); sheet.remove(); return; }
-      if(app==="msg"){ openExt("https://www.facebook.com/dialog/send?link="+encU+"&app_id=966242223397117&redirect_uri="+encU); sheet.remove(); return; }
-      if(app==="x"){ openExt("https://twitter.com/intent/tweet?text="+encT+"&url="+encU); sheet.remove(); return; }
-      if(app==="tt"){
-        // TikTok has no universal share URL — copy + toast
-        hardCopy(link, function(){ toast("TikTok · "+t("Link copied")); });
-        return;
-      }
-      if(app==="rd"){ openExt("https://www.reddit.com/submit?url="+encU+"&title="+encodeURIComponent(title)); sheet.remove(); return; }
-      if(app==="sys"){
-        try{
-          if(navigator.share){
-            navigator.share({ title: title, text: text, url: link }).catch(function(){});
-            sheet.remove();
-            return;
+  function bindAppClicks(root){
+    (root||sheet).querySelectorAll(".ss-app").forEach(function(btn){
+      if(btn._bound) return;
+      btn._bound = true;
+      btn.onclick = function(){
+        var app = btn.getAttribute("data-app");
+        var encU = encodeURIComponent(link);
+        var encT = encodeURIComponent(text);
+        if(app==="more"){
+          var row = document.getElementById("ssMoreRow");
+          if(row){
+            if(row.hasAttribute("hidden")){
+              row.removeAttribute("hidden");
+              row.innerHTML = moreApps.map(appBtn).join("");
+              bindAppClicks(row);
+            } else {
+              row.setAttribute("hidden","hidden");
+              row.innerHTML = "";
+            }
           }
+          return;
+        }
+        if(app==="tg"){ openTgShare(link, title + " — Cine Hub4"); sheet.remove(); return; }
+        if(app==="wa"){ openExt("https://wa.me/?text="+encT); sheet.remove(); return; }
+        if(app==="fb"){ openExt("https://www.facebook.com/sharer/sharer.php?u="+encU); sheet.remove(); return; }
+        if(app==="msg"){ openExt("https://www.facebook.com/dialog/send?link="+encU+"&app_id=966242223397117&redirect_uri="+encU); sheet.remove(); return; }
+        if(app==="x"){ openExt("https://twitter.com/intent/tweet?text="+encT+"&url="+encU); sheet.remove(); return; }
+        if(app==="tt"){ hardCopy(link, function(){ toast("TikTok · "+t("Link copied")); }); return; }
+        if(app==="rd"){ openExt("https://www.reddit.com/submit?url="+encU+"&title="+encodeURIComponent(title)); sheet.remove(); return; }
+        if(app==="imo"){ openExt("https://imo.im/"); hardCopy(link, function(){ toast("imo · "+t("Link copied")); }); return; }
+        if(app==="line"){ openExt("https://social-plugins.line.me/lineit/share?url="+encU); sheet.remove(); return; }
+        if(app==="viber"){ openExt("viber://forward?text="+encT); sheet.remove(); return; }
+        if(app==="discord"){ hardCopy(link, function(){ toast("Discord · "+t("Link copied")); }); return; }
+        if(app==="snap"){ hardCopy(link, function(){ toast("Snapchat · "+t("Link copied")); }); return; }
+        if(app==="mail"){ openExt("mailto:?subject="+encodeURIComponent(title)+"&body="+encT); sheet.remove(); return; }
+        try{
+          if(navigator.share){ navigator.share({ title: title, text: text, url: link }).catch(function(){}); sheet.remove(); return; }
         }catch(e){}
         openTgShare(link, title + " — Cine Hub4");
         sheet.remove();
-      }
-    };
-  });
+      };
+    });
+  }
+  bindAppClicks(sheet);
 }
 window.showSocialShareSheet = showSocialShareSheet;
 function movieDurationLabel(m){
@@ -412,13 +436,21 @@ function loadMoviesFromFB(){
     state.moviesLoaded=true;
     // Share deep-link: open movie after list arrives
     try{
-      var pending=sessionStorage.getItem("cinehub4_detail")||"";
-      if(pending && movies.some(function(m){return String(m.id)===String(pending);})){
-        state.detailId=pending;
-        state.page="detail";
-      }
-      // re-apply start param if needed
       if(typeof handleStartParam==="function") handleStartParam();
+      var pending=sessionStorage.getItem("cinehub4_detail")||state.detailId||"";
+      if(pending){
+        var found = movies.find(function(m){return String(m.id)===String(pending);});
+        if(found){
+          if(found.adult && !state.adultOK){
+            state.pendingAdultDetail = String(pending);
+            state.detailId = String(pending);
+            state.page = "adult";
+          } else {
+            state.detailId = String(pending);
+            state.page = "detail";
+          }
+        }
+      }
     }catch(e){}
     safeRender(false);
   });
@@ -430,6 +462,20 @@ function loadMoviesFromFB(){
         if(list&&list.length){
           movies=list;
           state.moviesLoaded=true;
+          try{
+            if(typeof handleStartParam==="function") handleStartParam();
+            var pending=sessionStorage.getItem("cinehub4_detail")||state.detailId||"";
+            if(pending && movies.some(function(m){return String(m.id)===String(pending);})){
+              var found=movies.find(function(m){return String(m.id)===String(pending);});
+              if(found && found.adult && !state.adultOK){
+                state.pendingAdultDetail=String(pending);
+                state.page="adult";
+              } else {
+                state.detailId=String(pending);
+                state.page="detail";
+              }
+            }
+          }catch(e){}
           safeRender(false);
         }
       }).catch(function(){});
@@ -674,7 +720,7 @@ function card(m,idx){
     <div class="movie-body">
       <div class="movie-body-row">
         <div class="mtitle">${title}</div>
-        <button type="button" class="share-btn share-btn-round" onclick='event.stopPropagation();shareMovie(${sid})' aria-label="Share">↗</button>
+        <button type="button" class="share-btn share-btn-round share-btn-glass" onclick='event.stopPropagation();shareMovie(${sid})' aria-label="Share"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.5 13.4l6.9 3.95M15.5 6.65l-6.9 3.95"/></svg></button>
       </div>
     </div>
   </article>`;
@@ -1697,13 +1743,10 @@ function detailView(){
       ${rating?`<div class="ps-rating-badge">★ ${rating}</div>`:""}
       ${dur?`<div class="ps-dur-badge">${dur}</div>`:""}
     </div>
-    <div class="ps-share-row">
-      <button type="button" class="ps-share-btn ps-copy" onclick='copyMovieLink(${JSON.stringify(String(m.id))})'>
-        <span class="ps-ico-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
-        ${t("Copy Link")}
-      </button>
-      <button type="button" class="ps-share-btn ps-send" onclick='shareMovie(${JSON.stringify(String(m.id))})'>
-        <span class="ps-ico-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></span>
+    <div class="ps-share-row ps-share-row-solo">
+      <button type="button" class="ps-share-btn ps-send ps-share-big" onclick='shareMovie(${JSON.stringify(String(m.id))})'>
+        <span class="ps-share-glow" aria-hidden="true"></span>
+        <span class="ps-ico-svg" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 3.9M15.4 6.6l-6.8 3.9"/></svg></span>
         ${t("Share")}
       </button>
     </div>

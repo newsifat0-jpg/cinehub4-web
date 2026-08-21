@@ -1167,3 +1167,36 @@ img.poster-full{
   flex-shrink:0;
 }
 .share-btn-round:active{transform:scale(.9)}
+
+
+/* Detail: single big Share with glow */
+.ps-share-row-solo{display:block;margin:12px 0 14px}
+.ps-share-big{
+  position:relative;width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:14px 18px!important;border:0!important;border-radius:16px!important;
+  font-size:16px!important;font-weight:800!important;color:#fff!important;
+  background:linear-gradient(135deg,#4f46e5 0%,#2563eb 45%,#06b6d4 100%)!important;
+  box-shadow:0 0 0 1px rgba(125,211,252,.35),0 8px 28px rgba(37,99,235,.45),0 0 40px rgba(99,102,241,.25)!important;
+  overflow:hidden;
+}
+.ps-share-big .ps-share-glow{
+  position:absolute;inset:-40%;background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.35),transparent 55%);
+  pointer-events:none;opacity:.7;
+}
+.ps-share-big:active{transform:scale(.98);opacity:.92}
+
+/* Card share — glass / transparent video-share style */
+.share-btn-glass{
+  width:40px!important;height:40px!important;border-radius:50%!important;
+  background:rgba(15,23,42,.35)!important;
+  border:1.5px solid rgba(255,255,255,.45)!important;
+  color:#fff!important;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  box-shadow:0 0 0 1px rgba(99,102,241,.25),0 4px 16px rgba(0,0,0,.35),0 0 20px rgba(56,189,248,.2)!important;
+}
+.share-btn-glass svg{display:block}
+.share-btn-glass:active{transform:scale(.9)}
+
+.ss-more-row{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:4px}
+.ss-more-row[hidden]{display:none!important}
+.ss-ico svg{display:block}
