@@ -2309,6 +2309,200 @@ function resolveAdSlot(mode){
   return slot;
 }
 
+
+function loadAdScriptOnce(src, globalCheck){
+  return new Promise(function(resolve){
+    try{
+      if(globalCheck && globalCheck()){ resolve(true); return; }
+      if(!src){ resolve(false); return; }
+      var existing = document.querySelector('script[data-adsrc="'+src+'"]');
+      if(existing){
+        setTimeout(function(){ resolve(!!(globalCheck && globalCheck())); }, 500);
+        return;
+      }
+      var s = document.createElement("script");
+      s.src = src;
+      s.async = true;
+      s.setAttribute("data-adsrc", src);
+      s.onload = function(){ setTimeout(function(){ resolve(!!(globalCheck && globalCheck())); }, 200); };
+      s.onerror = function(){ resolve(false); };
+      document.head.appendChild(s);
+    }catch(e){ resolve(false); }
+  });
+}
+
+function openAdLink(url){
+  try{
+    if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink){
+      window.Telegram.WebApp.openLink(url, {try_instant_view:false});
+      return true;
+    }
+  }catch(e){}
+  try{ window.open(url, "_blank"); return true; }catch(e){}
+  return false;
+}
+
+function playLinkAd(slot, onDone){
+  var id = String((slot&&slot.id)||"").trim();
+  if(!id){ toast(t("Admin has not configured this Ad Block ID")); if(onDone) onDone(); return; }
+  var url = id;
+  if(!/^https?:\/\//i.test(id)){
+    var net = String((slot&&slot.network)||"").toLowerCase();
+    if(net==="monetag"){
+      url = "https://otieu.com/4/"+encodeURIComponent(id);
+    } else {
+      // bare id without http — still try as path if monetag-like digits
+      if(/^\d+$/.test(id)){
+        url = "https://otieu.com/4/"+encodeURIComponent(id);
+      } else {
+        toast(t("Paste full ad URL for this network"));
+        return;
+      }
+    }
+  }
+  openAdLink(url);
+  var total = (typeof linkCountdownSecs==="function") ? linkCountdownSecs() : Math.max(5, Math.min(120, Number(cfg.adLinkSeconds)||20));
+  var left = total;
+  var cancelled = false;
+  var ov = document.createElement("div");
+  ov.className = "modal";
+  ov.innerHTML = '<div class="modal-card cd-card open-ad-card">'+
+    '<div class="cd-ring-wrap"><svg class="cd-svg" viewBox="0 0 100 100"><circle class="cd-bg" cx="50" cy="50" r="42"/><circle class="cd-fg" id="adNetFg" cx="50" cy="50" r="42" style="stroke-dasharray:264;stroke-dashoffset:0"/></svg><div class="cd-play">▶</div></div>'+
+    '<b class="cd-title">'+t("Watching Ad")+'</b>'+
+    '<div class="muted cd-sub">'+String((slot&&slot.network)||"ad").toUpperCase()+' · '+t("Keep this page open until countdown ends.")+'</div>'+
+    '<div class="cd-num" id="adNetNum">'+left+'s</div>'+
+    '<div class="muted" style="font-size:11px;margin-top:6px">'+t("After timer ends, press Back to return")+'</div>'+
+    '<button type="button" class="btn" style="margin-top:12px" id="adNetCancel">'+t("Cancel")+'</button></div>';
+  document.body.appendChild(ov);
+  var circ = 2*Math.PI*42;
+  var tick = setInterval(function(){
+    if(cancelled) return;
+    left--;
+    var el = document.getElementById("adNetNum");
+    var fg = document.getElementById("adNetFg");
+    if(el) el.textContent = left+"s";
+    if(fg) fg.style.strokeDashoffset = String(circ * (1 - Math.max(0,left)/total));
+    if(left <= 0){
+      clearInterval(tick);
+      if(cancelled) return;
+      if(typeof finishCountdownWithBackHint==="function"){
+        finishCountdownWithBackHint(ov, function(){ if(onDone) onDone(); });
+      } else {
+        try{ ov.remove(); }catch(e){}
+        if(onDone) onDone();
+      }
+    }
+  }, 1000);
+  var cancel = document.getElementById("adNetCancel");
+  if(cancel) cancel.onclick = function(){
+    cancelled=true; clearInterval(tick); try{ov.remove()}catch(e){}
+    toast(t("Ad closed"));
+  };
+}
+
+function playAdsgram(blockId, onDone){
+  if(!blockId){ toast(t("Admin has not configured this Ad Block ID")); return; }
+  var loadToastTimer = null;
+  var finished = false;
+  function clearLoadToast(){
+    if(loadToastTimer){ clearTimeout(loadToastTimer); loadToastTimer=null; }
+  }
+  function finish(ok){
+    if(finished) return;
+    finished = true;
+    clearLoadToast();
+    try{ if(onDone) onDone(); }catch(e){ console.warn(e); }
+  }
+  function tryShow(){
+    if(window.Adsgram && typeof window.Adsgram.init==="function"){
+      try{
+        var ad = window.Adsgram.init({blockId:String(blockId), debug:!!cfg.adsgramDebug});
+        loadToastTimer = setTimeout(function(){
+          if(!finished) toast(t("Ad loading…"));
+        }, 800);
+        ad.show().then(function(){ finish(true); }).catch(function(){ finish(true); });
+        return true;
+      }catch(e){ console.warn(e); }
+    }
+    return false;
+  }
+  if(tryShow()) return;
+  loadToastTimer = setTimeout(function(){
+    if(!finished) toast(t("Ad loading…"));
+  }, 800);
+  loadAdScriptOnce("https://sad.adsgram.ai/js/sad.min.js", function(){ return !!(window.Adsgram && window.Adsgram.init); })
+    .then(function(ok){
+      if(ok && tryShow()) return;
+      clearLoadToast();
+      // fallback: do not leave user stuck — treat as soft fail so multi-net can try next
+      if(!finished){
+        finished = true;
+        toast(t("Ad failed to load. Try again."));
+        // still do NOT call onDone on total failure of single adsgram — parent waterfall decides
+        if(onDone && onDone._allowFailReward){ try{ onDone(); }catch(e){} }
+      }
+    });
+}
+
+function playMonetag(zoneId, onDone){
+  var raw = String(zoneId||"").trim();
+  if(!raw){ toast(t("Admin has not configured this Ad Block ID")); return; }
+  var id = raw.replace(/^show_/i,"");
+  var fnName = "show_"+id;
+  var loadToastTimer = null;
+  var finished = false;
+  function clearLoadToast(){ if(loadToastTimer){ clearTimeout(loadToastTimer); loadToastTimer=null; } }
+  function finish(){
+    if(finished) return;
+    finished = true;
+    clearLoadToast();
+    try{ if(onDone) onDone(); }catch(e){}
+  }
+  function tryShow(){
+    if(typeof window[fnName]==="function"){
+      try{
+        var p = window[fnName]();
+        if(p && typeof p.then==="function"){
+          p.then(function(){ finish(); }).catch(function(){ finish(); });
+        } else {
+          finish();
+        }
+        return true;
+      }catch(e){ console.warn(e); }
+    }
+    return false;
+  }
+  if(tryShow()) return;
+  loadToastTimer = setTimeout(function(){ if(!finished) toast(t("Ad loading…")); }, 800);
+  if(!document.querySelector('script[data-monetag="'+id+'"]')){
+    var s = document.createElement("script");
+    s.src = "https://libtl.com/sdk.js";
+    s.async = true;
+    s.setAttribute("data-zone", id);
+    s.setAttribute("data-sdk", fnName);
+    s.setAttribute("data-monetag", id);
+    document.head.appendChild(s);
+  }
+  setTimeout(function(){
+    if(tryShow()) return;
+    clearLoadToast();
+    playLinkAd({network:"monetag", id:id}, onDone);
+  }, 1500);
+}
+
+function playTads(widgetId, onDone){
+  var id = String(widgetId||"").trim();
+  if(!id){ toast(t("Admin has not configured this Ad Block ID")); return; }
+  if(window.TADS && typeof window.TADS.show==="function"){
+    try{
+      window.TADS.show(id).then(function(){ if(onDone) onDone(); }).catch(function(){ if(onDone) onDone(); });
+      return;
+    }catch(e){}
+  }
+  playLinkAd({network:"tads", id:id}, onDone);
+}
+
+
 function playSingleAdUnit(unit, onDone, onFail){
   var net = String((unit&&unit.network)||"adsgram").toLowerCase();
   var id = String((unit&&unit.id)||"").trim();
@@ -2318,49 +2512,59 @@ function playSingleAdUnit(unit, onDone, onFail){
   function fail(){ if(doneOnce) return; doneOnce=true; try{ if(onFail) onFail(); }catch(e){} }
   try{
     if(net==="adsgram"){
-      // wrap: if adsgram fails load, fail → next
-      var finished=false;
-      function wrapDone(){ if(finished)return; finished=true; ok(); }
-      function wrapFail(){ if(finished)return; finished=true; fail(); }
-      try{
-        playAdsgram(id, wrapDone);
-        // safety: if still not finished after 25s treat as fail for waterfall
-        setTimeout(function(){ if(!finished) wrapFail(); }, 25000);
-      }catch(e){ wrapFail(); }
+      // Original adsgram always rewards on show resolve/reject; only fail if script never loads
+      var rewarded=false;
+      function wrapOk(){ if(rewarded)return; rewarded=true; ok(); }
+      // Patch: playAdsgram calls onDone on success; if it toasts fail without onDone, use timeout only as last resort
+      var orig = onDone;
+      playAdsgram(id, function(){ wrapOk(); });
+      // If adsgram never fires callback in 20s, fail for waterfall
+      setTimeout(function(){ if(!rewarded) fail(); }, 20000);
       return;
     }
-    if(net==="monetag"){
-      try{ playMonetag(id, ok); }catch(e){ fail(); }
-      return;
-    }
-    if(net==="tads"){
-      try{ playTads(id, ok); }catch(e){ fail(); }
-      return;
-    }
-    try{ playLinkAd({network:net, id:id}, ok); }catch(e){ fail(); }
+    if(net==="monetag"){ playMonetag(id, ok); return; }
+    if(net==="tads"){ playTads(id, ok); return; }
+    playLinkAd({network:net, id:id}, ok);
   }catch(e){ fail(); }
 }
 
-
 function playAdNetwork(slot, onDone){
   var list = normalizeSlotNetworks(slot);
+  if(!list.length){
+    // legacy single fields
+    if(slot && String(slot.id||"").trim()){
+      list = [{ network: String(slot.network||"adsgram").toLowerCase(), id: String(slot.id).trim() }];
+    }
+  }
   if(!list.length){ toast(t("Admin has not configured this Ad Block ID")); return; }
+
   var mode = String((slot&&slot.mode)||"first").toLowerCase();
-  if(mode!=="sequential" && mode!=="sequence" && mode!=="all") mode="first";
+
+  // Single network → direct play (most reliable, no waterfall fail toast)
+  if(list.length===1 && mode!=="sequential" && mode!=="sequence" && mode!=="all"){
+    var u = list[0];
+    var net = String(u.network||"adsgram").toLowerCase();
+    var id = String(u.id||"").trim();
+    if(net==="adsgram"){ playAdsgram(id, onDone); return; }
+    if(net==="monetag"){ playMonetag(id, onDone); return; }
+    if(net==="tads"){ playTads(id, onDone); return; }
+    playLinkAd(u, onDone);
+    return;
+  }
 
   if(mode==="sequential" || mode==="sequence" || mode==="all"){
     var i=0;
     function next(){
       if(i>=list.length){ if(onDone) onDone(); return; }
       var unit=list[i++];
-      toast(t("Ad")+" "+i+"/"+list.length+" · "+String(unit.network||"").toUpperCase());
+      if(list.length>1) toast(t("Ad")+" "+i+"/"+list.length+" · "+String(unit.network||"").toUpperCase());
       playSingleAdUnit(unit, function(){ next(); }, function(){ next(); });
     }
     next();
     return;
   }
 
-  // first = try until one succeeds (reward once)
+  // first-load wins: try each until success
   var j=0;
   function tryNext(){
     if(j>=list.length){
