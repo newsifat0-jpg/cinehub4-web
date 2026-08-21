@@ -2155,6 +2155,39 @@ function showVisitClaimTask(name, url, onClaim){
   };
 }
 
+
+function linkCountdownSecs(){
+  loadSharedSettings();
+  return Math.max(5, Math.min(120, Number(cfg.adLinkSeconds)||20));
+}
+function backToAppMsg(){
+  return t("Time's up! Press Back to return to the app.");
+}
+/** After countdown: show back hint (selected language), then continue */
+function finishCountdownWithBackHint(ov, onDone){
+  try{
+    var card = ov && (ov.querySelector(".modal-card") || ov.querySelector(".cd-card") || ov);
+    if(card){
+      card.innerHTML = '<div class="cd-ring-wrap" style="margin:0 auto 8px">'+
+        '<div class="cd-play" style="font-size:28px">✓</div></div>'+
+        '<b class="cd-title">'+t("Done")+'</b>'+
+        '<div class="muted cd-sub" style="margin:10px 0 6px">'+backToAppMsg()+'</div>'+
+        '<div class="cd-num" style="font-size:14px;color:#94a3b8">'+t("Then tap Continue")+'</div>'+
+        '<button type="button" class="pf-btn copy" id="cdBackContinue" style="margin-top:14px;width:100%">'+t("Continue")+'</button>';
+      var btn = document.getElementById("cdBackContinue");
+      if(btn){
+        btn.onclick = function(){
+          try{ ov.remove(); }catch(e){}
+          if(onDone) try{ onDone(); }catch(e){}
+        };
+        return;
+      }
+    }
+  }catch(e){}
+  try{ if(ov) ov.remove(); }catch(e){}
+  if(onDone) try{ onDone(); }catch(e){}
+}
+
 function showCountdownTask(name,secs,onDone,opts){
   opts=opts||{};
   const ov=document.createElement("div");
@@ -2174,6 +2207,7 @@ function showCountdownTask(name,secs,onDone,opts){
     <b class="cd-title">${name||"Task"}</b>
     <div class="muted cd-sub">${opts.sub||t("Keep this page open until countdown ends.")}</div>
     <div class="cd-num" id="cdNum">${left}s</div>
+    <div class="muted" style="font-size:11px;margin-top:6px">${t("After timer ends, press Back to return")}</div>
     <button type="button" class="pf-btn cancel-buy" id="cdCancelBtn" style="margin-top:14px;width:100%">${t("Cancel")}</button>
   </div>`;
   document.body.appendChild(ov);
@@ -2192,16 +2226,37 @@ function showCountdownTask(name,secs,onDone,opts){
     if(el) el.textContent=left+"s";
     if(fg) fg.style.strokeDashoffset=String(circ*(1-Math.max(0,left)/total));
     if(left<=0){
-      cleanup();
-      if(!cancelled && onDone) onDone();
+      try{clearInterval(tick)}catch(e){}
+      if(cancelled){ cleanup(); return; }
+      finishCountdownWithBackHint(ov, function(){ if(onDone) onDone(); });
     }
   },1000);
+}
+function slotHasAds(slot){
+  if(!slot) return false;
+  if(Array.isArray(slot.networks) && slot.networks.some(function(n){ return n && String(n.id||"").trim(); })) return true;
+  return !!(String(slot.id||"").trim());
+}
+function normalizeSlotNetworks(slot){
+  if(!slot) return [];
+  var list = [];
+  if(Array.isArray(slot.networks) && slot.networks.length){
+    slot.networks.forEach(function(n){
+      if(!n) return;
+      var id = String(n.id||"").trim();
+      if(!id) return;
+      list.push({ network: String(n.network||"adsgram").toLowerCase(), id: id });
+    });
+  }
+  if(!list.length && String(slot.id||"").trim()){
+    list.push({ network: String(slot.network||"adsgram").toLowerCase(), id: String(slot.id).trim() });
+  }
+  return list;
 }
 function resolveAdSlot(mode){
   loadSharedSettings();
   const slots = cfg.adSlots || {};
   const b = cfg.adBlocks || {};
-  // Map mode → slot key
   let key = "rewarded";
   if(mode==="adult") key="adult";
   else if(mode==="task") key="task";
@@ -2210,9 +2265,24 @@ function resolveAdSlot(mode){
   else if(mode==="bannerAdult") key="bannerAdult";
   else if(mode==="interstitial") key="interstitial";
 
-  let slot = slots[key];
-  if(!slot || (!slot.id && !slot.network)){
-    // legacy fallback from adBlocks only
+  // Pending task may override with its own networks
+  if(key==="task" && window.__cinehub_pendingTask!=null){
+    try{
+      var tk = getTasks()[window.__cinehub_pendingTask];
+      if(tk && (slotHasAds(tk) || (tk.adId||tk.adNetworks))){
+        var tSlot = {
+          network: tk.adNetwork || tk.network || "adsgram",
+          id: tk.adId || tk.id || "",
+          mode: tk.adMode || "first",
+          networks: tk.adNetworks || null
+        };
+        if(slotHasAds(tSlot) || normalizeSlotNetworks(tSlot).length) return tSlot;
+      }
+    }catch(e){}
+  }
+
+  let slot = slots[key] ? Object.assign({}, slots[key]) : null;
+  if(!slot || !slotHasAds(slot)){
     let id = "";
     if(key==="adult") id=b.adult||b.rewarded||"";
     else if(key==="task") id=b.task||b.rewarded||"";
@@ -2220,219 +2290,88 @@ function resolveAdSlot(mode){
     else if(key==="banner") id=b.banner||"";
     else if(key==="bannerAdult") id=b.bannerAdult||b.banner||"";
     else id=b.rewarded||"";
-    slot = { network: "adsgram", id: id };
+    slot = { network: "adsgram", id: id, mode: "first", networks: id ? [{network:"adsgram",id:id}] : [] };
   }
-  // unlock empty → try interstitial then rewarded
-  if(key==="unlock" && !(slot.id||"").trim()){
-    const inter = slots.interstitial || {network:"adsgram", id:b.interstitial||""};
-    if((inter.id||"").trim()) return inter;
-    const rew = slots.rewarded || {network:"adsgram", id:b.rewarded||""};
-    return rew;
+  // empty unlock/adult/task → fall back to rewarded (keep multi-net if present)
+  if(!slotHasAds(slot) && (key==="unlock"||key==="adult"||key==="task")){
+    var rew = slots.rewarded;
+    if(rew && slotHasAds(rew)) return Object.assign({}, rew);
+    if(key==="unlock"){
+      var inter = slots.interstitial;
+      if(inter && slotHasAds(inter)) return Object.assign({}, inter);
+    }
+    return { network:"adsgram", id: b.rewarded||"", mode:"first", networks: b.rewarded?[{network:"adsgram",id:b.rewarded}]:[] };
   }
-  if(key==="adult" && !(slot.id||"").trim()){
-    return slots.rewarded || {network:"adsgram", id:b.rewarded||""};
-  }
-  if(key==="task" && !(slot.id||"").trim()){
-    return slots.rewarded || {network:"adsgram", id:b.rewarded||""};
+  if(!slot.mode) slot.mode = "first";
+  if(!Array.isArray(slot.networks) || !slot.networks.length){
+    slot.networks = normalizeSlotNetworks(slot);
   }
   return slot;
 }
 
-function loadAdScriptOnce(src, globalCheck){
-  return new Promise(function(resolve){
-    if(globalCheck && globalCheck()){ resolve(true); return; }
-    if(!src){ resolve(false); return; }
-    const existing = document.querySelector('script[data-adsrc="'+src+'"]');
-    if(existing){
-      setTimeout(function(){ resolve(!!(globalCheck && globalCheck())); }, 400);
-      return;
-    }
-    const s = document.createElement("script");
-    s.src = src;
-    s.async = true;
-    s.setAttribute("data-adsrc", src);
-    s.onload = function(){ resolve(true); };
-    s.onerror = function(){ resolve(false); };
-    document.head.appendChild(s);
-  });
-}
-
-function openAdLink(url){
+function playSingleAdUnit(unit, onDone, onFail){
+  var net = String((unit&&unit.network)||"adsgram").toLowerCase();
+  var id = String((unit&&unit.id)||"").trim();
+  if(!id){ if(onFail) onFail(); return; }
+  var doneOnce = false;
+  function ok(){ if(doneOnce) return; doneOnce=true; try{ if(onDone) onDone(); }catch(e){} }
+  function fail(){ if(doneOnce) return; doneOnce=true; try{ if(onFail) onFail(); }catch(e){} }
   try{
-    if(window.Telegram && window.Telegram.WebApp){
-      if(window.Telegram.WebApp.openLink){
-        window.Telegram.WebApp.openLink(url, {try_instant_view:false});
-        return true;
-      }
+    if(net==="adsgram"){
+      // wrap: if adsgram fails load, fail → next
+      var finished=false;
+      function wrapDone(){ if(finished)return; finished=true; ok(); }
+      function wrapFail(){ if(finished)return; finished=true; fail(); }
+      try{
+        playAdsgram(id, wrapDone);
+        // safety: if still not finished after 25s treat as fail for waterfall
+        setTimeout(function(){ if(!finished) wrapFail(); }, 25000);
+      }catch(e){ wrapFail(); }
+      return;
     }
-  }catch(e){}
-  try{ window.open(url, "_blank"); return true; }catch(e){}
-  return false;
-}
-
-/** Non-SDK networks: open zone/URL then countdown before reward */
-function playLinkAd(slot, onDone){
-  const id = String(slot.id||"").trim();
-  if(!id){ toast(t("Admin has not configured this Ad Block ID")); return; }
-  let url = id;
-  // If looks like bare zone id (digits), build common redirect patterns per network
-  if(!/^https?:\/\//i.test(id)){
-    const net = (slot.network||"").toLowerCase();
     if(net==="monetag"){
-      url = "https://otieu.com/4/"+encodeURIComponent(id);
-    } else if(net==="onclicka" || net==="propeller" || net==="adexium" || net==="adsonar" || net==="tads" || net==="richads" || net==="aads" || net==="hilltop"){
-      // Bare zone IDs need full tracking URL from dashboard — prompt admin
-      toast(t("Paste full ad URL for this network")+" ("+net+")");
-      return;
-    } else {
-      toast(t("Paste full ad URL for this network"));
+      try{ playMonetag(id, ok); }catch(e){ fail(); }
       return;
     }
-  }
-  if(!/^https?:\/\//i.test(url)){
-    toast(t("Invalid ad URL"));
-    return;
-  }
-  openAdLink(url);
-  const total = Math.max(5, Math.min(120, Number(cfg.adLinkSeconds)||20));
-  let left = total;
-  const ov = document.createElement("div");
-  ov.className = "modal";
-  ov.innerHTML = `<div class="modal-card cd-card open-ad-card">
-    <div class="cd-ring-wrap">
-      <svg class="cd-svg" viewBox="0 0 100 100"><circle class="cd-bg" cx="50" cy="50" r="42"/><circle class="cd-fg" id="adNetFg" cx="50" cy="50" r="42" style="stroke-dasharray:264;stroke-dashoffset:0"/></svg>
-      <div class="cd-play">▶</div>
-    </div>
-    <b class="cd-title">${t("Watching Ad")}</b>
-    <div class="muted cd-sub">${(slot.network||"ad").toUpperCase()} · ${t("Keep this page open until countdown ends.")}</div>
-    <div class="cd-num" id="adNetNum">${left}s</div>
-    <button type="button" class="btn" style="margin-top:12px" id="adNetCancel">${t("Cancel")}</button>
-  </div>`;
-  document.body.appendChild(ov);
-  const circ = 2*Math.PI*42;
-  const tick = setInterval(function(){
-    left--;
-    const el = document.getElementById("adNetNum");
-    const fg = document.getElementById("adNetFg");
-    if(el) el.textContent = left+"s";
-    if(fg) fg.style.strokeDashoffset = String(circ * (1 - Math.max(0,left)/total));
-    if(left <= 0){
-      clearInterval(tick);
-      ov.remove();
-      if(onDone) onDone();
-    }
-  }, 1000);
-  const cancel = document.getElementById("adNetCancel");
-  if(cancel) cancel.onclick = function(){ clearInterval(tick); ov.remove(); toast(t("Ad closed")); };
-}
-
-function playAdsgram(blockId, onDone){
-  if(!blockId){ toast(t("Admin has not configured this Ad Block ID")); return; }
-  var loadToastTimer = null;
-  var finished = false;
-  function clearLoadToast(){
-    if(loadToastTimer){ clearTimeout(loadToastTimer); loadToastTimer=null; }
-  }
-  function finish(ok){
-    if(finished) return;
-    finished = true;
-    clearLoadToast();
-    try{ if(onDone) onDone(); }catch(e){ console.warn(e); }
-  }
-  function tryShow(){
-    if(window.Adsgram && typeof window.Adsgram.init==="function"){
-      try{
-        const ad = window.Adsgram.init({blockId:String(blockId), debug:!!cfg.adsgramDebug});
-        // only show "loading" if ad takes >800ms to open
-        loadToastTimer = setTimeout(function(){
-          if(!finished) toast(t("Ad loading…"));
-        }, 800);
-        ad.show().then(function(){ finish(true); }).catch(function(){ finish(true); });
-        return true;
-      }catch(e){ console.warn(e); }
-    }
-    return false;
-  }
-  if(tryShow()) return;
-  loadToastTimer = setTimeout(function(){
-    if(!finished) toast(t("Ad loading…"));
-  }, 800);
-  loadAdScriptOnce("https://sad.adsgram.ai/js/sad.min.js", function(){ return !!(window.Adsgram && window.Adsgram.init); })
-    .then(function(ok){
-      if(ok && tryShow()) return;
-      clearLoadToast();
-      toast(t("Ad failed to load. Try again."));
-    });
-}
-
-function playMonetag(zoneId, onDone){
-  var raw = String(zoneId||"").trim();
-  if(!raw){ toast(t("Admin has not configured this Ad Block ID")); return; }
-  var id = raw.replace(/^show_/i,"");
-  const fnName = "show_"+id;
-  var loadToastTimer = null;
-  var finished = false;
-  function clearLoadToast(){ if(loadToastTimer){ clearTimeout(loadToastTimer); loadToastTimer=null; } }
-  function finish(){
-    if(finished) return;
-    finished = true;
-    clearLoadToast();
-    try{ if(onDone) onDone(); }catch(e){}
-  }
-  function tryShow(){
-    if(typeof window[fnName]==="function"){
-      try{
-        var p = window[fnName]();
-        if(p && typeof p.then==="function"){
-          p.then(function(){ finish(); }).catch(function(){ finish(); });
-        } else {
-          finish();
-        }
-        return true;
-      }catch(e){ console.warn(e); }
-    }
-    return false;
-  }
-  if(tryShow()) return;
-  loadToastTimer = setTimeout(function(){ if(!finished) toast(t("Ad loading…")); }, 800);
-  if(!document.querySelector('script[data-monetag="'+id+'"]')){
-    var s = document.createElement("script");
-    s.src = "https://libtl.com/sdk.js";
-    s.async = true;
-    s.setAttribute("data-zone", id);
-    s.setAttribute("data-sdk", fnName);
-    s.setAttribute("data-monetag", id);
-    document.head.appendChild(s);
-  }
-  setTimeout(function(){
-    if(tryShow()) return;
-    clearLoadToast();
-    playLinkAd({network:"monetag", id:id}, onDone);
-  }, 1200);
-}
-
-function playTads(widgetId, onDone){
-  const id = String(widgetId||"").trim();
-  if(!id){ toast(t("Admin has not configured this Ad Block ID")); return; }
-  // TADS uses widget embed — fallback to link/countdown if no global
-  if(window.TADS && typeof window.TADS.show==="function"){
-    try{
-      window.TADS.show(id).then(function(){ if(onDone) onDone(); }).catch(function(){ toast(t("Ad closed")); });
+    if(net==="tads"){
+      try{ playTads(id, ok); }catch(e){ fail(); }
       return;
-    }catch(e){}
-  }
-  playLinkAd({network:"tads", id:id}, onDone);
+    }
+    try{ playLinkAd({network:net, id:id}, ok); }catch(e){ fail(); }
+  }catch(e){ fail(); }
 }
+
 
 function playAdNetwork(slot, onDone){
-  const net = String((slot&&slot.network)||"adsgram").toLowerCase();
-  const id = String((slot&&slot.id)||"").trim();
-  if(!id){ toast(t("Admin has not configured this Ad Block ID")); return; }
-  if(net==="adsgram"){ playAdsgram(id, onDone); return; }
-  if(net==="monetag"){ playMonetag(id, onDone); return; }
-  if(net==="tads"){ playTads(id, onDone); return; }
-  // richads, onclicka, adsonar, propeller, adexium, aads, hilltop, custom → open URL/zone + countdown reward
-  playLinkAd(slot, onDone);
+  var list = normalizeSlotNetworks(slot);
+  if(!list.length){ toast(t("Admin has not configured this Ad Block ID")); return; }
+  var mode = String((slot&&slot.mode)||"first").toLowerCase();
+  if(mode!=="sequential" && mode!=="sequence" && mode!=="all") mode="first";
+
+  if(mode==="sequential" || mode==="sequence" || mode==="all"){
+    var i=0;
+    function next(){
+      if(i>=list.length){ if(onDone) onDone(); return; }
+      var unit=list[i++];
+      toast(t("Ad")+" "+i+"/"+list.length+" · "+String(unit.network||"").toUpperCase());
+      playSingleAdUnit(unit, function(){ next(); }, function(){ next(); });
+    }
+    next();
+    return;
+  }
+
+  // first = try until one succeeds (reward once)
+  var j=0;
+  function tryNext(){
+    if(j>=list.length){
+      toast(t("Ad failed to load. Try again."));
+      return;
+    }
+    var unit=list[j++];
+    if(list.length>1) toast(String(unit.network||"").toUpperCase()+"…");
+    playSingleAdUnit(unit, function(){ if(onDone) onDone(); }, function(){ tryNext(); });
+  }
+  tryNext();
 }
 
 function resetDailyAdsIfNeeded(){
@@ -2458,8 +2397,7 @@ function watchAd(mode){
 
   loadSharedSettings();
   const slot = resolveAdSlot(mode);
-  const id = String((slot&&slot.id)||"").trim();
-  if(!id && mode!=="countdown"){ toast(t("Admin has not configured this Ad Block ID")); return; }
+  if(!slotHasAds(slot) && mode!=="countdown"){ toast(t("Admin has not configured this Ad Block ID")); return; }
 
   // Daily limit only for earning modes (not unlock/adult unlock path)
   if(mode!=="unlock" && mode!=="adult"){
@@ -2473,7 +2411,7 @@ function watchAd(mode){
       const mid=state.detailId;
       if(!mid){toast(t("Open a movie first"));return;}
       loadSharedSettings();
-      const needAds=Math.max(1, Number(cfg.adsForUnlock)||5);
+      const needAds=getUnlockRules(mid).adsNeed;
       let adProg=getAdUnlockProgress(mid)+1;
       adProg=setAdUnlockProgress(mid, adProg);
       toast("+1 "+t("ad progress")+" ("+adProg+"/"+needAds+")");

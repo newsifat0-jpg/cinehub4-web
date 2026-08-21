@@ -286,16 +286,27 @@ function ensureAdSlots(){
   const slots = ["rewarded","unlock","interstitial","task","banner","bannerAdult","adult"];
   slots.forEach(function(k){
     if (!A.settings.adSlots[k]) {
-      A.settings.adSlots[k] = { network: "adsgram", id: String(b[k] || (k==="unlock"?b.interstitial||b.rewarded:"") || "") };
+      var id0 = String(b[k] || (k==="unlock"?b.interstitial||b.rewarded:"") || "");
+      A.settings.adSlots[k] = { network: "adsgram", id: id0, mode: "first", networks: id0 ? [{network:"adsgram",id:id0}] : [] };
     }
-    if (!A.settings.adSlots[k].network) A.settings.adSlots[k].network = "adsgram";
-    if (A.settings.adSlots[k].id == null) A.settings.adSlots[k].id = "";
+    var s = A.settings.adSlots[k];
+    if (!s.network) s.network = "adsgram";
+    if (s.id == null) s.id = "";
+    if (!s.mode) s.mode = "first";
+    if (!Array.isArray(s.networks)) s.networks = [];
+    if (!s.networks.length && s.id) {
+      s.networks = [{ network: s.network || "adsgram", id: String(s.id) }];
+    }
   });
-  // Keep legacy adBlocks in sync for older app builds
   A.settings.adBlocks = A.settings.adBlocks || {};
   slots.forEach(function(k){
-    if (A.settings.adSlots[k] && A.settings.adSlots[k].id) {
-      A.settings.adBlocks[k] = A.settings.adSlots[k].id;
+    var s = A.settings.adSlots[k];
+    if (s && s.networks && s.networks[0] && s.networks[0].id) {
+      A.settings.adBlocks[k] = s.networks[0].id;
+      s.id = s.networks[0].id;
+      s.network = s.networks[0].network || s.network;
+    } else if (s && s.id) {
+      A.settings.adBlocks[k] = s.id;
     }
   });
 }
@@ -1034,149 +1045,153 @@ function savePoints(){
   render();
   toast("✓ Movie "+A.settings.unlockCost+"pts/"+A.settings.adsForUnlock+"ads · Adult "+A.settings.adultUnlockCost+"pts/"+A.settings.adultAdsForUnlock+"ads → Firebase");
 }
+
+function addAdNetwork(slotKey){
+  ensureAdSlots();
+  var s = A.settings.adSlots[slotKey] || {networks:[]};
+  if(!Array.isArray(s.networks)) s.networks = [];
+  // collect current from DOM first
+  try{
+    var nets=[];
+    document.querySelectorAll('.mn-net[data-slot="'+slotKey+'"]').forEach(function(el,i){
+      var idEl=document.querySelector('.mn-id[data-slot="'+slotKey+'"][data-i="'+el.getAttribute("data-i")+'"]')||document.querySelectorAll('.mn-id[data-slot="'+slotKey+'"]')[i];
+      nets.push({network:el.value,id:(idEl&&idEl.value)||""});
+    });
+    s.networks = nets;
+  }catch(e){}
+  s.networks.push({network:"adsgram",id:""});
+  A.settings.adSlots[slotKey]=s;
+  render();
+}
+function removeAdNetwork(slotKey, idx){
+  ensureAdSlots();
+  var s = A.settings.adSlots[slotKey] || {networks:[]};
+  try{
+    var nets=[];
+    document.querySelectorAll('.mn-net[data-slot="'+slotKey+'"]').forEach(function(el,i){
+      var idEl=document.querySelectorAll('.mn-id[data-slot="'+slotKey+'"]')[i];
+      nets.push({network:el.value,id:(idEl&&idEl.value)||""});
+    });
+    s.networks = nets;
+  }catch(e){}
+  if(!Array.isArray(s.networks)) s.networks=[];
+  s.networks.splice(idx,1);
+  if(!s.networks.length) s.networks=[{network:"adsgram",id:""}];
+  A.settings.adSlots[slotKey]=s;
+  render();
+}
+
 function ads(){
   ensureAdSlots();
   const slots = A.settings.adSlots || {};
   const s = A.settings;
   const AD_NETS = [
-    ["adsgram","Adsgram — Rewarded / Interstitial / Task"],
-    ["monetag","Monetag — Rewarded Interstitial SDK"],
-    ["richads","RichAds — Banner / push-style"],
-    ["onclicka","OnClicka — Rewarded + Banner"],
-    ["tads","TADS — Native TMA ads"],
-    ["adsonar","AdSonar — Multi-network"],
-    ["propeller","PropellerAds — Telegram format"],
-    ["adexium","Adexium — Banner / Rewarded"],
+    ["adsgram","Adsgram"],
+    ["monetag","Monetag"],
+    ["richads","RichAds"],
+    ["onclicka","OnClicka"],
+    ["tads","TADS"],
+    ["adsonar","AdSonar"],
+    ["propeller","PropellerAds"],
+    ["adexium","Adexium"],
     ["aads","AADS"],
     ["hilltop","HilltopAds"],
     ["custom","Custom Link / URL"]
   ];
-  function netSel(id, cur){
-    return '<select id="'+id+'">'+AD_NETS.map(function(n){
+  function netOpts(cur){
+    return AD_NETS.map(function(n){
       return '<option value="'+n[0]+'"'+(cur===n[0]?' selected':'')+'>'+n[1]+'</option>';
-    }).join('')+'</select>';
+    }).join('');
   }
-  function val(slot){ return String((slots[slot]||{}).id||"").replace(/"/g,'&quot;'); }
-  function net(slot){ return (slots[slot]||{}).network || "adsgram"; }
+  function slotCard(key, title, hint){
+    var sl = slots[key] || {network:"adsgram",id:"",mode:"first",networks:[]};
+    var nets = (sl.networks && sl.networks.length) ? sl.networks : (sl.id ? [{network:sl.network||"adsgram",id:sl.id}] : [{network:"adsgram",id:""}]);
+    var mode = sl.mode || "first";
+    var rows = nets.map(function(n,i){
+      return '<div class="form-grid multi-ad-row" data-slot="'+key+'" data-i="'+i+'" style="margin-top:8px">'+
+        '<div class="field"><label>Network #'+(i+1)+'</label><select class="mn-net" data-slot="'+key+'" data-i="'+i+'">'+netOpts(n.network||"adsgram")+'</select></div>'+
+        '<div class="field"><label>ID / Zone / URL</label><input class="mn-id" data-slot="'+key+'" data-i="'+i+'" value="'+String(n.id||"").replace(/"/g,"&quot;")+'" placeholder="Block ID or full URL"></div>'+
+        '<div class="field" style="display:flex;align-items:flex-end"><button type="button" class="btn" onclick="removeAdNetwork(\''+key+'\','+i+')">✕</button></div>'+
+        '</div>';
+    }).join("");
+    return '<div class="card" style="margin-bottom:12px" id="slotcard_'+key+'">'+
+      '<h3>'+title+'</h3>'+
+      '<p class="muted smalltext">'+(hint||"")+'</p>'+
+      '<div class="field" style="max-width:280px;margin-top:8px"><label>Mode</label>'+
+      '<select id="mode_'+key+'">'+
+      '<option value="first"'+(mode==="first"?" selected":"")+'>First load wins (একটা সফল হলেই)</option>'+
+      '<option value="sequential"'+(mode==="sequential"?" selected":"")+'>Sequential (একটার পর একটা সব)</option>'+
+      '</select></div>'+
+      '<div id="nets_'+key+'">'+rows+'</div>'+
+      '<button type="button" class="btn" style="margin-top:10px" onclick="addAdNetwork(\''+key+'\')">＋ Add Network</button>'+
+      '</div>';
+  }
 
-  // Main rewarded = rewarded slot; main banner = banner slot
   return `<div class="toolbar"><div>
-    <h2 style="margin:0;font-size:18px">Ads & Networks</h2>
-    <p class="muted smalltext" style="margin:4px 0 0">মিনি অ্যাপ মুভি বটের জন্য · শুধু Network + ID/লিংক বসান</p>
+    <h2 style="margin:0;font-size:18px">Ads & Multi-Network</h2>
+    <p class="muted smalltext" style="margin:4px 0 0">একাধিক নেটওয়ার্ক · First-load বা Sequential · স্লট আলাদা</p>
   </div></div>
 
   <div class="card" style="border:1px solid #3b82f6;margin-bottom:12px">
-    <h3>🎬 মেইন রিওয়ার্ডেড (পয়েন্ট · আনলক · ডেইলি টাস্ক · অ্যাডাল্ট)</h3>
-    <p class="muted smalltext">একটা Network + একটা ID দিলেই সব রিওয়ার্ডেড জায়গায় চলবে। নিচে আলাদা ওভাররাইড করতে পারবেন।</p>
-    <div class="form-grid" style="margin-top:10px">
-      <div class="field"><label>Network</label>${netSel("mainRewNet", net("rewarded"))}</div>
-      <div class="field"><label>Block ID / Zone ID / SDK ID</label>
-        <input id="mainRewId" value="${val("rewarded")}" placeholder="e.g. Adsgram 43222 · Monetag zone · URL">
-      </div>
-    </div>
-    <label class="switch" style="margin-top:12px;display:flex;gap:10px;align-items:center">
-      <input type="checkbox" id="applyRewAll" checked>
-      <span>এই ID সব রিওয়ার্ডেড স্লটে কপি করো (Unlock / Task / Adult)</span>
-    </label>
-  </div>
-
-
-  <div class="card" style="margin-bottom:12px">
-    <h3>⏱ Non-SDK কাউন্টডাউন</h3>
-    <p class="muted smalltext">Monetag/RichAds/Custom লিংক মোডে অ্যাড খোলার পর কত সেকেন্ড পর রিওয়ার্ড দেবে</p>
+    <h3>⏱ Link / Non-SDK countdown</h3>
+    <p class="muted smalltext">লিংক-ভিত্তিক অ্যাড খোলার পর কত সেকেন্ড পর রিওয়ার্ড</p>
     <div class="field" style="max-width:200px">
       <input id="adLinkSeconds" type="number" min="5" max="120" value="${Number(s.adLinkSeconds)||20}">
     </div>
   </div>
 
-  <details class="card" style="margin-bottom:12px">
-    <summary style="cursor:pointer;font-weight:700;padding:4px 0">⚙ অ্যাডভান্সড · প্রতি স্লটে আলাদা নেটওয়ার্ক (ঐচ্ছিক)</summary>
-    <p class="muted smalltext" style="margin:8px 0">খালি রাখলে মেইন রিওয়ার্ডেড/ব্যানার ব্যবহার হবে</p>
-    ${[
-      ["unlock","Movie Unlock"],
-      ["interstitial","Interstitial (fallback)"],
-      ["task","Daily Task only"],
-      ["adult","Adult rewarded only"],
-      ["bannerAdult","Adult banner only"]
-    ].map(function(row){
-      return '<div class="form-grid" style="margin-top:10px;padding-top:10px;border-top:1px solid #1a2236">'+
-        '<div class="field"><label>'+row[1]+' · Network</label>'+netSel("net_"+row[0], net(row[0]))+'</div>'+
-        '<div class="field"><label>ID / Zone / URL</label><input id="id_'+row[0]+'" value="'+val(row[0])+'" placeholder="খালি = মেইন ব্যবহার"></div>'+
-        '</div>';
-    }).join("")}
-  </details>
+  ${slotCard("rewarded","🎬 Daily Earn / Default Rewarded","পয়েন্ট আয় (Watch Ad Now) — ডিফল্ট ফলব্যাক")}
+  ${slotCard("unlock","🔓 Movie Unlock Ads","নন-অ্যাডাল্ট মুভি আনলক")}
+  ${slotCard("adult","🔞 Adult Unlock Ads","অ্যাডাল্ট মুভি আনলক")}
+  ${slotCard("task","✓ Daily Task Ads","ডেইলি টাস্ক টাইপ = ad (টাস্কে আলাদা সেট না থাকলে)")}
+  ${slotCard("interstitial","Interstitial fallback","Unlock খালি থাকলে ফলব্যাক")}
+  ${slotCard("banner","Banner (Movies)","হোম/মুভি ব্যানার")}
+  ${slotCard("bannerAdult","Banner (Adult)","অ্যাডাল্ট ব্যানার")}
 
-  <div class="grid section-grid">
-    <button class="btn primary" style="margin-top:14px;width:100%;padding:14px" onclick="saveAds()">💾 Save Ad Settings</button>
-  <div class="card" style="margin-top:14px">
-    <h3>সাপোর্টেড নেটওয়ার্ক</h3>
+  <div class="card">
+    <h3>টিপস</h3>
     <p class="muted smalltext">
-      <b>Adsgram</b> · <b>Monetag</b> · RichAds · OnClicka · TADS · AdSonar · PropellerAds · Adexium · AADS · Hilltop · Custom URL<br>
-      মুভি বট: রিওয়ার্ডেড → পয়েন্ট/আনলক/টাস্ক (হোম ব্যানার সরানো হয়েছে)
+      <b>First load wins:</b> যে নেটওয়ার্ক আগে লোড/সফল হবে সেটাই চলবে, রিওয়ার্ড একবার।<br>
+      <b>Sequential:</b> নেটওয়ার্ক ১ শেষ → ২ → ৩… সব শেষে রিওয়ার্ড।<br>
+      টাস্ক আইটেমে আলাদা Network দিলে সেটা টাস্ক স্লটের উপরে প্রাধান্য পাবে।<br>
+      খালি স্লট → Rewarded ডিফল্ট ব্যবহার হবে।
     </p>
-  </div>`;
+  </div>
+
+  <button class="btn primary" style="margin-top:14px;width:100%;padding:14px" onclick="saveAds()">💾 Save Ad Settings</button>`;
 }
 function saveAds(){
   ensureAdSlots();
   A.settings.adSlots = A.settings.adSlots || {};
   A.settings.adBlocks = A.settings.adBlocks || {};
-
-  const mainRewNet = (document.getElementById("mainRewNet")||{}).value || "adsgram";
-  const mainRewId = String((document.getElementById("mainRewId")||{}).value || "").trim();
-  const mainBanNet = (document.getElementById("mainBanNet")||{}).value || "adsgram";
-  const mainBanId = String((document.getElementById("mainBanId")||{}).value || (A.settings.adBlocks&&A.settings.adBlocks.banner) || "").trim();
-  const applyRew = (document.getElementById("applyRewAll")||{}).checked !== false;
-  const applyBan = (document.getElementById("applyBanAll")||{}).checked !== false;
-
-  // Main rewarded
-  A.settings.adSlots.rewarded = { network: mainRewNet, id: mainRewId };
-  A.settings.adBlocks.rewarded = mainRewId;
-
-  const rewSlots = ["unlock","interstitial","task","adult"];
-  rewSlots.forEach(function(k){
-    const netEl = document.getElementById("net_"+k);
-    const idEl = document.getElementById("id_"+k);
-    let network = netEl ? netEl.value : mainRewNet;
-    let id = idEl ? String(idEl.value||"").trim() : "";
-    if (applyRew || !id) {
-      // use main if empty or apply-all checked
-      if (applyRew || !id) {
-        network = mainRewNet;
-        id = mainRewId;
-      }
+  const keys = ["rewarded","unlock","adult","task","interstitial","banner","bannerAdult"];
+  keys.forEach(function(key){
+    var modeEl = document.getElementById("mode_"+key);
+    var mode = modeEl ? modeEl.value : "first";
+    var netEls = document.querySelectorAll('.mn-net[data-slot="'+key+'"]');
+    var idEls = document.querySelectorAll('.mn-id[data-slot="'+key+'"]');
+    var networks = [];
+    for(var i=0;i<netEls.length;i++){
+      var id = String((idEls[i]&&idEls[i].value)||"").trim();
+      var network = String((netEls[i]&&netEls[i].value)||"adsgram");
+      if(id) networks.push({ network: network, id: id });
     }
-    // if advanced has explicit id, keep it when applyRew is off
-    if (!applyRew && idEl && String(idEl.value||"").trim()) {
-      network = netEl ? netEl.value : mainRewNet;
-      id = String(idEl.value||"").trim();
-    }
-    A.settings.adSlots[k] = { network: network, id: id };
-    A.settings.adBlocks[k] = id;
+    var primary = networks[0] || { network: "adsgram", id: "" };
+    A.settings.adSlots[key] = {
+      network: primary.network,
+      id: primary.id,
+      mode: mode === "sequential" ? "sequential" : "first",
+      networks: networks
+    };
+    A.settings.adBlocks[key] = primary.id;
   });
-
-  // Main banner
-  A.settings.adSlots.banner = { network: mainBanNet, id: mainBanId };
-  A.settings.adBlocks.banner = mainBanId;
-
-  const banAdultNetEl = document.getElementById("net_bannerAdult");
-  const banAdultIdEl = document.getElementById("id_bannerAdult");
-  let banAdultNet = banAdultNetEl ? banAdultNetEl.value : mainBanNet;
-  let banAdultId = banAdultIdEl ? String(banAdultIdEl.value||"").trim() : "";
-  if (applyBan || !banAdultId) {
-    banAdultNet = mainBanNet;
-    banAdultId = mainBanId;
-  }
-  A.settings.adSlots.bannerAdult = { network: banAdultNet, id: banAdultId };
-  A.settings.adBlocks.bannerAdult = banAdultId;
-
   const sec = document.getElementById("adLinkSeconds");
   if (sec) A.settings.adLinkSeconds = Math.max(5, Math.min(120, Number(sec.value)||20));
-
   try { saveBanners(); } catch(e) {}
   save();
-  toast("Ad networks saved — rewarded + banner ready");
+  toast("✓ Multi-network ads saved → Firebase");
+  render();
 }
-
 function tasks(){
   // Only seed defaults once — never force-fill after admin deletes all
   if(!A.settings.tasks){
@@ -1199,6 +1214,16 @@ function tasks(){
     </div>
     <div class="form-grid">
       <div class="field"><label>Task Name (English)</label><input value="${(t.name||"").replace(/"/g,"&quot;")}" onchange="A.settings.tasks[${i}].name=this.value;save()"></div>
+      <div class="field"><label>Ad Network (টাস্ক টাইপ=ad হলে, খালি=গ্লোবাল task স্লট)</label>
+        <select onchange="A.settings.tasks[${i}].adNetwork=this.value;save()">
+          <option value="">(Global task slot)</option>
+          <option value="adsgram" ${(t.adNetwork==="adsgram")?"selected":""}>Adsgram</option>
+          <option value="monetag" ${(t.adNetwork==="monetag")?"selected":""}>Monetag</option>
+          <option value="custom" ${(t.adNetwork==="custom")?"selected":""}>Custom URL</option>
+          <option value="richads" ${(t.adNetwork==="richads")?"selected":""}>RichAds</option>
+          <option value="onclicka" ${(t.adNetwork==="onclicka")?"selected":""}>OnClicka</option>
+        </select></div>
+      <div class="field"><label>Ad ID / URL (এই টাস্কের)</label><input value="${(t.adId||"").replace(/"/g,"&quot;")}" placeholder="খালি = গ্লোবাল" onchange="A.settings.tasks[${i}].adId=this.value;save()"></div>
       <div class="field"><label>টাস্ক নাম (বাংলা)</label><input value="${(t.nameBn||"").replace(/"/g,"&quot;")}" placeholder="বাংলা নাম" onchange="A.settings.tasks[${i}].nameBn=this.value;save()"></div>
       <div class="field"><label>Reward Points</label><input type="number" value="${t.reward||0}" onchange="A.settings.tasks[${i}].reward=Number(this.value)||0;save()"></div>
       <div class="field"><label>Daily Limit</label><input type="number" value="${t.limit||1}" onchange="A.settings.tasks[${i}].limit=Number(this.value)||1;save()"></div>
@@ -1232,7 +1257,7 @@ function tasks(){
   </div>`).join("");
   return `<div class="toolbar">
     <div><h2 style="margin:0;font-size:18px">Daily Tasks</h2><p class="muted smalltext" style="margin:4px 0 0">User app → <b>MORE EARNING BUTTONS</b> (Start cards). Independent from Watch Ad Now / Points settings.</p></div>
-    <button class="btn primary" onclick="A.settings.tasks.push({name:'New Task',nameBn:'',reward:2,limit:1,type:'login',seconds:5,link:'',resetHours:24,resetMode:'hours',permanent:false});save();render()">＋ Add Task</button>
+    <button class="btn primary" onclick="A.settings.tasks.push({name:'New Task',nameBn:'',reward:2,limit:1,type:'login',seconds:5,link:'',resetHours:24,resetMode:'hours',permanent:false,adNetwork:'',adId:'',adMode:'first',adNetworks:[]});save();render()">＋ Add Task</button>
   </div>
   ${cards||'<div class="card muted">No tasks yet. Click Add Task.</div>'}
   <div class="card" style="margin-top:8px"><p class="muted smalltext">User app → Tasks page. Types: <b>Daily Login</b> = one tap points. <b>Telegram Join</b> = points only after bot verifies membership (bot must be admin in channel). <b>Social / any link</b> = Facebook, YouTube, Instagram, Website… no timer; Claim or Cancel. <b>Open Link</b> = URL + countdown. <b>Telegram Join</b> = public or private channel/group (bot must be Admin; private → use chat id -100…). <b>Watch Ads</b> = complete after Limit ads. <b>Refer</b> = real joins count. Top “Watch Ad Now” is separate (Points settings: reward + daily limit + reset). Permanent = stays Done until you delete the task.</p></div>`;

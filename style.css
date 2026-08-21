@@ -35,7 +35,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;min-height:100%;overscroll-behavior:none}
 #app{min-height:100vh;min-height:100dvh;position:relative;margin:0;padding:0}
-#screen{display:block;min-height:70vh;padding:0 14px 96px!important;margin:0!important;position:relative;z-index:1}
+#screen{display:block;min-height:70vh;padding:0 14px 92px!important;margin:0!important;position:relative;z-index:1}
 
 /* Splash — same animated style as the page-transition overlay (orbit rings, pop-in logo, sliding text, progress bar) */
 #appSplash{position:fixed;inset:0;z-index:99999;background:#0a0c14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:1;transition:opacity .35s ease-out}
@@ -194,7 +194,39 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
 .movie-meta{font-size:11px;color:#8b93a7}
 
 /* Bottom nav */
-.bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:50;height:64px;padding-bottom:env(safe-area-inset-bottom);display:grid;grid-template-columns:repeat(5,1fr);background:rgba(12,16,28,.96);border-top:1px solid #1e2538;backdrop-filter:blur(12px)}
+.bottom-nav{
+  position:fixed;z-index:50;
+  left:12px;right:12px;
+  bottom:max(12px, calc(8px + env(safe-area-inset-bottom, 0px)));
+  height:58px;padding:0;margin:0;
+  display:flex;align-items:stretch;justify-content:space-around;
+  background:transparent;
+  border:0;border-radius:18px;
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  box-shadow:0 8px 28px rgba(0,0,0,.45);
+  overflow:hidden;
+  isolation:isolate;
+}
+.bottom-nav::before{
+  content:"";position:absolute;left:50%;top:50%;
+  width:220%;height:220%;
+  transform:translate(-50%,-50%);
+  background:conic-gradient(from 0deg,#00c6ff 0deg,#7c5cff 120deg,#ff8c00 240deg,#00c6ff 360deg);
+  animation:navGlowSpin 3.2s linear infinite;
+  z-index:0;pointer-events:none;
+}
+.bottom-nav::after{
+  content:"";position:absolute;inset:1.5px;
+  border-radius:16.5px;
+  background:rgba(10,14,24,.94);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  z-index:1;pointer-events:none;
+}
+@keyframes navGlowSpin{
+  to{transform:translate(-50%,-50%) rotate(360deg)}
+}
+.bottom-nav .nav-item{position:relative;z-index:2}
+
 .nav-item{border:0;background:transparent;color:#6b738a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:9px;font-weight:700;padding:6px 2px;cursor:pointer}
 .nav-item.active{color:#fff}
 .nav-item.active .nav-ico{background:linear-gradient(135deg,#5b4cff,#3b82f6);box-shadow:0 4px 14px #5b4cff55}
@@ -904,7 +936,6 @@ body{background:radial-gradient(1200px 600px at 50% -10%,#152038 0%,#070b14 55%,
 /* Adult tab hidden — keep remaining nav evenly spaced */
 .bottom-nav.adult-off .nav-item{flex:1 1 0}
 .bottom-nav.adult-off .nav-item.nav-hidden{display:none !important}
-.bottom-nav{display:flex;align-items:stretch;justify-content:space-around;gap:0}
 .bottom-nav .nav-item{flex:1 1 0;min-width:0}
 
 /* ========== Prime Scene-style unlock page ========== */
@@ -1313,3 +1344,25 @@ img.poster-full{
 .how-btn-ico svg{display:block}
 .pf-stat .ico.eye{color:#38bdf8}
 .pf-stat .ico.shield{color:#34d399}
+
+
+/* Floating bottom nav polish */
+.nav-item{
+  border:0;background:transparent;color:#7a849c;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;font-size:9px;font-weight:700;padding:6px 2px;cursor:pointer;
+  transition:color .2s,transform .15s;
+}
+.nav-item .nav-ico{
+  width:26px;height:26px;border-radius:10px;
+  display:grid;place-items:center;
+  transition:background .2s,box-shadow .2s,color .2s;
+}
+.nav-item.active{color:#e8f7ff}
+.nav-item.active .nav-ico{
+  color:#e0f2fe;
+  background:linear-gradient(145deg,rgba(0,198,255,.22),rgba(124,92,255,.18));
+  box-shadow:0 0 14px rgba(0,198,255,.35),0 0 8px rgba(255,140,0,.2);
+  filter:drop-shadow(0 0 6px rgba(56,189,248,.45));
+}
+.nav-item:active{transform:scale(.94)}

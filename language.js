@@ -65,6 +65,16 @@ window.CINEHUB4_LANG = (() => {
     "Watch ads or use your points to unlock. After unlock you can watch and download the movie from available servers.": "অ্যাড দেখুন অথবা আপনার পয়েন্ট ব্যবহার করে আনলক করুন। আনলক হলে উপলব্ধ সার্ভার থেকে মুভি দেখতে ও ডাউনলোড করতে পারবেন।",
     "Unlock adult content with ads or points": "অ্যাড বা পয়েন্ট দিয়ে অ্যাডাল্ট কনটেন্ট আনলক করুন",
     "Watch ads or use points to unlock. Then you can stream or download this adult content.": "অ্যাড দেখুন অথবা পয়েন্ট ব্যবহার করে আনলক করুন। এরপর এই অ্যাডাল্ট কনটেন্ট স্ট্রিম বা ডাউনলোড করতে পারবেন।",
+    
+    "Time's up! Press Back to return to the app.": "সময় শেষ! অ্যাপে ফিরতে Back চাপুন।",
+    "After timer ends, press Back to return": "টাইমার শেষ হলে অ্যাপে ফিরতে Back চাপুন",
+    "Then tap Continue": "এরপর Continue চাপুন",
+    "Done": "হয়েছে",
+    "Keep this page open until countdown ends.": "কাউন্টডাউন শেষ না হওয়া পর্যন্ত এই পেজ খোলা রাখুন।",
+    "Watching Ad": "অ্যাড দেখা হচ্ছে",
+    "Ad closed": "অ্যাড বন্ধ",
+    "Link opened — wait for timer": "লিংক খোলা হয়েছে — টাইমার শেষ হওয়া পর্যন্ত অপেক্ষা করুন",
+
     "Buy Premium Points": "প্রিমিয়াম পয়েন্ট কিনুন",
     "Select a package or enter custom USDT amount, then submit your payment proof for admin approval.": "একটি প্যাকেজ বেছে নিন অথবা কাস্টম USDT দিন, তারপর অ্যাডমিন অনুমোদনের জন্য পেমেন্ট প্রুফ জমা দিন।",
     "How to Buy Points": "কীভাবে পয়েন্ট কিনবেন",
