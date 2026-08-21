@@ -222,21 +222,55 @@ function ensureAdSlots(){
 function allowedAdminIds(){return (window.__ADMIN_IDS||[]).map(String)}
 function isTelegramAdmin(){const id=getTelegramUserId();return !!id&&allowedAdminIds().includes(id)}
 function openAdmin(){
-  localStorage.setItem('cinehub4_admin_session','1');
-  var gate=$("#adminGate");
-  var app=$("#adminApp");
-  if(gate){ gate.classList.add('hidden'); gate.style.display='none'; }
-  if(app){ app.classList.remove('hidden'); app.style.display='block'; }
-  wireAdminNav();
   try{
-    if(window.CineHubFB){
+    window.__IS_ADMIN=true;
+    localStorage.setItem("cinehub4_admin_session","1");
+    sessionStorage.setItem("cinehub4_is_admin","1");
+  }catch(e){}
+  var gate=document.getElementById("adminGate");
+  var app=document.getElementById("adminApp");
+  if(gate){
+    gate.classList.add("hidden");
+    gate.style.cssText="display:none!important";
+  }
+  if(app){
+    app.classList.remove("hidden");
+    app.style.cssText="display:block!important;min-height:100vh;visibility:visible;opacity:1";
+  }
+  // Ensure sidebar + nav visible
+  var sb=document.querySelector(".sidebar");
+  if(sb){
+    sb.style.visibility="visible";
+    sb.style.opacity="1";
+  }
+  var nav=document.getElementById("sideNav");
+  if(nav){
+    nav.style.display="flex";
+    nav.style.visibility="visible";
+  }
+  try{ wireAdminNav(); }catch(e){ console.error("wireAdminNav",e); }
+  try{
+    if(window.CineHubFB && window.CineHubFB.loadConfig){
       window.CineHubFB.loadConfig().then(function(c){
-        if(c){ A.settings={...A.settings,...c}; A.settings.adBlocks={...DEFAULT.adBlocks,...(A.settings.adBlocks||{})};
-ensureAdSlots(); A.settings.categories=A.settings.categories||DEFAULT.categories; A.settings.adultCategories=A.settings.adultCategories&&A.settings.adultCategories.length?A.settings.adultCategories:DEFAULT.adultCategories; localStorage.setItem("cinehub4_settings",JSON.stringify(A.settings)); render(); }
-      }).catch(function(){});
+        if(c && typeof c==="object"){
+          try{
+            A.settings=Object.assign({}, A.settings||{}, c);
+            A.settings.adBlocks=Object.assign({}, (DEFAULT&&DEFAULT.adBlocks)||{}, A.settings.adBlocks||{});
+            if(typeof ensureAdSlots==="function") ensureAdSlots();
+            A.settings.categories=A.settings.categories||(DEFAULT&&DEFAULT.categories)||[];
+            A.settings.adultCategories=(A.settings.adultCategories&&A.settings.adultCategories.length)?A.settings.adultCategories:((DEFAULT&&DEFAULT.adultCategories)||[]);
+            localStorage.setItem("cinehub4_settings", JSON.stringify(A.settings));
+          }catch(e){}
+          try{ render(); }catch(e){ console.error(e); }
+        }
+      }).catch(function(e){ console.warn("loadConfig",e); });
     }
   }catch(e){}
-  render();
+  try{ render(); }catch(e){
+    console.error("render",e);
+    var box=document.getElementById("content");
+    if(box) box.innerHTML='<div class="card"><p>Render error: '+String(e&&e.message||e)+'</p><button class="btn" onclick="location.reload()">Reload</button></div>';
+  }
 }
 
 function setGateStatus(msg, isError){
@@ -392,11 +426,16 @@ function setSection(s){ if(s==='payments') window.__payLoaded=false; if(s==='req
   }catch(err){console.error('setSection',err);toast('Section error: '+err.message)}
 }
 function wireAdminNav(){
-  document.querySelectorAll('#sideNav button[data-section]').forEach(btn=>{
+  var buttons=document.querySelectorAll("#sideNav button[data-section]");
+  if(!buttons || !buttons.length){
+    console.warn("sideNav buttons missing");
+  }
+  buttons.forEach(function(btn){
     btn.onclick=function(e){
       e.preventDefault();
       e.stopPropagation();
-      setSection(this.getAttribute('data-section'));
+      var sec=this.getAttribute("data-section");
+      if(sec) setSection(sec);
     };
   });
   const mm=document.getElementById('mobileMenu');

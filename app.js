@@ -67,53 +67,84 @@ function buildMiniAppLink(startParam){
   }
   return base;
 }
-function nativeShare(opts){
-  const title=opts.title||"Cine Hub4";
-  const text=opts.text||"";
-  const url=opts.url||buildMiniAppLink();
-  const shareUrl="https://t.me/share/url?url="+encodeURIComponent(url)+"&text="+encodeURIComponent(text||title||"");
-  try{
-    if(window.Telegram&&window.Telegram.WebApp){
-      if(window.Telegram.WebApp.openTelegramLink){
-        window.Telegram.WebApp.openTelegramLink(shareUrl);
-        return;
-      }
-      if(window.Telegram.WebApp.openLink){
-        window.Telegram.WebApp.openLink(shareUrl);
-        return;
-      }
-    }
-  }catch(e){}
-  if(navigator.share){
-    navigator.share({title:title,text:text,url:url}).catch(function(){
-      try{window.open(shareUrl,"_blank")}catch(e){}
-    });
-    return;
-  }
-  try{window.open(shareUrl,"_blank")}catch(e){}
-  try{if(navigator.clipboard)navigator.clipboard.writeText((text?text+"\n":"")+url)}catch(e){}
-  toast(t("Share link ready"));
-}
 function telegramShare(text,url){
   nativeShare({text:text,url:url});
 }
-function shareMovie(id){
-  const mid=String(id||"").trim();
-  if(!mid){toast(t("Movie")+" ID missing");return}
-  const m=movies.find(x=>String(x.id)===mid);
-  const title=m?(m.title||"").split("|")[0].trim():"Movie";
-  // startapp param: only A-Za-z0-9_- allowed by Telegram; keep movie_<id>
-  const param=("movie_"+mid).replace(/[^A-Za-z0-9_\-]/g,"").slice(0,64);
-  const link=buildMiniAppLink(param);
-  const text=title+" — Cine Hub4\n"+link;
-  nativeShare({title:title+" | Cine Hub4", text:text, url:link});
+function nativeShare(opts){
+  const title = (opts && opts.title) || "Cine Hub4";
+  const text = (opts && opts.text) || "";
+  const url = (opts && opts.url) || buildMiniAppLink();
+  // Prefer Telegram share sheet
   try{
-    if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(link).catch(function(){});
+    if(window.Telegram && window.Telegram.WebApp){
+      const shareUrl = "https://t.me/share/url?url=" + encodeURIComponent(url) + "&text=" + encodeURIComponent(text || title);
+      if(typeof window.Telegram.WebApp.openTelegramLink === "function"){
+        window.Telegram.WebApp.openTelegramLink(shareUrl);
+        return true;
+      }
+      if(typeof window.Telegram.WebApp.openLink === "function"){
+        window.Telegram.WebApp.openLink(shareUrl, {try_instant_view:false});
+        return true;
+      }
+    }
+  }catch(e){ console.warn("tg share", e); }
+  // Web Share API
+  try{
+    if(navigator.share){
+      navigator.share({title:title, text:text, url:url}).catch(function(){});
+      return true;
     }
   }catch(e){}
-  toast(t("Share")+" · "+t("Link copied"));
+  // Fallback: open share URL
+  try{ window.open("https://t.me/share/url?url="+encodeURIComponent(url)+"&text="+encodeURIComponent(text||title), "_blank"); return true; }catch(e){}
+  return false;
 }
+function movieShareLink(id){
+  const mid = String(id||"").trim();
+  const param = ("movie_"+mid).replace(/[^A-Za-z0-9_\-]/g,"").slice(0,64);
+  return buildMiniAppLink(param);
+}
+function copyMovieLink(id){
+  const mid = String(id||"").trim();
+  if(!mid){ toast(t("Movie")+" ID missing"); return; }
+  const m = movies.find(function(x){ return String(x.id)===mid; });
+  const title = m ? (m.title||"").split("|")[0].trim() : "Movie";
+  const link = movieShareLink(mid);
+  function ok(){ toast(t("Link copied")); }
+  function fail(){
+    try{
+      const ta = document.createElement("textarea");
+      ta.value = link;
+      ta.style.cssText = "position:fixed;left:-9999px;top:0";
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      ok();
+    }catch(e){ toast(link); }
+  }
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(link).then(ok).catch(fail);
+    } else fail();
+  }catch(e){ fail(); }
+}
+function shareMovie(id){
+  const mid = String(id||"").trim();
+  if(!mid){ toast(t("Movie")+" ID missing"); return; }
+  const m = movies.find(function(x){ return String(x.id)===mid; });
+  const title = m ? (m.title||"").split("|")[0].trim() : "Movie";
+  const link = movieShareLink(mid);
+  const text = title + " — Cine Hub4";
+  const ok = nativeShare({title: title+" | Cine Hub4", text: text, url: link});
+  if(!ok){
+    // last resort copy
+    copyMovieLink(mid);
+  } else {
+    toast(t("Share"));
+  }
+}
+
 function shareRef(){shareRefLink()}
 function shareRefLink(){
   const uid=(function(){try{return String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id||"")}catch(e){return ""}})();
@@ -577,12 +608,17 @@ function profile(){
     <button type="button" class="pf-btn tutorial" onclick="openLink(cfg.watchTutorialVideo||cfg.telegramBotLink)">▶ ${t("Watch Tutorial")}</button>
     <button type="button" class="pf-btn buy" onclick="nav('buy')">🛒 ${t("Buy Points")}</button>
   </div>
-  <div class="pf-section">⚡ ${t("MORE POINT EARNING")}</div>
+  <div class="pf-section">${t("MORE POINT EARNING")}</div>
   <div class="earn-card">
-    <h3>⚡ ${t("Watch Ads & Earn Points")}</h3>
+    <h3>${t("Watch Ads & Earn Points")}</h3>
     <p>${t("Complete ads to get rewards and unlock videos with points.")}</p>
-    <div class="earn-tags"><span>✔ ${t("Instant Reward")}</span><span>🪙 ${t("More Points")}</span><span>🔓 ${t("Unlock Videos")}</span></div>
-    <button type="button" class="pf-btn wide" onclick="nav('tasks')">⚡ ${t("More Point Earning")}</button>
+    <div class="earn-tags"><span>✔ ${t("Instant Reward")}</span><span>🪙 ${t("More Points")}</span><span>${t("Unlock Videos")}</span></div>
+    <button type="button" class="pf-btn wide" onclick="nav('tasks')">${t("More Point Earning")}</button>
+  </div>
+  <div id="adminPanelWrap" class="pf-section" style="display:none;margin-top:8px">
+    <button type="button" id="adminPanelBtn" class="pf-btn wide" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:#fff;font-weight:800;border:0;padding:14px;border-radius:14px;width:100%">
+      ⚙ ${t("Admin Panel")||"Admin Panel"}
+    </button>
   </div>`;
 }
 
@@ -1166,8 +1202,13 @@ function detailView(){
       <div class="ps-dur">★ ${m.rating||8} · ${m.year||""}</div>
     </div>
     <div class="ps-share-row">
-      <button type="button" class="ps-share-btn" onclick="shareMovie(${JSON.stringify(String(m.id))})">
-        <span class="ps-ico">↗</span> ${t("Share")} · Telegram
+      <button type="button" class="ps-share-btn ps-copy" onclick="copyMovieLink(${JSON.stringify(String(m.id))})">
+        <span class="ps-ico-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+        ${t("Copy Link")}
+      </button>
+      <button type="button" class="ps-share-btn ps-send" onclick="shareMovie(${JSON.stringify(String(m.id))})">
+        <span class="ps-ico-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></span>
+        ${t("Share")}
       </button>
     </div>
     <h1 class="ps-title">${title.replace(/</g,"&lt;")}</h1>
@@ -1214,22 +1255,22 @@ function detailView(){
           <b>${t("Content unlocked successfully")}</b>
         </div>
         <div class="ps-metrics">
-          <div class="ps-m need"><span class="ps-m-ico">🔑</span><span class="ps-m-lbl">${t("Required")}</span><b>${cost}</b></div>
-          <div class="ps-m myp"><span class="ps-m-ico">🪙</span><span class="ps-m-lbl">${t("My Points")}</span><b>${state.points||0}</b></div>
-          <div class="ps-m rem"><span class="ps-m-ico">⏳</span><span class="ps-m-lbl">${t("Remaining")}</span><b>0</b></div>
+          <div class="ps-m need"><span class="ps-m-ico ps-i-key" aria-hidden="true"></span><span class="ps-m-lbl">${t("Required")}</span><b>${cost}</b></div>
+          <div class="ps-m myp"><span class="ps-m-ico ps-i-coin" aria-hidden="true"></span><span class="ps-m-lbl">${t("My Points")}</span><b>${state.points||0}</b></div>
+          <div class="ps-m rem"><span class="ps-m-ico ps-i-time" aria-hidden="true"></span><span class="ps-m-lbl">${t("Remaining")}</span><b>0</b></div>
         </div>
         <div class="ps-progress">
           <div class="ps-bar"><i style="width:100%"></i></div>
           <div class="ps-prog-txt">${t("Progress")}: ${cost}/${cost}</div>
         </div>
         <div class="ps-timer-box">
-          <div class="ps-timer-lbl">⏱ ${t("Unlock time remaining")}</div>
+          <div class="ps-timer-lbl">${t("Unlock time remaining")}</div>
           <div class="ps-timer" id="unlockTimer" data-exp="${exp}">${timerStr}</div>
           <div class="ps-timer-sub">${t("This content stays unlocked for a limited time.")}</div>
         </div>
         <div class="ps-dl-list">${servers}</div>
       </div>
-      <button type="button" class="ps-more" onclick="nav('${backPage}')">🎬 ${t("More Watching")} ›</button>
+      <button type="button" class="ps-more" onclick="nav('${backPage}')">${t("More Watching")} ›</button>
     </div>`;
   }
 
@@ -1259,19 +1300,19 @@ function detailView(){
         <b>${t("Unlock this content using ads or points.")}</b>
       </div>
       <div class="ps-metrics">
-        <div class="ps-m need"><span class="ps-m-ico">🔑</span><span class="ps-m-lbl">${t("Required")}</span><b>${cost}</b></div>
-        <div class="ps-m myp"><span class="ps-m-ico">🪙</span><span class="ps-m-lbl">${t("My Points")}</span><b>${my}</b></div>
-        <div class="ps-m rem"><span class="ps-m-ico">⏳</span><span class="ps-m-lbl">${t("Remaining")}</span><b>${rem}</b></div>
+        <div class="ps-m need"><span class="ps-m-ico ps-i-key" aria-hidden="true"></span><span class="ps-m-lbl">${t("Required")}</span><b>${cost}</b></div>
+        <div class="ps-m myp"><span class="ps-m-ico ps-i-coin" aria-hidden="true"></span><span class="ps-m-lbl">${t("My Points")}</span><b>${my}</b></div>
+        <div class="ps-m rem"><span class="ps-m-ico ps-i-time" aria-hidden="true"></span><span class="ps-m-lbl">${t("Remaining")}</span><b>${rem}</b></div>
       </div>
       <div class="ps-progress">
         <div class="ps-bar"><i style="width:${pct}%"></i></div>
         <div class="ps-prog-txt">${t("Points")}: ${prog}/${cost} · ${t("Ads")}: ${adProg}/${adsNeed} · ${hours}h</div>
       </div>
       <div class="ps-hint">${t("Unlock with points or ads")}</div>
-      <button type="button" class="ps-btn lock" onclick="unlockWithAds()">🔒 ${t("Unlock Video")}</button>
-      <button type="button" class="ps-btn points" onclick="usePointsForUnlock()">🪙 ${t("Use My Points")}</button>
+      <button type="button" class="ps-btn lock" onclick="unlockWithAds()">${t("Unlock Video")}</button>
+      <button type="button" class="ps-btn points" onclick="usePointsForUnlock()">${t("Use My Points")}</button>
     </div>
-    <button type="button" class="ps-more" onclick="nav('${backPage}')">🎬 ${t("More Watching")} ›</button>
+    <button type="button" class="ps-more" onclick="nav('${backPage}')">${t("More Watching")} ›</button>
   </div>`;
 }
 
@@ -1554,43 +1595,65 @@ function playLinkAd(slot, onDone){
 
 function playAdsgram(blockId, onDone){
   if(!blockId){ toast(t("Admin has not configured this Ad Block ID")); return; }
+  var loadToastTimer = null;
+  var finished = false;
+  function clearLoadToast(){
+    if(loadToastTimer){ clearTimeout(loadToastTimer); loadToastTimer=null; }
+  }
+  function finish(ok){
+    if(finished) return;
+    finished = true;
+    clearLoadToast();
+    try{ if(onDone) onDone(); }catch(e){ console.warn(e); }
+  }
   function tryShow(){
     if(window.Adsgram && typeof window.Adsgram.init==="function"){
       try{
         const ad = window.Adsgram.init({blockId:String(blockId), debug:!!cfg.adsgramDebug});
-        toast(t("Opening Ad"));
-        ad.show().then(function(){ if(onDone) onDone(); }).catch(function(){
-          // Still credit unlock/task progress when ad unit was shown then closed
-          if(onDone) onDone();
-          else toast(t("Ad closed"));
-        });
+        // only show "loading" if ad takes >800ms to open
+        loadToastTimer = setTimeout(function(){
+          if(!finished) toast(t("Ad loading…"));
+        }, 800);
+        ad.show().then(function(){ finish(true); }).catch(function(){ finish(true); });
         return true;
       }catch(e){ console.warn(e); }
     }
     return false;
   }
   if(tryShow()) return;
+  loadToastTimer = setTimeout(function(){
+    if(!finished) toast(t("Ad loading…"));
+  }, 800);
   loadAdScriptOnce("https://sad.adsgram.ai/js/sad.min.js", function(){ return !!(window.Adsgram && window.Adsgram.init); })
     .then(function(ok){
       if(ok && tryShow()) return;
-      toast(t("Adsgram loading… try again"));
+      clearLoadToast();
+      toast(t("Ad failed to load. Try again."));
     });
 }
 
 function playMonetag(zoneId, onDone){
-  // Accept "31613452" or "show_31613452" from Monetag dashboard
   var raw = String(zoneId||"").trim();
   if(!raw){ toast(t("Admin has not configured this Ad Block ID")); return; }
   var id = raw.replace(/^show_/i,"");
   const fnName = "show_"+id;
+  var loadToastTimer = null;
+  var finished = false;
+  function clearLoadToast(){ if(loadToastTimer){ clearTimeout(loadToastTimer); loadToastTimer=null; } }
+  function finish(){
+    if(finished) return;
+    finished = true;
+    clearLoadToast();
+    try{ if(onDone) onDone(); }catch(e){}
+  }
   function tryShow(){
     if(typeof window[fnName]==="function"){
       try{
         var p = window[fnName]();
         if(p && typeof p.then==="function"){
-          p.then(function(){ if(onDone) onDone(); }).catch(function(){ toast(t("Ad closed")); });
+          p.then(function(){ finish(); }).catch(function(){ finish(); });
         } else {
-          if(onDone) onDone();
+          finish();
         }
         return true;
       }catch(e){ console.warn(e); }
@@ -1598,7 +1661,7 @@ function playMonetag(zoneId, onDone){
     return false;
   }
   if(tryShow()) return;
-  // Inject Monetag-style tag then retry
+  loadToastTimer = setTimeout(function(){ if(!finished) toast(t("Ad loading…")); }, 800);
   if(!document.querySelector('script[data-monetag="'+id+'"]')){
     var s = document.createElement("script");
     s.src = "https://libtl.com/sdk.js";
@@ -1610,6 +1673,7 @@ function playMonetag(zoneId, onDone){
   }
   setTimeout(function(){
     if(tryShow()) return;
+    clearLoadToast();
     playLinkAd({network:"monetag", id:id}, onDone);
   }, 1200);
 }
@@ -1884,6 +1948,8 @@ function loadAdminIdsApp(){
         window.__ADMIN_IDS=uid?[uid]:["1"];
         window.__IS_ADMIN=true;
         try{ sessionStorage.setItem("cinehub4_is_admin","1"); }catch(e){}
+        try{ setupAdminButton(); }catch(e){}
+        try{ if(state.page==="profile") render(false); }catch(e){}
       }else{
         window.__ADMIN_IDS=[];
         window.__IS_ADMIN=false;
@@ -1953,16 +2019,26 @@ try{
 function setupAdminButton(){
   try{
     const btn=document.getElementById("adminPanelBtn");
-    if(!btn) return;
+    const wrap=document.getElementById("adminPanelWrap");
+    if(!btn && !wrap) return;
     // ONLY show for server-verified admins (Script Properties ADMIN_IDS)
     if(isAdminUser()){
-      btn.classList.remove("hidden");
-      btn.style.display="flex";
-      btn.onclick=function(){ location.href="admin.html"; };
+      if(wrap){ wrap.style.display="block"; }
+      if(btn){
+        btn.classList.remove("hidden");
+        btn.style.display="flex";
+        btn.onclick=function(e){
+          e.preventDefault();
+          location.href="admin.html";
+        };
+      }
     }else{
-      btn.classList.add("hidden");
-      btn.style.display="none";
-      btn.onclick=null;
+      if(wrap){ wrap.style.display="none"; }
+      if(btn){
+        btn.classList.add("hidden");
+        btn.style.display="none";
+        btn.onclick=null;
+      }
     }
   }catch(e){}
 }

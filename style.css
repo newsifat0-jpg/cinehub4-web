@@ -902,3 +902,48 @@ img.poster-full{
 }
 .ps-share-btn:active{opacity:.85}
 .poster-img{width:100%;height:100%;object-fit:cover;display:block;background:#0d1120}
+
+
+/* —— Aesthetic unlock metrics (no emoji) —— */
+.ps-m-ico{
+  width:28px;height:28px;border-radius:8px;display:grid;place-items:center;
+  margin-bottom:6px;position:relative;
+}
+.ps-i-key{background:rgba(245,158,11,.15)}
+.ps-i-key::before{
+  content:"";width:12px;height:12px;border:2px solid #f59e0b;border-radius:50%;
+  display:block;box-shadow:5px 3px 0 -1px #f59e0b;
+}
+.ps-i-coin{background:rgba(234,179,8,.12)}
+.ps-i-coin::before{
+  content:"";width:14px;height:14px;border-radius:50%;
+  border:2px solid #eab308;box-shadow:inset 0 0 0 2px rgba(234,179,8,.25);
+}
+.ps-i-time{background:rgba(56,189,248,.12)}
+.ps-i-time::before{
+  content:"";width:12px;height:12px;border:2px solid #38bdf8;border-radius:50%;
+  border-top-color:transparent;display:block;
+}
+
+/* Share row: Copy | Share */
+.ps-share-row{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;
+}
+.ps-share-btn{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+  border:1px solid #2a3a5c;background:#12182a;color:#e2e8f0;
+  border-radius:12px;padding:12px 10px;font-size:13px;font-weight:700;cursor:pointer;
+}
+.ps-share-btn.ps-copy{background:#0f172a;border-color:#334155}
+.ps-share-btn.ps-send{
+  background:linear-gradient(135deg,#1d4ed8,#6366f1);border-color:transparent;color:#fff;
+}
+.ps-share-btn:active{opacity:.88}
+.ps-ico-svg{display:flex;align-items:center;line-height:0}
+.ps-ico-svg svg{display:block}
+
+/* Cleaner unlock buttons */
+.ps-btn-ad, .ps-btn-pts{
+  letter-spacing:.01em;
+}
+
