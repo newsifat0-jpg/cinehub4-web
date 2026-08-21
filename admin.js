@@ -994,6 +994,16 @@ function points(){return `<div class="toolbar"><div><h2 style="margin:0;font-siz
     <div class="switch"><span>Unlock period</span><span class="badge green">${A.settings.unlockHours||15} HOURS</span></div>
   </div>
 </div>
+  <div class="card"><h3>Unlock Notice Text (Movie / Adult separate)</h3>
+    <div class="field"><label>Movie notice head (EN)</label><input id="unlockNoticeHead" value="${(A.settings.unlockNoticeHead||"").replace(/"/g,"&quot;")}" placeholder="Unlock movie with ads or points"></div>
+    <div class="field"><label>মুভি নোটিশ হেড (বাংলা)</label><input id="unlockNoticeHeadBn" value="${(A.settings.unlockNoticeHeadBn||"").replace(/"/g,"&quot;")}"></div>
+    <div class="field"><label>Movie notice body (EN)</label><textarea id="unlockNoticeText" rows="2">${A.settings.unlockNoticeText||""}</textarea></div>
+    <div class="field"><label>মুভি নোটিশ বডি (বাংলা)</label><textarea id="unlockNoticeTextBn" rows="2">${A.settings.unlockNoticeTextBn||""}</textarea></div>
+    <div class="field"><label>Adult notice head (EN)</label><input id="adultUnlockNoticeHead" value="${(A.settings.adultUnlockNoticeHead||"").replace(/"/g,"&quot;")}"></div>
+    <div class="field"><label>অ্যাডাল্ট নোটিশ হেড (বাংলা)</label><input id="adultUnlockNoticeHeadBn" value="${(A.settings.adultUnlockNoticeHeadBn||"").replace(/"/g,"&quot;")}"></div>
+    <div class="field"><label>Adult notice body (EN)</label><textarea id="adultUnlockNoticeText" rows="2">${A.settings.adultUnlockNoticeText||""}</textarea></div>
+    <div class="field"><label>অ্যাডাল্ট নোটিশ বডি (বাংলা)</label><textarea id="adultUnlockNoticeTextBn" rows="2">${A.settings.adultUnlockNoticeTextBn||""}</textarea></div>
+  </div>
 <button class="btn primary" style="margin-top:14px;width:100%;padding:14px" onclick="savePoints()">💾 Save Unlock & Points Settings</button>`}
 function savePoints(){
   const rm=document.getElementById("dailyAdResetMode");
@@ -1012,6 +1022,14 @@ function savePoints(){
   A.settings.joinBonus=Math.max(0, Number(($('#bonus')||{}).value)||10);
   A.settings.newUserBonus=A.settings.joinBonus;
   A.settings.referralReward=Math.max(0, Number(($('#ref')||{}).value)||20);
+  A.settings.unlockNoticeHead=(($('#unlockNoticeHead')||{}).value)||"";
+  A.settings.unlockNoticeHeadBn=(($('#unlockNoticeHeadBn')||{}).value)||"";
+  A.settings.unlockNoticeText=(($('#unlockNoticeText')||{}).value)||"";
+  A.settings.unlockNoticeTextBn=(($('#unlockNoticeTextBn')||{}).value)||"";
+  A.settings.adultUnlockNoticeHead=(($('#adultUnlockNoticeHead')||{}).value)||"";
+  A.settings.adultUnlockNoticeHeadBn=(($('#adultUnlockNoticeHeadBn')||{}).value)||"";
+  A.settings.adultUnlockNoticeText=(($('#adultUnlockNoticeText')||{}).value)||"";
+  A.settings.adultUnlockNoticeTextBn=(($('#adultUnlockNoticeTextBn')||{}).value)||"";
   save();
   render();
   toast("✓ Movie "+A.settings.unlockCost+"pts/"+A.settings.adsForUnlock+"ads · Adult "+A.settings.adultUnlockCost+"pts/"+A.settings.adultAdsForUnlock+"ads → Firebase");

@@ -62,6 +62,7 @@ function ico(name, size){
     shield: '<path d="M12 3l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3z"/>',
     download: '<path d="M12 4v12M7 12l5 5 5-5M5 20h14"/>',
     mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+    eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
     play: '<circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4V8z" fill="currentColor" stroke="none"/>',
     wallet: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14h2"/>',
     task: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>',
@@ -879,7 +880,7 @@ function heroPills(){return`<div class="hero-pills-sticky"><div class="hero-pill
 function catRow(){const cats=cfg.categories||defaults.categories;return`<div class="cat-row">${cats.map(c=>{const k=catKey(c);return `<button type="button" class="cat-chip ${state.category===k?"active":""}" onclick="filterCat('${String(k).replace(/'/g,"\\'")}')">${catLabel(c)}</button>`}).join("")}</div>`}
 function libCard(){
   const title=state.mode==="trending"?t("Trending Movies"):(cfg.libraryTitle||t("Cinema Library"));
-  return `<div class="lib-card lib-card-sm"><div class="lib-badge"><i></i> ${cfg.libraryBadge||"MOVIE ZONE"}</div><h2>${title}</h2><p class="lib-desc">${cfg.libraryDesc||"Curated movies, web series and premium entertainment updates."}</p><button type="button" class="how-btn" onclick="howToEarn()">${cfg.howToWatchLabel||"▶ How to Watch"}</button></div>`;
+  return `<div class="lib-card lib-card-sm"><div class="lib-badge"><i></i> ${cfg.libraryBadge||"MOVIE ZONE"}</div><h2>${title}</h2><p class="lib-desc">${cfg.libraryDesc||"Curated movies, web series and premium entertainment updates."}</p><button type="button" class="how-btn" onclick="howToEarn()"><span class="how-btn-ico">${ico("play",16)}</span><span>${(cfg.howToWatchLabel||t("How to Watch")).replace(/^▶\s*/,"")}</span></button></div>`;
 }
 function ticker(){
   const t=cfg.tickerText||"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ";
@@ -991,7 +992,7 @@ function heroPillsAdult(){return`<div class="hero-pills-sticky"><div class="hero
 function catRowAdult(){const cats=cfg.adultCategories||defaults.adultCategories;return`<div class="cat-row">${cats.map(c=>{const k=catKey(c);return `<button type="button" class="cat-chip ${state.adultCategory===k?"active":""}" onclick="filterAdultCat('${String(k).replace(/'/g,"\\'")}')">${catLabel(c)}</button>`}).join("")}</div>`}
 function libCardAdult(){
   const title=state.adultMode==="trending"?t("Trending Movies"):loc(cfg.adultLibraryTitle||"Adult Library", cfg.adultLibraryTitleBn);
-  return `<div class="lib-card lib-card-sm"><div class="lib-badge"><i></i> ${loc(cfg.adultLibraryBadge||"ADULT ZONE", cfg.adultLibraryBadgeBn)}</div><h2>${title}</h2><p class="lib-desc">${loc(cfg.adultLibraryDesc||"Curated 18+ content and premium entertainment updates.", cfg.adultLibraryDescBn)}</p><button type="button" class="how-btn" onclick="howToEarn()">${loc(cfg.adultHowToWatchLabel||"▶ How to Watch", cfg.adultHowToWatchLabelBn)}</button></div>`;
+  return `<div class="lib-card lib-card-sm"><div class="lib-badge"><i></i> ${loc(cfg.adultLibraryBadge||"ADULT ZONE", cfg.adultLibraryBadgeBn)}</div><h2>${title}</h2><p class="lib-desc">${loc(cfg.adultLibraryDesc||"Curated 18+ content and premium entertainment updates.", cfg.adultLibraryDescBn)}</p><button type="button" class="how-btn" onclick="howToEarn()"><span class="how-btn-ico">${ico("play",16)}</span><span>${(loc(cfg.adultHowToWatchLabel||t("How to Watch"), cfg.adultHowToWatchLabelBn)||t("How to Watch")).replace(/^▶\s*/,"")}</span></button></div>`;
 }
 function tickerAdult(){
   const raw=cfg.adultTickerText||"18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ";
@@ -1293,8 +1294,8 @@ function tasks(){
   <div class="pf-stats">
     <div class="pf-stat"><div><b>${state.points}</b><span>${t("Current Balance")}</span></div><div class="ico coin">${ico("coin",22)}</div></div>
     <div class="pf-stat"><div><b>${cfg.adReward||2}</b><span>${t("Points Per Ad")}</span></div><div class="ico gift">${ico("gem",22)}</div></div>
-    <div class="pf-stat"><div><b>${watched}</b><span>${t("Ads Watched")}</span></div><div class="ico eye">${ico("search",22)}</div></div>
-    <div class="pf-stat"><div><b>${limit}</b><span>${t("Daily Limit")}</span></div><div class="ico shield">🛡</div></div>
+    <div class="pf-stat"><div><b>${watched}</b><span>${t("Ads Watched")}</span></div><div class="ico eye">${ico("eye",22)}</div></div>
+    <div class="pf-stat"><div><b>${limit}</b><span>${t("Daily Limit")}</span></div><div class="ico shield">${ico("shield",22)}</div></div>
   </div>
   <div class="pf-section">${icoWrap("settings","sec")} ${t("EARNING SETTINGS")}</div>
   <div class="pf-panel earn-settings">
@@ -1720,6 +1721,26 @@ function markMovieUnlocked(id){
   return hours;
 }
 /** Unlock rules: movie vs adult separate (admin controlled) */
+
+function unlockNoticeText(isAdult){
+  loadSharedSettings();
+  if(isAdult){
+    var en = cfg.adultUnlockNoticeText || "Watch ads or use points to unlock. Then you can stream or download this adult content.";
+    var bn = cfg.adultUnlockNoticeTextBn || "অ্যাড দেখুন অথবা পয়েন্ট ব্যবহার করে আনলক করুন। এরপর এই অ্যাডাল্ট কনটেন্ট স্ট্রিম বা ডাউনলোড করতে পারবেন।";
+    return loc(en, bn);
+  }
+  var en2 = cfg.unlockNoticeText || "Watch ads or use your points to unlock. After unlock you can watch and download the movie from available servers.";
+  var bn2 = cfg.unlockNoticeTextBn || "অ্যাড দেখুন অথবা আপনার পয়েন্ট ব্যবহার করে আনলক করুন। আনলক হলে উপলব্ধ সার্ভার থেকে মুভি দেখতে ও ডাউনলোড করতে পারবেন।";
+  return loc(en2, bn2);
+}
+function unlockNoticeHead(isAdult){
+  loadSharedSettings();
+  if(isAdult){
+    return loc(cfg.adultUnlockNoticeHead || "Unlock adult content with ads or points", cfg.adultUnlockNoticeHeadBn || "অ্যাড বা পয়েন্ট দিয়ে অ্যাডাল্ট কনটেন্ট আনলক করুন");
+  }
+  return loc(cfg.unlockNoticeHead || "Unlock movie with ads or points", cfg.unlockNoticeHeadBn || "অ্যাড বা পয়েন্ট দিয়ে মুভি আনলক করুন");
+}
+
 function isAdultMovie(m){
   if(!m) return false;
   if(m === true) return true;
@@ -1996,14 +2017,14 @@ function detailView(){
       <div>
         <div class="ps-n-title">${t("UNLOCK NOTICE")}</div>
         <div class="ps-n-sub">${isAdult?t("ADULT CONTENT"):t("MOVIE CONTENT")}</div>
-        <div class="ps-n-desc">${t("Unlock this content using ads or points.")}</div>
+        <div class="ps-n-desc">${unlockNoticeText(isAdult)}</div>
       </div>
     </div>
     ${posterBlock()}
     <div class="ps-unlock-card">
       <div class="ps-ok-head">
         <span class="ps-dot"></span>
-        <b>${t("Unlock this content using ads or points.")}</b>
+        <b>${unlockNoticeHead(isAdult)}</b>
       </div>
       <div class="ps-metrics">
         <div class="ps-m need"><span class="ps-m-ico ps-i-key" aria-hidden="true">${ico("star",14)}</span><span class="ps-m-lbl">${t("Required")}</span><b>${cost}</b></div>
@@ -2472,10 +2493,8 @@ function watchAd(mode){
         state.points+=Number(tk.reward||0);save();
         const finished=markTaskProgress(ti,tk);
         toast("+"+(tk.reward||0)+" points"+(finished?" · Done":""));
-        const watched=Number((userData&&userData.ads_today)||0)+1;
-        const totalAds=Number((userData&&userData.ads_total)||0)+1;
-        if(userData){userData.ads_today=watched;userData.ads_day=new Date().toDateString();userData.ads_total=totalAds;}
-        if(window.CineHubFB) try{window.CineHubFB.updateUserField(null,{ads_today:watched,ads_day:new Date().toDateString(),ads_total:totalAds,points:state.points})}catch(e){}
+        // Task ads do NOT count toward daily earning ad limit
+        if(window.CineHubFB) try{window.CineHubFB.updateUserField(null,{points:state.points})}catch(e){}
         render(false);
         return;
       }
@@ -2505,16 +2524,18 @@ function startVoiceSearch(){
     r.interimResults=false;
     r.maxAlternatives=1;
     const mic=document.getElementById("micBtn");
+    const bar=document.querySelector(".search-bar-wrap");
     if(mic){mic.classList.add("listening");mic.style.background="#ef4444";mic.style.color="#fff";}
+    if(bar) bar.classList.add("listening");
     r.onresult=function(ev){
       const t=(ev.results[0]&&ev.results[0][0]&&ev.results[0][0].transcript)||"";
       state.query=t;
       const q=document.getElementById("q");
       if(q) q.value=t;
-      doSearch();
+      if(state.page==="adultSearch") doAdultSearch(); else doSearch();
     };
-    r.onerror=function(){toast("Voice failed");if(mic){mic.classList.remove("listening");mic.style.background="";mic.style.color=""}};
-    r.onend=function(){if(mic){mic.classList.remove("listening");mic.style.background="";mic.style.color=""}};
+    r.onerror=function(){toast("Voice failed");if(mic){mic.classList.remove("listening");mic.style.background="";mic.style.color=""} if(bar) bar.classList.remove("listening");};
+    r.onend=function(){if(mic){mic.classList.remove("listening");mic.style.background="";mic.style.color=""} if(bar) bar.classList.remove("listening");};
     r.start();
     toast("Listening...");
   }catch(e){toast("Voice error")}
