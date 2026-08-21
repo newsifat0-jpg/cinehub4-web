@@ -49,6 +49,13 @@ function ico(name, size){
     medal: '<circle cx="12" cy="9" r="5"/><path d="M8.5 13.5L6 21l6-3 6 3-2.5-7.5"/>',
     crown: '<path d="M3 17h18l-1.5-9-4.5 4L12 5l-3 7-4.5-4L3 17z"/><path d="M5 17h14v2H5z"/>',
     gem: '<path d="M6 3h12l4 7-10 11L2 10l4-7z"/><path d="M2 10h20M12 3v18M8.5 3l-4 7M15.5 3l4 7"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    send: '<path d="M21 5L3 12.5l5 1.8L18 8l-8 7.2v3.3l2.8-2.5 4.2 3.1L21 5z"/>',
+    bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/>',
+    unlock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0"/>',
+    points: '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10h6M9 14h6"/>',
+    more: '<path d="M5 12h14M13 6l6 6-6 6"/>',
     fire: '<path d="M12 22c4 0 7-2.8 7-7 0-3.2-1.8-5.2-3.2-6.6-.4 2.2-1.8 3.2-1.8 3.2S13.5 7 13 4c0 0-5 2.5-5 8.5 0 .8.2 1.5.5 2.1C7.2 13.8 6 12 6 10c0 0-1 1.8-1 5 0 4.2 3 7 7 7z"/>',
     check: '<circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9"/>',
     telegram: '<path d="M21 5L3 12.5l5 1.8L18 8l-8 7.2v3.3l2.8-2.5 4.2 3.1L21 5z"/>',
@@ -621,7 +628,7 @@ function showBlockedScreen(){
   ov.className = "blocked-overlay";
   ov.innerHTML =
     '<div class="blocked-card">'+
-      '<div class="blocked-ico" aria-hidden="true">⛔</div>'+
+      '<div class="blocked-ico" aria-hidden="true">${ico("shield",40)}</div>'+
       '<h2 class="blocked-title">'+t("Account Blocked")+'</h2>'+
       '<p class="blocked-msg">'+t("Your account has been blocked by the admin. You cannot use this app right now.")+'</p>'+
       '<p class="blocked-sub">'+t("Contact admin if you think this is a mistake.")+'</p>'+
@@ -904,7 +911,7 @@ function bannerSlot(zone){
   if(blockId){
     return `<div class="home-banner home-banner-adsgram" data-zone="${zone}" data-ad="${blockId.replace(/"/g,"")}">
       <button type="button" class="adsgram-banner-btn" onclick="showAdsgramBanner('${blockId.replace(/'/g,"\\'")}','${zone}')">
-        <span class="hb-ph-ico">▶</span>
+        <span class="hb-ph-ico">${ico("play",18)}</span>
         <b>${label} · Adsgram</b>
         <small>ID: ${blockId.replace(/</g,"")}</small>
       </button>
@@ -928,7 +935,7 @@ function bannerSlot(zone){
   // 4) Empty placeholder
   return `<div class="home-banner home-banner-placeholder" data-zone="${zone}" onclick="toast(t('Set Adsgram Block ID in Admin → Ads'))">
     <div class="hb-ph">
-      <span class="hb-ph-ico">▦</span>
+      <span class="hb-ph-ico">${ico("overview",18)}</span>
       <b>${label} Banner</b>
       <small>${t("Set Adsgram Block ID in Admin → Ads")}</small>
     </div>
@@ -1001,11 +1008,11 @@ function adult(){
   if(!state.adultOK){
     return `<div class="gate-wrap">
       <div class="gate-card">
-        <div class="gate-icon">🛡</div>
+        <div class="gate-icon">${ico("shield",36)}</div>
         <h2>${t("Adult Access Confirmation")}</h2>
         <p>${t("This section is reserved for mature viewers. Please confirm that you are 18 or older before entering the Adult Zone.")}</p>
-        <div class="gate-note">${t("✓ I confirm that I am 18 or older")}</div>
-        <div class="gate-note muted">${t("🔒 Your choice is remembered for this session only")}</div>
+        <div class="gate-note">${ico("check",14)} ${t("I confirm that I am 18 or older")}</div>
+        <div class="gate-note muted">${ico("shield",12)} ${t("Your choice is remembered for this session only")}</div>
         <div class="gate-actions">
           <button type="button" class="gate-yes" onclick="confirmAdult()">${t("Yes, Enter")}</button>
           <button type="button" class="gate-no" onclick="nav('movies')">${t("No, Watch Movie")}</button>
@@ -1047,7 +1054,7 @@ function adultSearchPage(){
       <button type="button" class="mic-btn" id="micBtn" title="Voice search" aria-label="Voice search">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0" stroke="currentColor" stroke-width="2"/><path d="M12 18v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
-      <button type="button" class="search-go" onclick="doAdultSearch()" aria-label="Search">🔍</button>
+      <button type="button" class="search-go" onclick="doAdultSearch()" aria-label="Search">${ico("search",18)}</button>
     </div>
   </div>
   <div id="searchResults" class="search-results">${adultSearchResultsHTML()}</div>`;
@@ -1151,19 +1158,19 @@ function profile(){
     <div class="pf-how-card"><b>${t("More Earning")}</b><span>${t("Watch ads & earn")}</span></div>
   </div>
   <div class="pf-actions" style="margin-bottom:12px">
-    <button type="button" class="pf-btn tutorial" onclick="openLink(cfg.watchTutorialVideo||cfg.telegramBotLink)">▶ ${t("Watch Tutorial")}</button>
+    <button type="button" class="pf-btn tutorial" onclick="openLink(cfg.watchTutorialVideo||cfg.telegramBotLink)">${ico("play",16)} ${t("Watch Tutorial")}</button>
     <button type="button" class="pf-btn buy" onclick="nav('buy')">${ico("cart",16)} ${t("Buy Points")}</button>
   </div>
   <div class="pf-section">${t("MORE POINT EARNING")}</div>
   <div class="earn-card">
     <h3>${t("Watch Ads & Earn Points")}</h3>
     <p>${t("Complete ads to get rewards and unlock videos with points.")}</p>
-    <div class="earn-tags"><span>✔ ${t("Instant Reward")}</span><span>🪙 ${t("More Points")}</span><span>${t("Unlock Videos")}</span></div>
-    <button type="button" class="pf-btn wide" onclick="nav('tasks')">${t("More Point Earning")}</button>
+    <div class="earn-tags"><span>${ico("check",12)} ${t("Instant Reward")}</span><span>${ico("coin",12)} ${t("More Points")}</span><span>${ico("film",12)} ${t("Unlock Videos")}</span></div>
+    <button type="button" class="pf-btn wide" onclick="nav('tasks')">${ico("zap",16)} ${t("More Point Earning")}</button>
   </div>
   <div id="adminPanelWrap" class="pf-section" style="display:none;margin-top:8px">
     <button type="button" id="adminPanelBtn" class="pf-btn wide" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:#fff;font-weight:800;border:0;padding:14px;border-radius:14px;width:100%">
-      ⚙ ${t("Admin Panel")||"Admin Panel"}
+      ${ico("shield",16)} ${t("Admin Panel")||"Admin Panel"}
     </button>
   </div>`;
 }
@@ -1272,7 +1279,7 @@ function tasks(){
   const list=getTasks();
   return pageBackBar(t("More Point Earning"))+`
   <div class="earn-hero">
-    <div class="earn-hero-ico">⚡</div>
+    <div class="earn-hero-ico">${ico("zap",28)}</div>
     <div>
       <b>${t("Watch Ads & Earn Points")}</b>
       <p>${t("Complete ads and premium earning tasks to unlock exclusive videos instantly.")}</p>
@@ -1284,12 +1291,12 @@ function tasks(){
     </div>
   </div>
   <div class="pf-stats">
-    <div class="pf-stat"><div><b>${state.points}</b><span>${t("Current Balance")}</span></div><div class="ico coin">🪙</div></div>
-    <div class="pf-stat"><div><b>${cfg.adReward||2}</b><span>${t("Points Per Ad")}</span></div><div class="ico gift">🎁</div></div>
-    <div class="pf-stat"><div><b>${watched}</b><span>${t("Ads Watched")}</span></div><div class="ico eye">👁</div></div>
+    <div class="pf-stat"><div><b>${state.points}</b><span>${t("Current Balance")}</span></div><div class="ico coin">${ico("coin",22)}</div></div>
+    <div class="pf-stat"><div><b>${cfg.adReward||2}</b><span>${t("Points Per Ad")}</span></div><div class="ico gift">${ico("gem",22)}</div></div>
+    <div class="pf-stat"><div><b>${watched}</b><span>${t("Ads Watched")}</span></div><div class="ico eye">${ico("search",22)}</div></div>
     <div class="pf-stat"><div><b>${limit}</b><span>${t("Daily Limit")}</span></div><div class="ico shield">🛡</div></div>
   </div>
-  <div class="pf-section">⚙ ${t("EARNING SETTINGS")}</div>
+  <div class="pf-section">${icoWrap("settings","sec")} ${t("EARNING SETTINGS")}</div>
   <div class="pf-panel earn-settings">
     <div class="pf-row"><span>${t("Reward Per Ad")}</span><b>${cfg.adReward||2} ${t("Points")}</b></div>
     <div class="pf-row"><span>${t("Maximum Daily Ads")}</span><b>${limit}</b></div>
@@ -1297,14 +1304,14 @@ function tasks(){
     <div class="progress-bar"><i style="width:${Math.min(100,(watched/Math.max(1,limit))*100)}%"></i></div>
     <div class="muted" style="font-size:11px;margin-top:6px;text-align:center">${watched} / ${limit} ${t("completed today")}</div>
   </div>
-  <button type="button" class="watch-ad-now" onclick="watchAd('rewarded')">▶ ${t("Watch Ad Now")}</button>
-  <div class="pf-section">🎁 ${t("MORE EARNING BUTTONS")}</div>
+  <button type="button" class="watch-ad-now" onclick="watchAd('rewarded')">${ico("play",16)} ${t("Watch Ad Now")}</button>
+  <div class="pf-section">${icoWrap("gem","sec")} ${t("MORE EARNING BUTTONS")}</div>
   ${list.map((tk,i)=>{
     const st=taskResetInfo(i,tk);
     const prog=st.limit>1?(` · ${st.count}/${st.limit}`):"";
     const statusLabel=st.done?(tk.permanent?t("Completed"):t("Done")):(tk.permanent?t("One-time task"):t("Daily task"))+prog;
     return `<div class="task-row ${st.done?"done":""}">
-      <div class="task-ico">🎁</div>
+      <div class="task-ico">${ico("gem",20)}</div>
       <div class="task-meta"><b>${langIsBn()&&tk.nameBn?tk.nameBn:t(tk.name||"")}</b><span>${t("Reward")}: ${tk.reward} pt · ${statusLabel}</span></div>
       ${st.done?`<button type="button" class="task-done" disabled>${t("Done")}</button>`:`<button type="button" class="task-start" onclick="runTask(${i})">${t("Start")}</button>`}
     </div>`;
@@ -1428,7 +1435,7 @@ function runTask(i){
   credit();
 }
 
-function settings(){return pageBackBar(t("Settings"))+`<div class="section-title"><b>⚙ ${t("Settings")}</b></div><div class="panel"><div class="task"><span>${t("Language")}</span><select class="pill" style="appearance:auto" onchange="CINEHUB4_LANG.set(this.value);render(false)"><option value="en" ${CINEHUB4_LANG.get()==="en"?"selected":""}>English</option><option value="bn" ${CINEHUB4_LANG.get()==="bn"?"selected":""}>বাংলা</option></select></div><div class="task"><span>${t("Telegram")}</span><button class="pill" onclick="openLink(cfg.telegramBotLink)">${t("Open")}</button></div><div class="task"><span>${t("How to Watch")}</span><button class="pill" onclick="howToEarn()">${t("Open")}</button></div></div>`}
+function settings(){return pageBackBar(t("Settings"))+`<div class="section-title"><b>${ico("settings",18)} ${t("Settings")}</b></div><div class="panel"><div class="task"><span>${t("Language")}</span><select class="pill" style="appearance:auto" onchange="CINEHUB4_LANG.set(this.value);render(false)"><option value="en" ${CINEHUB4_LANG.get()==="en"?"selected":""}>English</option><option value="bn" ${CINEHUB4_LANG.get()==="bn"?"selected":""}>বাংলা</option></select></div><div class="task"><span>${t("Telegram")}</span><button class="pill" onclick="openLink(cfg.telegramBotLink)">${t("Open")}</button></div><div class="task"><span>${t("How to Watch")}</span><button class="pill" onclick="howToEarn()">${t("Open")}</button></div></div>`}
 
 function getPackages(){
   const list = (cfg.packages&&cfg.packages.length)?cfg.packages:[
@@ -1595,12 +1602,12 @@ function buy(){
     const o=state.buyOrder;
     return `
     <div class="buy-modal">
-      <div class="buy-modal-icon">👑</div>
+      <div class="buy-modal-icon">${ico("crown",32)}</div>
       <h2>${t("Confirm Purchase")}</h2>
       <div class="pf-panel">
         <div class="pf-row"><span>${t("Package")}</span><b>${langIsBn()&&o.nameBn?o.nameBn:t(o.name||"")}</b></div>
         <div class="pf-row"><span>${t("Pay Amount")}</span><b>${o.price} USDT</b></div>
-        <div class="pf-row"><span>🪙 ${t("You Get")}</span><b>${o.points} Points</b></div>
+        <div class="pf-row"><span class="pf-row-ico">${ico("coin",16)} ${t("You Get")}</span><b>${o.points} ${t("Points")}</b></div>
       </div>
       <p class="muted" style="font-size:12px;line-height:1.45">${t("After confirmation, select a wallet address, send the exact USDT amount, then submit TxID and screenshot for admin approval.")}</p>
       <div class="pf-actions" style="margin-top:14px">
@@ -1615,7 +1622,7 @@ function buy(){
     const sw=state.selectedWallet;
     const walletOpts=wallets.map((w,i)=>`<option value="${i}">${w.name||("Wallet "+(i+1))}</option>`).join("");
     return pageBackBar(t("Buy Points"))+`
-    <button type="button" class="pf-btn wide" style="margin-bottom:12px" onclick="cancelBuy()">👑 ${t("Purchase Custom Coins")}</button>
+    <button type="button" class="pf-btn wide" style="margin-bottom:12px" onclick="cancelBuy()">${ico("crown",16)} ${t("Purchase Custom Coins")}</button>
     <div class="pf-section">💳 ${t("PAYMENT STEP")}</div>
     <div class="pf-panel">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
@@ -1629,14 +1636,14 @@ function buy(){
       </select>
       <div class="pf-linkbox" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <span style="word-break:break-all;font-size:12px">${sw?sw.address:"Wallet address will appear here."}</span>
-        <button type="button" class="primary" style="flex-shrink:0" onclick="copyWalletAddr()">📋</button>
+        <button type="button" class="primary" style="flex-shrink:0" onclick="copyWalletAddr()">${ico("copy",16)}</button>
       </div>
       <p class="muted" style="font-size:11px;margin:10px 0">Send the exact USDT amount to the selected address. Then submit your TxID and payment screenshot below.</p>
       <label style="font-size:12px;color:#9aa3b8">Transaction ID / TxID</label>
       <input id="payTxid" type="text" placeholder="Paste your transaction hash / TxID here" style="width:100%;margin:8px 0;padding:12px;border-radius:12px;border:1px solid #2a334d;background:#0c101c;color:#eef1ff">
       <label style="font-size:12px;color:#9aa3b8">Payment Screenshot</label>
       <input id="payShot" type="file" accept="image/*" style="width:100%;margin:8px 0;color:#9aa3b8">
-      <button type="button" class="pf-btn wide copy" style="margin-top:10px" onclick="submitPayment()">✈ Submit Payment Request</button>
+      <button type="button" class="pf-btn wide copy" style="margin-top:10px" onclick="submitPayment()">${ico("send",16)} ${t("Submit Payment Request")}</button>
     </div>`;
   }
   const pkgs=getPackages();
@@ -1713,25 +1720,39 @@ function markMovieUnlocked(id){
   return hours;
 }
 /** Unlock rules: movie vs adult separate (admin controlled) */
+function isAdultMovie(m){
+  if(!m) return false;
+  if(m === true) return true;
+  if(typeof m === "boolean") return m;
+  if(typeof m === "object"){
+    if(m.adult === true || m.adult === 1 || m.adult === "1" || m.adult === "true") return true;
+    var ty = String(m.type || "").toLowerCase();
+    if(ty === "adult" || ty === "18+") return true;
+    return false;
+  }
+  return false;
+}
+/** Unlock rules: movie vs adult fully separate (admin Points & Unlocks) */
 function getUnlockRules(movieOrAdult){
+  loadSharedSettings();
   var isAdult = false;
   if(typeof movieOrAdult === "boolean") isAdult = movieOrAdult;
-  else if(movieOrAdult && typeof movieOrAdult === "object") isAdult = !!movieOrAdult.adult;
+  else if(movieOrAdult && typeof movieOrAdult === "object") isAdult = isAdultMovie(movieOrAdult);
   else if(movieOrAdult != null){
-    var mm = movies.find(function(x){ return String(x.id)===String(movieOrAdult); });
-    isAdult = !!(mm && mm.adult);
+    var mm = (typeof movies !== "undefined" ? movies : []).find(function(x){ return String(x.id)===String(movieOrAdult); });
+    isAdult = isAdultMovie(mm);
   }
   if(isAdult){
     return {
       cost: Math.max(1, Number(cfg.adultUnlockCost != null ? cfg.adultUnlockCost : 3) || 3),
       adsNeed: Math.max(1, Number(cfg.adultAdsForUnlock != null ? cfg.adultAdsForUnlock : 5) || 5),
-      hours: Math.max(1, Number(cfg.adultUnlockHours != null ? cfg.adultUnlockHours : (cfg.unlockHours||15)) || 15)
+      hours: Math.max(1, Number(cfg.adultUnlockHours != null ? cfg.adultUnlockHours : 15) || 15)
     };
   }
   return {
-    cost: Math.max(1, Number(cfg.unlockCost)||5),
-    adsNeed: Math.max(1, Number(cfg.adsForUnlock)||5),
-    hours: Math.max(1, Number(cfg.unlockHours)||15)
+    cost: Math.max(1, Number(cfg.unlockCost != null ? cfg.unlockCost : 5) || 5),
+    adsNeed: Math.max(1, Number(cfg.adsForUnlock != null ? cfg.adsForUnlock : 5) || 5),
+    hours: Math.max(1, Number(cfg.unlockHours != null ? cfg.unlockHours : 15) || 15)
   };
 }
 /** Points contributed toward unlockCost — Firebase */
@@ -1745,7 +1766,7 @@ function getUnlockProgress(id){
 }
 function setUnlockProgress(id,n){
   loadSharedSettings();
-  const cost=Math.max(1, Number(cfg.unlockCost)||5);
+  const cost=getUnlockRules(id).cost;
   const v=Math.max(0,Math.min(cost,Number(n)||0));
   if(!userData) userData={};
   if(!userData.unlock_prog) userData.unlock_prog={};
@@ -1847,7 +1868,7 @@ if(!window.__unlockTimerIv){
 function detailView(){
   loadSharedSettings();
   const m=movies.find(x=>String(x.id)===String(state.detailId));if(!m)return moviesPage();
-  const isAdult=!!m.adult;
+  const isAdult=isAdultMovie(m);
   const rules=getUnlockRules(m);
   const cost=rules.cost;
   const adsNeed=rules.adsNeed;
@@ -1911,14 +1932,14 @@ function detailView(){
       const url = m["server"+i]||m["server"+i+"_link"]||m["s"+i]||"";
       if(!url && i>1) continue;
       servers+=`<button type="button" class="ps-dl-btn" onclick='openServer(${JSON.stringify(String(m.id))},${i})'>
-        <span class="ps-dl-ico">⬇</span>
+        <span class="ps-dl-ico">${ico("download",18)}</span>
         <span><b>${t("Server")} ${i}</b><small>${t("Download / Watch")}</small></span>
         <span class="ps-dl-go">›</span>
       </button>`;
     }
     if(!servers){
       servers=`<button type="button" class="ps-dl-btn primary" onclick='openServer(${JSON.stringify(String(m.id))},1)'>
-        <span class="ps-dl-ico">⬇</span>
+        <span class="ps-dl-ico">${ico("download",18)}</span>
         <span><b>${t("Download Now")}</b><small>${t("Watch or download")}</small></span>
         <span class="ps-dl-go">›</span>
       </button>`;
@@ -1944,9 +1965,9 @@ function detailView(){
           <b>${t("Content unlocked successfully")}</b>
         </div>
         <div class="ps-metrics">
-          <div class="ps-m need"><span class="ps-m-ico ps-i-key" aria-hidden="true"></span><span class="ps-m-lbl">${t("Required")}</span><b>${cost}</b></div>
-          <div class="ps-m myp"><span class="ps-m-ico ps-i-coin" aria-hidden="true"></span><span class="ps-m-lbl">${t("My Points")}</span><b>${state.points||0}</b></div>
-          <div class="ps-m rem"><span class="ps-m-ico ps-i-time" aria-hidden="true"></span><span class="ps-m-lbl">${t("Remaining")}</span><b>0</b></div>
+          <div class="ps-m need"><span class="ps-m-ico ps-i-key" aria-hidden="true">${ico("star",14)}</span><span class="ps-m-lbl">${t("Required")}</span><b>${cost}</b></div>
+          <div class="ps-m myp"><span class="ps-m-ico ps-i-coin" aria-hidden="true">${ico("coin",14)}</span><span class="ps-m-lbl">${t("My Points")}</span><b>${state.points||0}</b></div>
+          <div class="ps-m rem"><span class="ps-m-ico ps-i-time" aria-hidden="true">${ico("clock",14)}</span><span class="ps-m-lbl">${t("Remaining")}</span><b>0</b></div>
         </div>
         <div class="ps-timer-box">
           <div class="ps-timer-lbl">${t("Unlock time remaining")}</div>
@@ -1971,7 +1992,7 @@ function detailView(){
   return pageBackBar(pageLabel)+`
   <div class="ps-page">
     <div class="ps-notice">
-      <div class="ps-bell">🔔</div>
+      <div class="ps-bell">${ico("bell",22)}</div>
       <div>
         <div class="ps-n-title">${t("UNLOCK NOTICE")}</div>
         <div class="ps-n-sub">${isAdult?t("ADULT CONTENT"):t("MOVIE CONTENT")}</div>
@@ -1985,9 +2006,9 @@ function detailView(){
         <b>${t("Unlock this content using ads or points.")}</b>
       </div>
       <div class="ps-metrics">
-        <div class="ps-m need"><span class="ps-m-ico ps-i-key" aria-hidden="true"></span><span class="ps-m-lbl">${t("Required")}</span><b>${cost}</b></div>
-        <div class="ps-m myp"><span class="ps-m-ico ps-i-coin" aria-hidden="true"></span><span class="ps-m-lbl">${t("My Points")}</span><b>${my}</b></div>
-        <div class="ps-m rem"><span class="ps-m-ico ps-i-time" aria-hidden="true"></span><span class="ps-m-lbl">${t("Remaining")}</span><b>${rem}</b></div>
+        <div class="ps-m need"><span class="ps-m-ico ps-i-key" aria-hidden="true">${ico("star",14)}</span><span class="ps-m-lbl">${t("Required")}</span><b>${cost}</b></div>
+        <div class="ps-m myp"><span class="ps-m-ico ps-i-coin" aria-hidden="true">${ico("coin",14)}</span><span class="ps-m-lbl">${t("My Points")}</span><b>${my}</b></div>
+        <div class="ps-m rem"><span class="ps-m-ico ps-i-time" aria-hidden="true">${ico("clock",14)}</span><span class="ps-m-lbl">${t("Remaining")}</span><b>${rem}</b></div>
       </div>
       <div class="ps-progress ps-progress-split">
         <div class="ps-prog-line">
@@ -2000,10 +2021,10 @@ function detailView(){
         </div>
       </div>
       <div class="ps-hint">${t("Unlock with points or ads")}</div>
-      <button type="button" class="ps-btn lock" onclick="unlockWithAds()">${t("Unlock Video")}</button>
-      <button type="button" class="ps-btn points" onclick="usePointsForUnlock()">${t("Use My Points")}</button>
+      <button type="button" class="ps-btn lock" onclick="unlockWithAds()">${ico("unlock",16)} ${t("Unlock Video")}</button>
+      <button type="button" class="ps-btn points" onclick="usePointsForUnlock()">${ico("coin",16)} ${t("Use My Points")}</button>
     </div>
-    <button type="button" class="ps-more" onclick="nav('${backPage}')">${t("More Watching")} ›</button>
+    <button type="button" class="ps-more" onclick="nav('${backPage}')">${ico("more",16)} ${t("More Watching")}</button>
   </div>`;
 }
 
@@ -2562,7 +2583,7 @@ function searchResultRow(m){
   var poster = (m.poster||m.poster_path||"").replace(/"/g,"&quot;");
   var thumb = poster
     ? `<img class="sr-thumb" src="${poster}" alt="" loading="lazy" onerror="this.classList.add('broken')">`
-    : `<div class="sr-thumb sr-thumb-fallback">🎬</div>`;
+    : `<div class="sr-thumb sr-thumb-fallback">${ico("film",28)}</div>`;
   var kind = m.adult ? "ADULT" : "MOVIE";
   return `<button type="button" class="sr-row" onclick='detail(${sid})'>
     ${thumb}
@@ -2581,7 +2602,7 @@ function searchPage(){
       <button type="button" class="mic-btn" id="micBtn" title="Voice search" aria-label="Voice search">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0" stroke="currentColor" stroke-width="2"/><path d="M12 18v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
-      <button type="button" class="search-go" onclick="doSearch()" aria-label="Search">🔍</button>
+      <button type="button" class="search-go" onclick="doSearch()" aria-label="Search">${ico("search",18)}</button>
     </div>
   </div>
   <div id="searchResults" class="search-results">${searchResultsHTML()}</div>`;
@@ -2660,16 +2681,10 @@ function bindDrawer(){
   setupAdminButton();
 }
 function isAdminUser(){
+  // Only server-verified admin (adminCheck). Never trust client-only session alone.
   try{
-    if(window.__IS_ADMIN===true) return true;
-    try{
-      if(sessionStorage.getItem("cinehub4_is_admin")==="1") return true;
-    }catch(e){}
-    const ids=(window.__ADMIN_IDS||[]);
-    const tg=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initDataUnsafe&&window.Telegram.WebApp.initDataUnsafe.user;
-    const uid=tg&&tg.id!=null?String(tg.id):"";
-    return !!uid && ids.length>0 && ids.map(String).includes(uid);
-  }catch(e){return false}
+    return window.__IS_ADMIN === true;
+  }catch(e){ return false; }
 }
 // Secure admin check: backend verifies Telegram initData. No admin IDs are exposed to the browser.
 function loadAdminIdsApp(){
@@ -2706,7 +2721,7 @@ function loadAdminIdsApp(){
       }else{
         window.__ADMIN_IDS=[];
         window.__IS_ADMIN=false;
-        try{ sessionStorage.removeItem("cinehub4_is_admin"); }catch(e){}
+        try{ sessionStorage.removeItem("cinehub4_is_admin"); localStorage.removeItem("cinehub4_admin_session"); }catch(e){}
       }
       try{setupAdminButton()}catch(e){}
     }).catch(function(err){
@@ -2774,18 +2789,31 @@ try{
 }catch(e){}
 function setupAdminButton(){
   try{
-    const btn=document.getElementById("adminPanelBtn");
+    const isAdm = (typeof isAdminUser==="function") ? isAdminUser() : false;
+    // Profile page admin wrap
     const wrap=document.getElementById("adminPanelWrap");
-    if(!btn && !wrap) return;
-    // Always show entry point — real auth is on admin.html (ADMIN_IDS server check)
-    if(wrap){ wrap.style.display="block"; }
-    if(btn){
-      btn.classList.remove("hidden");
-      btn.style.display="flex";
-      btn.onclick=function(e){
-        e.preventDefault();
-        location.href="admin.html";
-      };
+    const btn=document.getElementById("adminPanelBtn");
+    // Drawer admin button (may share id — query all)
+    const drawerBtns=document.querySelectorAll("#drawer #adminPanelBtn, #drawer button.admin-only, button.admin-only");
+    if(isAdm){
+      if(wrap){ wrap.style.display="block"; }
+      if(btn){
+        btn.classList.remove("hidden");
+        btn.style.display="flex";
+        btn.onclick=function(e){ e.preventDefault(); location.href="admin.html"; };
+      }
+      drawerBtns.forEach(function(b){
+        b.style.display="flex";
+        b.classList.remove("hidden");
+        b.onclick=function(e){ e.preventDefault(); location.href="admin.html"; };
+      });
+    }else{
+      if(wrap){ wrap.style.display="none"; }
+      if(btn){ btn.style.display="none"; btn.classList.add("hidden"); }
+      drawerBtns.forEach(function(b){
+        b.style.display="none";
+        b.classList.add("hidden");
+      });
     }
   }catch(e){}
 }

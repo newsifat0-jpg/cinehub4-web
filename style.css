@@ -1038,26 +1038,21 @@ img.poster-full{
 .poster-img{width:100%;height:100%;object-fit:cover;display:block;background:#0d1120}
 
 
-/* —— Aesthetic unlock metrics (no emoji) —— */
+/* —— Aesthetic unlock metrics (SVG icons) —— */
 .ps-m-ico{
-  width:28px;height:28px;border-radius:8px;display:grid;place-items:center;
-  margin-bottom:6px;position:relative;
+  width:32px;height:32px;border-radius:10px;display:grid;place-items:center;
+  margin:0 auto 6px;position:relative;
 }
-.ps-i-key{background:rgba(245,158,11,.15)}
-.ps-i-key::before{
-  content:"";width:12px;height:12px;border:2px solid #f59e0b;border-radius:50%;
-  display:block;box-shadow:5px 3px 0 -1px #f59e0b;
-}
-.ps-i-coin{background:rgba(234,179,8,.12)}
-.ps-i-coin::before{
-  content:"";width:14px;height:14px;border-radius:50%;
-  border:2px solid #eab308;box-shadow:inset 0 0 0 2px rgba(234,179,8,.25);
-}
-.ps-i-time{background:rgba(56,189,248,.12)}
-.ps-i-time::before{
-  content:"";width:12px;height:12px;border:2px solid #38bdf8;border-radius:50%;
-  border-top-color:transparent;display:block;
-}
+.ps-m-ico svg{display:block}
+.ps-i-key{background:rgba(245,158,11,.18);color:#fbbf24}
+.ps-i-coin{background:rgba(234,179,8,.14);color:#facc15}
+.ps-i-time{background:rgba(56,189,248,.14);color:#38bdf8}
+.ps-btn{display:flex;align-items:center;justify-content:center;gap:8px}
+.ps-more{display:flex;align-items:center;justify-content:center;gap:8px}
+.ps-bell{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:rgba(251,191,36,.15);color:#fbbf24;flex-shrink:0}
+.ps-bell svg{display:block}
+.pf-row-ico{display:inline-flex;align-items:center;gap:6px}
+
 
 /* Share row: Copy | Share */
 .ps-share-row{
@@ -1277,3 +1272,16 @@ img.poster-full{
 .pkg-tone-6 .pkg-ico{color:#fb923c;border-color:rgba(251,146,60,.35)}
 .pkg-buy{display:inline-flex;align-items:center;gap:6px}
 .pf-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+
+.earn-hero-ico,.buy-modal-icon,.gate-icon,.task-ico,.blocked-ico{display:grid;place-items:center}
+.earn-hero-ico svg,.buy-modal-icon svg,.gate-icon svg,.task-ico svg,.blocked-ico svg,.hb-ph-ico svg{display:block}
+.gate-icon{width:64px;height:64px;margin:0 auto 12px;border-radius:18px;background:linear-gradient(145deg,rgba(99,102,241,.25),rgba(56,189,248,.12));color:#93c5fd}
+.buy-modal-icon{width:56px;height:56px;margin:0 auto 10px;border-radius:16px;background:linear-gradient(135deg,#7c5cff,#5b8cff);color:#fff}
+.earn-hero-ico{color:#fbbf24}
+.earn-tags span{display:inline-flex;align-items:center;gap:4px}
+.hb-ph-ico{display:grid;place-items:center;color:#e2e8f0}
+
+.search-go{display:grid;place-items:center}
+.search-go svg{display:block;color:#e0f2fe}
+.ps-dl-ico svg{display:block}
+.mic-btn svg{display:block}

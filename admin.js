@@ -1613,7 +1613,10 @@ function settings(){
     <div class="form-grid">
       <div class="field"><label>Unlock Cost (points)</label><input id="s_unlockCost" type="number" value="${s.unlockCost||5}"></div>
       <div class="field"><label>Lock after (hours)</label><input id="s_unlockHours" type="number" value="${s.unlockHours||15}"></div>
-      <div class="field"><label>Ads needed to unlock</label><input id="s_adsForUnlock" type="number" value="${s.adsForUnlock||5}"></div>
+      <div class="field"><label>Ads needed to unlock (Movies)</label><input id="s_adsForUnlock" type="number" value="${s.adsForUnlock||5}"></div>
+      <div class="field"><label>Adult unlock cost (points)</label><input id="s_adultUnlockCost" type="number" value="${s.adultUnlockCost!=null?s.adultUnlockCost:3}"></div>
+      <div class="field"><label>Adult ads to unlock</label><input id="s_adultAdsForUnlock" type="number" value="${s.adultAdsForUnlock!=null?s.adultAdsForUnlock:5}"></div>
+      <div class="field"><label>Adult unlock hours</label><input id="s_adultUnlockHours" type="number" value="${s.adultUnlockHours!=null?s.adultUnlockHours:15}"></div>
       <div class="field"><label>Points per ad</label><input id="s_adReward" type="number" value="${s.adReward||2}"></div>
       <div class="field"><label>Daily ad limit</label><input id="s_dailyAd" type="number" value="${s.dailyAdLimit||20}"></div>
       <div class="field"><label>Download servers count</label><input id="s_servers" type="number" value="${s.downloadServers||1}"></div>
@@ -1701,6 +1704,9 @@ function saveAllSettings(){
   if(g("s_unlockCost")) s.unlockCost=Number(g("s_unlockCost").value)||5;
   if(g("s_unlockHours")) s.unlockHours=Number(g("s_unlockHours").value)||15;
   if(g("s_adsForUnlock")) s.adsForUnlock=Number(g("s_adsForUnlock").value)||5;
+  if(g("s_adultUnlockCost")) s.adultUnlockCost=Math.max(1, Number(g("s_adultUnlockCost").value)||3);
+  if(g("s_adultAdsForUnlock")) s.adultAdsForUnlock=Math.max(1, Number(g("s_adultAdsForUnlock").value)||5);
+  if(g("s_adultUnlockHours")) s.adultUnlockHours=Math.max(1, Number(g("s_adultUnlockHours").value)||15);
   if(g("s_adReward")) s.adReward=Number(g("s_adReward").value)||2;
   if(g("s_dailyAd")) s.dailyAdLimit=Number(g("s_dailyAd").value)||20;
   if(g("s_servers")) s.downloadServers=Number(g("s_servers").value)||1;

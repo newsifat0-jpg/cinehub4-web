@@ -57,7 +57,7 @@
       server1_status: s1on, server2_status: s2on, server3_status: s3on,
       s1on: s1on, s2on: s2on, s3on: s3on,
       category: d.category || (d.genres ? String(d.genres).split(",")[0].trim() : "All Movies"),
-      adult: !!d.adult, type: d.adult ? "Adult" : (d.type || "Movie"),
+      adult: !!(d.adult === true || d.adult === 1 || d.adult === "1" || d.adult === "true" || String(d.type||"").toLowerCase()==="adult"), type: (d.adult || String(d.type||"").toLowerCase()==="adult") ? "Adult" : (d.type || "Movie"),
       clicks: Number(d.clicks) || 0, downloads: Number(d.downloads) || 0,
       likes: Number(d.likes) || 0, views: Number(d.views || d.clicks) || 0,
       status: d.status || "Published", added_by: d.added_by || "",
