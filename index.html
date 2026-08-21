@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#0a0c14">
 <title>Cine Hub4</title>
 <style>html,body{background:#0a0c14!important;margin:0}</style>
-<link rel="stylesheet" href="style.css?v=20260821fix20">
-<script src="language.js?v=20260821fix6"></script>
+<link rel="stylesheet" href="style.css?v=20260821icons1">
+<script src="language.js?v=20260821lang2"></script>
 <script src="https://sad.adsgram.ai/js/sad.min.js" async></script>
 </head>
 <body style="background:#0a0c14">
@@ -23,22 +23,22 @@
 <div id="app">
 <main id="screen" style="min-height:60vh"></main>
 <nav class="bottom-nav" id="bottomNav">
-<button data-page="movies" class="nav-item active" type="button"><span class="nav-ico">🎬</span><span class="nav-lbl">Movies</span></button>
-<button data-page="series" class="nav-item" type="button"><span class="nav-ico">📺</span><span class="nav-lbl">Series</span></button>
-<button data-page="search" class="nav-item" type="button"><span class="nav-ico">🔍</span><span class="nav-lbl">Search</span></button>
-<button data-page="adult" class="nav-item" type="button"><span class="nav-ico">🔞</span><span class="nav-lbl">18+</span></button>
-<button data-page="profile" class="nav-item" type="button"><span class="nav-ico">👤</span><span class="nav-lbl">Profile</span></button>
+<button data-page="movies" class="nav-item active" type="button"><span class="nav-ico" data-ico="film"></span><span class="nav-lbl" data-i18n="Movies">Movies</span></button>
+<button data-page="series" class="nav-item" type="button"><span class="nav-ico" data-ico="tv"></span><span class="nav-lbl" data-i18n="Series">Series</span></button>
+<button data-page="search" class="nav-item" type="button"><span class="nav-ico" data-ico="search"></span><span class="nav-lbl" data-i18n="Search">Search</span></button>
+<button data-page="adult" class="nav-item" type="button"><span class="nav-ico" data-ico="adult"></span><span class="nav-lbl">18+</span></button>
+<button data-page="profile" class="nav-item" type="button"><span class="nav-ico" data-ico="user"></span><span class="nav-lbl" data-i18n="Profile">Profile</span></button>
 </nav>
 <div id="drawer" class="drawer-wrap hidden">
 <div class="drawer-backdrop"></div>
 <aside class="drawer">
 <div class="drawer-head"><div><strong>Cine Hub4</strong><small>Movie Mini App</small></div><button id="closeDrawer" type="button">×</button></div>
-<button type="button" data-page="movies">🎬 <span data-i18n="Movies">Movies</span></button>
-<button type="button" data-page="series">▤ <span data-i18n="Series">Series</span></button>
-<button type="button" data-page="adult">🔞 <span data-i18n="Adult">Adult</span></button>
-<button type="button" data-page="buy">🛒 <span data-i18n="Buy Points">Buy Points</span></button>
-<button type="button" data-page="tasks">✓ <span data-i18n="Daily Tasks">Daily Tasks</span></button>
-<button type="button" data-page="profile">◉ <span data-i18n="Profile">Profile</span></button>
+<button type="button" data-page="movies"><span class="dr-ico" data-ico="film"></span> <span data-i18n="Movies">Movies</span></button>
+<button type="button" data-page="series"><span class="dr-ico" data-ico="tv"></span> <span data-i18n="Series">Series</span></button>
+<button type="button" data-page="adult"><span class="dr-ico" data-ico="adult"></span> <span data-i18n="Adult">Adult</span></button>
+<button type="button" data-page="buy"><span class="dr-ico" data-ico="cart"></span> <span data-i18n="Buy Points">Buy Points</span></button>
+<button type="button" data-page="tasks"><span class="dr-ico" data-ico="task"></span> <span data-i18n="Daily Tasks">Daily Tasks</span></button>
+<button type="button" data-page="profile"><span class="dr-ico" data-ico="user"></span> <span data-i18n="Profile">Profile</span></button>
 <div class="lang-switch" id="langSwitch">
   <div class="lang-head"><span class="lang-ico">A文</span> <span data-i18n="Language">ভাষা পরিবর্তন</span></div>
   <div class="lang-toggle">
@@ -47,8 +47,8 @@
   </div>
 </div>
 <div class="drawer-spacer"></div>
-<button type="button" data-page="telegram">◉ <span>Telegram</span></button>
-<button id="adminPanelBtn" class="admin-only" type="button" style="display:flex">🛡️ <span data-i18n="Admin Panel">Admin Panel</span></button>
+<button type="button" data-page="telegram"><span class="dr-ico" data-ico="telegram"></span> <span data-i18n="Telegram">Telegram</span></button>
+<button id="adminPanelBtn" class="admin-only" type="button" style="display:flex"><span class="dr-ico" data-ico="shield"></span> <span data-i18n="Admin Panel">Admin Panel</span></button>
 </aside>
 </div>
 <div id="pageTransition" class="page-transition hidden" aria-hidden="true">
@@ -65,15 +65,15 @@
 </div>
 <div id="toast"></div>
 </div>
-<script src="https://telegram.org/js/telegram-web-app.js?v=20260821adultgate1"></script>
+<script src="https://telegram.org/js/telegram-web-app.js?v=20260821lang2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="config.js?v=20260820final"></script>
 <script src="firebase-helper.js?v=20260821final"></script>
-<script src="app.js?v=20260821adultgate1"></script>
+<script src="app.js?v=20260821lang2"></script>
 <script>
-/* last-resort safety net only — app.js?v=20260821adultgate1"appSplash");
+/* last-resort safety net only — app.js?v=20260821lang2"appSplash");
     if(s && !s.classList.contains("gone")){ s.className="gone"; s.style.display="none"; }
     var sc=document.getElementById("screen");
     if(sc && sc.innerHTML.indexOf("Loading Cine Hub4")>=0){
-      sc.innerHTML='<div style="padding:24px;color:#f88;text-align:center"><b>App script did not load</b><br><small>Upload app.js?v=20260821adultgate1
+      sc.innerHTML='<div style="padding:24px;color:#f88;text-align:center"><b>App script did not load</b><br><small>Upload app.js?v=20260821lang2

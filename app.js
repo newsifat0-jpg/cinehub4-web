@@ -1,5 +1,18 @@
 /* bilingual helper — never pass movie titles to t() */
 
+
+function paintStaticIcons(){
+  try{
+    document.querySelectorAll("[data-ico]").forEach(function(el){
+      if(el.getAttribute("data-painted")==="1") return;
+      var n = el.getAttribute("data-ico");
+      if(!n || typeof ico!=="function") return;
+      el.innerHTML = ico(n, el.classList.contains("nav-ico")?22:18);
+      el.setAttribute("data-painted","1");
+    });
+  }catch(e){}
+}
+
 function applyTheme(){
   try{
     const r=document.documentElement;
@@ -12,6 +25,48 @@ function applyTheme(){
 }
 function t(k){try{return (window.CINEHUB4_LANG&&window.CINEHUB4_LANG.t)?window.CINEHUB4_LANG.t(k):k}catch(e){return k}}
 window.__cinehub_rerender=function(){if(window.__cinehub_langSwitching)return;try{render(false)}catch(e){}};
+
+/** Professional SVG icons (stroke) */
+function ico(name, size){
+  size = size || 20;
+  var s = String(size);
+  var common = 'width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"';
+  var paths = {
+    film: '<rect x="2" y="2" width="20" height="20" rx="2.5"/><path d="M7 2v20M17 2v20M2 12h20M2 7h5M2 17h5M17 7h5M17 17h5"/>',
+    tv: '<rect x="2" y="7" width="20" height="13" rx="2"/><path d="M8 7V4M16 7V4M12 4v3M8 21h8"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+    adult: '<circle cx="12" cy="12" r="10"/><path d="M8 15c1.2-1.5 2.5-2.2 4-2.2s2.8.7 4 2.2"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-3.5 4.2-5 8-5s6.5 1.5 8 5"/>',
+    users: '<circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.8"/><path d="M2.5 19.5c1.2-3 3.5-4.5 6.5-4.5s5.3 1.5 6.5 4.5"/><path d="M14.5 15.2c1.6-.4 3.2.1 4.5 1.8"/>',
+    coin: '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c.6-.8 1.5-1.2 2.5-1.2 1.7 0 3 1 3 2.5s-1.3 2.5-3 2.5h-1c-1.7 0-3 1-3 2.5s1.3 2.5 3 2.5c1 0 1.9-.4 2.5-1.2"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L11 5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.81 13.12a5 5 0 0 0 7.07 7.07L13 19"/>',
+    copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+    share: '<circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.5 13.4l6.9 3.95M15.5 6.65l-6.9 3.95"/>',
+    cart: '<circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none"/><circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none"/><path d="M3 4h2l2.2 11h11.3l2-7H7.2"/>',
+    chart: '<path d="M4 19V5M4 19h16"/><path d="M8 16v-5M12 16V8M16 16v-3"/>',
+    zap: '<path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>',
+    star: '<path d="M12 3l2.4 5.4L20 9.3l-4 4.2.9 5.8L12 16.8 7.1 19.3l.9-5.8-4-4.2 5.6-.9L12 3z"/>',
+    medal: '<circle cx="12" cy="9" r="5"/><path d="M8.5 13.5L6 21l6-3 6 3-2.5-7.5"/>',
+    crown: '<path d="M3 17h18l-1.5-9-4.5 4L12 5l-3 7-4.5-4L3 17z"/><path d="M5 17h14v2H5z"/>',
+    gem: '<path d="M6 3h12l4 7-10 11L2 10l4-7z"/><path d="M2 10h20M12 3v18M8.5 3l-4 7M15.5 3l4 7"/>',
+    fire: '<path d="M12 22c4 0 7-2.8 7-7 0-3.2-1.8-5.2-3.2-6.6-.4 2.2-1.8 3.2-1.8 3.2S13.5 7 13 4c0 0-5 2.5-5 8.5 0 .8.2 1.5.5 2.1C7.2 13.8 6 12 6 10c0 0-1 1.8-1 5 0 4.2 3 7 7 7z"/>',
+    check: '<circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9"/>',
+    telegram: '<path d="M21 5L3 12.5l5 1.8L18 8l-8 7.2v3.3l2.8-2.5 4.2 3.1L21 5z"/>',
+    shield: '<path d="M12 3l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3z"/>',
+    download: '<path d="M12 4v12M7 12l5 5 5-5M5 20h14"/>',
+    mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+    play: '<circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4V8z" fill="currentColor" stroke="none"/>',
+    wallet: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14h2"/>',
+    task: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>',
+    overview: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'
+  };
+  var body = paths[name] || paths.star;
+  return '<svg class="ui-ico" '+common+'>'+body+'</svg>';
+}
+function icoWrap(name, cls){
+  return '<span class="ico-svg '+(cls||'')+'" aria-hidden="true">'+ico(name, 18)+'</span>';
+}
+
 
 /** Current UI language */
 function langIsBn(){try{return (window.CINEHUB4_LANG&&window.CINEHUB4_LANG.get&&window.CINEHUB4_LANG.get())==="bn"}catch(e){return false}}
@@ -787,6 +842,7 @@ function card(m,idx){
   const curMode=state.page==="adult"?state.adultMode:state.mode;
   const top=idx===0&&curMode==="trending"?`<span class="movie-top">TOP 1</span>`:"";
   const title=(m.title||"").split("|")[0].trim().replace(/</g,"");
+  const year=String(m.year||m.release_year||m.releaseYear||"").trim().replace(/</g,"");
   const sid=JSON.stringify(String(m.id));
   const rating=movieRatingLabel(m);
   const dur=movieDurationLabel(m);
@@ -795,11 +851,14 @@ function card(m,idx){
       ${top}
       ${rating?`<span class="movie-rating">★ ${rating}</span>`:""}
       ${posterHTML(m)}
-      ${dur?`<span class="movie-dur"><span class="movie-dur-ico">⏱</span>${dur}</span>`:""}
+      ${dur?`<span class="movie-dur"><span class="movie-dur-ico" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>${dur}</span>`:""}
     </div>
     <div class="movie-body">
       <div class="movie-body-row">
-        <div class="mtitle">${title}</div>
+        <div class="mtitle-wrap">
+          <div class="mtitle">${title}</div>
+          ${year?`<div class="myear">${year}</div>`:""}
+        </div>
         <button type="button" class="share-btn share-btn-round share-btn-glass" onclick='event.stopPropagation();shareMovie(${sid})' aria-label="Share"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.5 13.4l6.9 3.95M15.5 6.65l-6.9 3.95"/></svg></button>
       </div>
     </div>
@@ -912,7 +971,7 @@ function filterCat(c){
   showPageTransition(function(){state.category=c;render(true)});
 }
 function listForHome(){let list=movies.filter(m=>!m.adult);if(state.category&&state.category!=="All Movies"&&state.category!=="All"){list=list.filter(m=>(m.category||"").toLowerCase().includes(state.category.toLowerCase().replace(" moves","").replace(" movie hindi",""))|| (m.category||"").toLowerCase()===state.category.toLowerCase())}if(state.mode==="trending")list=list.slice().sort((a,b)=>(b.views||b.clicks||0)-(a.views||a.clicks||0));else list=list.slice().sort((a,b)=>b.id-a.id);return list}
-function moviesPage(){const list=listForHome();return `<div class="home-sticky-top" id="homeSticky">`+primeHeader()+heroPills()+`<div class="home-sticky-line"></div></div>`+catRow()+libCard()+ticker()+(list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No movies found.")}</div>`)}
+function moviesPage(){const list=listForHome();return `<div class="home-sticky-top" id="homeSticky">`+primeHeader()+heroPills()+catRow()+`<div class="home-sticky-line"></div></div>`+libCard()+ticker()+(list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No movies found.")}</div>`)}
 function setAdultMode(m){
   if(state.adultMode===m)return;
   showPageTransition(function(){state.adultMode=m;render(true)});
@@ -955,7 +1014,7 @@ function adult(){
     </div>`;
   }
   const list=listForAdult();
-  return `<div class="home-sticky-top" id="homeSticky">`+adultHeaderWithSearch()+heroPillsAdult()+`<div class="home-sticky-line"></div></div>`+catRowAdult()+libCardAdult()+tickerAdult()+list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No adult content yet. Add from Admin Panel.")}</div>`;
+  return `<div class="home-sticky-top" id="homeSticky">`+adultHeaderWithSearch()+heroPillsAdult()+catRowAdult()+`<div class="home-sticky-line"></div></div>`+libCardAdult()+tickerAdult()+list.map((m,i)=>card(m,i)).join("")||`<div class="empty">${t("No adult content yet. Add from Admin Panel.")}</div>`;
 }
 function adultHeaderWithSearch(){
   return `<div class="page-back-bar adult-head-bar">
@@ -1069,12 +1128,12 @@ function profile(){
       </div>
     </div>
   </div>
-  <div class="pf-section">📊 ${t("OVERVIEW")}</div>
+  <div class="pf-section">${icoWrap("overview","sec")} ${t("OVERVIEW")}</div>
   <div class="pf-stats">
-    <div class="pf-stat"><div><b>${state.points}</b><span>${t("My Points")}</span></div><div class="ico">🪙</div></div>
-    <div class="pf-stat"><div><b>${refs}</b><span>${t("Total Referrals")}</span></div><div class="ico">👥</div></div>
+    <div class="pf-stat"><div><b>${state.points}</b><span>${t("My Points")}</span></div><div class="ico ico-coin">${ico("coin",22)}</div></div>
+    <div class="pf-stat"><div><b>${refs}</b><span>${t("Total Referrals")}</span></div><div class="ico ico-users">${ico("users",22)}</div></div>
   </div>
-  <div class="pf-section">🔗 ${t("REFERRAL SYSTEM")}</div>
+  <div class="pf-section">${icoWrap("link","sec")} ${t("REFERRAL SYSTEM")}</div>
   <div class="pf-panel">
     <div class="pf-row"><span>${t("Per Referral Reward")}</span><b>${cfg.referralReward||20} ${t("Points")}</b></div>
     <div class="pf-row"><span>${t("Join Bonus")}</span><b>${cfg.joinBonus||10} ${t("Points")}</b></div>
@@ -1082,7 +1141,7 @@ function profile(){
     <div style="font-size:12px;color:#9aa3b8;margin-top:8px">${t("Your Referral Link")}</div>
     <div class="pf-linkbox" id="refLinkText">${refLink}</div>
     <div class="pf-actions">
-      <button type="button" class="pf-btn copy" onclick="copyRefLink()">📋 ${t("Copy Link")}</button>
+      <button type="button" class="pf-btn copy" onclick="copyRefLink()">${ico("copy",16)} ${t("Copy Link")}</button>
       <button type="button" class="pf-btn share" onclick="shareRefLink()">↗ ${t("Share")}</button>
     </div>
   </div>
@@ -1093,7 +1152,7 @@ function profile(){
   </div>
   <div class="pf-actions" style="margin-bottom:12px">
     <button type="button" class="pf-btn tutorial" onclick="openLink(cfg.watchTutorialVideo||cfg.telegramBotLink)">▶ ${t("Watch Tutorial")}</button>
-    <button type="button" class="pf-btn buy" onclick="nav('buy')">🛒 ${t("Buy Points")}</button>
+    <button type="button" class="pf-btn buy" onclick="nav('buy')">${ico("cart",16)} ${t("Buy Points")}</button>
   </div>
   <div class="pf-section">${t("MORE POINT EARNING")}</div>
   <div class="earn-card">
@@ -1581,31 +1640,31 @@ function buy(){
     </div>`;
   }
   const pkgs=getPackages();
-  const icons=["⚡","⭐","🏅","👑","💎","🔥"];
+  const icons=["zap","star","medal","crown","gem","fire"];
   return pageBackBar(t("Buy Points"))+`
   <div class="earn-card">
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
-      <div class="ico" style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#7c5cff,#5b8cff);display:grid;place-items:center;font-size:22px">🪙</div>
-      <div><h3 style="margin:0">Buy Premium Points</h3>
-      <p style="margin:4px 0 0;font-size:12px;color:#9aa3b8">Select a package or enter custom USDT amount, then submit your payment proof for admin approval.</p></div>
+      <div class="ico ico-head">${ico("coin",24)}</div>
+      <div><h3 style="margin:0">${t("Buy Premium Points")}</h3>
+      <p style="margin:4px 0 0;font-size:12px;color:#9aa3b8">${t("Select a package or enter custom USDT amount, then submit your payment proof for admin approval.")}</p></div>
     </div>
-    <button type="button" class="pf-btn wide" style="margin-top:8px" onclick="openLink(cfg.howToBuyVideo||cfg.telegramBotLink)">▶ How to Buy Points</button>
+    <button type="button" class="pf-btn wide" style="margin-top:8px" onclick="openLink(cfg.howToBuyVideo||cfg.telegramBotLink)">${ico("play",16)} ${t("How to Buy Points")}</button>
   </div>
-  <div class="pf-section">💎 SELECT PACKAGE</div>
+  <div class="pf-section">${icoWrap("gem","sec")} ${t("SELECT PACKAGE")}</div>
   ${pkgs.map((p,i)=>`<div class="pkg-row pkg-tone-${(i%6)+1}">
-    <div class="pkg-ico">${icons[i%icons.length]}</div>
+    <div class="pkg-ico">${ico(icons[i%icons.length],20)}</div>
     <div class="pkg-meta">
       <div class="pkg-name">${langIsBn()&&p.nameBn?p.nameBn:t(p.name||"")} ${p.tag?`<span class="pkg-tag">${langIsBn()&&p.tagBn?p.tagBn:t(p.tag||"")}</span>`:""}</div>
-      <div class="pkg-sub">$ ${p.price} USDT · <span style="color:#4ade80">${p.points} Points</span></div>
+      <div class="pkg-sub">$ ${p.price} USDT · <span style="color:#4ade80">${p.points} ${t("Points")}</span></div>
     </div>
-    <button type="button" class="pkg-buy" onclick="startBuy('${p.name.replace(/'/g,"")}',${p.price},${p.points})">🛒 Buy</button>
+    <button type="button" class="pkg-buy" onclick="startBuy('${String(p.name||"").replace(/'/g,"")}',${p.price},${p.points})">${ico("cart",15)} ${t("Buy")}</button>
   </div>`).join("")}
-  <div class="pf-section">✦ CUSTOM AMOUNT</div>
+  <div class="pf-section">${icoWrap("wallet","sec")} ${t("CUSTOM AMOUNT")}</div>
   <div class="pf-panel">
     <label style="font-size:12px;color:#9aa3b8">Enter Points Amount</label>
     <input id="customPts" type="number" placeholder="Example: 1000" oninput="updateCustomUsdt()" style="width:100%;margin:8px 0;padding:12px;border-radius:12px;border:1px solid #2a334d;background:#0c101c;color:#eef1ff">
     <div class="pf-row"><span>Required USDT</span><b id="customUsdtShow">0.00 USDT</b></div>
-    <button type="button" class="pf-btn wide copy" style="margin-top:10px" onclick="buyCustom()">👑 ${t("Purchase Custom Coins")}</button>
+    <button type="button" class="pf-btn wide copy" style="margin-top:10px" onclick="buyCustom()">${ico("crown",16)} ${t("Purchase Custom Coins")}</button>
   </div>`;
 }
 
@@ -1831,7 +1890,7 @@ function detailView(){
       <div class="ps-poster-img">${posterHTML(m,"full")}</div>
       <div class="ps-badge">${isAdult?"18+":t("Movie")}</div>
       ${rating?`<div class="ps-rating-badge">★ ${rating}</div>`:""}
-      ${dur?`<div class="ps-dur-badge">${dur}</div>`:""}
+      ${dur?`<div class="ps-dur-badge"><span class="ps-dur-ico" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>${dur}</div>`:""}
     </div>
     <div class="ps-share-row ps-share-row-solo">
       <button type="button" class="ps-share-btn ps-send ps-share-big" onclick='shareMovie(${JSON.stringify(String(m.id))})'>
@@ -2806,6 +2865,7 @@ try{
 }catch(e){}
 if($("#backBtn"))$("#backBtn").onclick=()=>goBack();
 $$(".nav-item").forEach(b=>b.onclick=()=>nav(b.dataset.page));
+  try{paintStaticIcons()}catch(e){}
 setupAdminButton();setTimeout(setupAdminButton,250);setTimeout(setupAdminButton,1000);
 bindDrawer();
 
@@ -2886,6 +2946,7 @@ setTimeout(function(){
   }
 },2500);
 bindLeaveGuard();
+try{paintStaticIcons()}catch(e){}
 
 function killSplash(){
   const s=document.getElementById("appSplash");

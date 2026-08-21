@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#070a12">
   <title>Cine Hub4 • Admin Control Center</title>
-  <link rel="stylesheet" href="admin.css?v=20260821full1">
-  <script src="language.js?v=20260820fix2"></script>
+  <link rel="stylesheet" href="admin.css?v=20260821icons2">
+  <script src="language.js?v=20260821lang2"></script>
 </head>
 <body>
   <!-- Gate -->
@@ -38,19 +38,19 @@
         <div><b>Super Admin</b><small>Telegram verified</small></div>
       </div>
       <nav id="sideNav">
-        <button type="button" data-section="dashboard" class="active">⌂ <span>Dashboard</span></button>
-        <button type="button" data-section="movies">🎬 <span>Movies</span></button>
-        <button type="button" data-section="categories">▦ <span>Categories</span></button>
-        <button type="button" data-section="users">♙ <span>Users</span></button>
-        <button type="button" data-section="points">◈ <span>Points & Unlocks</span></button>
-        <button type="button" data-section="ads">◉ <span>Ads & Ad IDs</span></button>
-        <button type="button" data-section="tasks">✓ <span>Daily Tasks</span></button>
-        <button type="button" data-section="payments">৳ <span>Payments</span><em id="payBadge" style="display:none">0</em></button>
-        <button type="button" data-section="adult">18+ <span>Adult Library</span></button>
-        <button type="button" data-section="requests">✉ <span>Movie Requests</span><em id="reqBadge" style="display:none">0</em></button>
-        <button type="button" data-section="content">🔗 <span>Links & Videos</span></button>
-        <button type="button" data-section="broadcast">↗ <span>Broadcast</span></button>
-        <button type="button" data-section="settings">⚙ <span>Settings</span></button>
+        <button type="button" data-section="dashboard" class="active"><span class="adm-ico" data-ico="chart"></span> <span>Dashboard</span></button>
+        <button type="button" data-section="movies"><span class="adm-ico" data-ico="film"></span> <span>Movies</span></button>
+        <button type="button" data-section="categories"><span class="adm-ico" data-ico="grid"></span> <span>Categories</span></button>
+        <button type="button" data-section="users"><span class="adm-ico" data-ico="users"></span> <span>Users</span></button>
+        <button type="button" data-section="points"><span class="adm-ico" data-ico="coin"></span> <span>Points & Unlocks</span></button>
+        <button type="button" data-section="ads"><span class="adm-ico" data-ico="ad"></span> <span>Ads & Ad IDs</span></button>
+        <button type="button" data-section="tasks"><span class="adm-ico" data-ico="task"></span> <span>Daily Tasks</span></button>
+        <button type="button" data-section="payments"><span class="adm-ico" data-ico="wallet"></span> <span>Payments</span><em id="payBadge" style="display:none">0</em></button>
+        <button type="button" data-section="adult"><span class="adm-ico" data-ico="adult"></span> <span>Adult Library</span></button>
+        <button type="button" data-section="requests"><span class="adm-ico" data-ico="mail"></span> <span>Movie Requests</span><em id="reqBadge" style="display:none">0</em></button>
+        <button type="button" data-section="content"><span class="adm-ico" data-ico="link"></span> <span>Links & Videos</span></button>
+        <button type="button" data-section="broadcast"><span class="adm-ico" data-ico="send"></span> <span>Broadcast</span></button>
+        <button type="button" data-section="settings"><span class="adm-ico" data-ico="settings"></span> <span>Settings</span></button>
       </nav>
       <div class="side-bottom">
         <button type="button" id="openUser">↗ Open User App</button>
@@ -81,7 +81,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="config.js?v=20260821adminfix"></script>
   <script src="firebase-helper.js?v=20260821final"></script>
-  <script src="admin.js?v=20260821full1"></script>
+  <script src="admin.js?v=20260821icons2"></script>
   <script>
     // Hard bind Enter button (survives any earlier onclick loss)
     document.addEventListener("DOMContentLoaded", function(){

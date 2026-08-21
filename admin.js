@@ -78,6 +78,43 @@ const DEFAULT={
   themePink:"#ec4899",
   themeBg:"#0a0c14"
 };
+
+function admIco(name, size){
+  size = size || 18;
+  var s = String(size);
+  var common = 'width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"';
+  var p = {
+    film: '<rect x="2" y="2" width="20" height="20" rx="2.5"/><path d="M7 2v20M17 2v20M2 12h20"/>',
+    chart: '<path d="M4 19V5M4 19h16"/><path d="M8 16v-5M12 16V8M16 16v-3"/>',
+    grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+    users: '<circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.8"/><path d="M2.5 19.5c1.2-3 3.5-4.5 6.5-4.5s5.3 1.5 6.5 4.5"/>',
+    coin: '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c.6-.8 1.5-1.2 2.5-1.2 1.7 0 3 1 3 2.5s-1.3 2.5-3 2.5h-1"/>',
+    ad: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h4M7 14h2M14 10l4 2-4 2z"/>',
+    task: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>',
+    wallet: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14h2"/>',
+    adult: '<circle cx="12" cy="12" r="10"/><path d="M8 15c1.2-1.5 2.5-2.2 4-2.2s2.8.7 4 2.2"/>',
+    mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 7 9-7"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L11 5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.81 13.12a5 5 0 0 0 7.07 7.07L13 19"/>',
+    send: '<path d="M21 5L3 12.5l5 1.8L18 8l-8 7.2v3.3l2.8-2.5 4.2 3.1L21 5z"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    pay: '<path d="M12 2v20M17 7H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'
+  };
+  return '<svg class="ui-ico" '+common+'>'+(p[name]||p.film)+'</svg>';
+}
+function paintAdminIcons(){
+  try{
+    document.querySelectorAll("[data-ico]").forEach(function(el){
+      // re-paint if empty (after render) or not yet painted
+      if(el.getAttribute("data-painted")==="1" && el.querySelector("svg")) return;
+      var n=el.getAttribute("data-ico");
+      if(!n) return;
+      var sz = el.classList.contains("stat-icon") ? 22 : 18;
+      el.innerHTML=admIco(n, sz);
+      el.setAttribute("data-painted","1");
+    });
+  }catch(e){}
+}
+
 const A={section:"dashboard",settings:{...DEFAULT,...JSON.parse(localStorage.getItem("cinehub4_settings")||"{}")},movies:[],users:0,points:0,adultEnabled:true,moviesLoaded:false,payments:[],requests:[],userList:[],statsLoaded:false};
 /* Load movies from Firebase — prefer secure API, fallback client listen */
 function applyMoviesList_(list){
@@ -470,6 +507,8 @@ function loadAdminIdsFromFB(fromButton){
   }catch(e){ return Promise.resolve(false); }
 }
 function boot(){
+  try{ paintAdminIcons(); }catch(e){}
+  setTimeout(function(){ try{ paintAdminIcons(); }catch(e){} }, 200);
   try{ window.Telegram.WebApp.ready(); window.Telegram.WebApp.expand(); }catch(e){}
   var tgId=getTelegramUserId();
   var inp=document.getElementById("adminIdInput");
@@ -495,6 +534,8 @@ function setSection(s){ if(s==='payments') window.__payLoaded=false; if(s==='req
     if(tt) tt.textContent=sectionTitle(s);
     document.querySelectorAll('#sideNav button').forEach(b=>b.classList.toggle('active',b.dataset.section===s));
     render();
+    try{ paintAdminIcons(); }catch(e){}
+    setTimeout(function(){ try{ paintAdminIcons(); }catch(e){} }, 50);
     closeSidebar();
   }catch(err){console.error('setSection',err);toast('Section error: '+err.message)}
 }
@@ -549,10 +590,10 @@ function dashboard(){
   }
   var pendingPay = (A.payments||[]).filter(function(p){return (p.status||"pending")==="pending"}).length;
   return `<div class="stats-row">
-  <div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-value">${money(A.users)}</div><div class="stat-sub">From Firebase</div><div class="stat-icon">♙</div></div>
-  <div class="stat-card"><div class="stat-label">Movies</div><div class="stat-value">${A.movies.length}</div><div class="stat-sub">Live library</div><div class="stat-icon">🎬</div></div>
-  <div class="stat-card"><div class="stat-label">Points Issued</div><div class="stat-value">${money(A.points)}</div><div class="stat-sub">Sum of user points</div><div class="stat-icon">◈</div></div>
-  <div class="stat-card"><div class="stat-label">Pending Payments</div><div class="stat-value">${pendingPay}</div><div class="stat-sub">Needs review</div><div class="stat-icon">৳</div></div>
+  <div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-value">${money(A.users)}</div><div class="stat-sub">From Firebase</div><div class="stat-icon" data-ico="users"></div></div>
+  <div class="stat-card"><div class="stat-label">Movies</div><div class="stat-value">${A.movies.length}</div><div class="stat-sub">Live library</div><div class="stat-icon" data-ico="film"></div></div>
+  <div class="stat-card"><div class="stat-label">Points Issued</div><div class="stat-value">${money(A.points)}</div><div class="stat-sub">Sum of user points</div><div class="stat-icon" data-ico="coin"></div></div>
+  <div class="stat-card"><div class="stat-label">Pending Payments</div><div class="stat-value">${pendingPay}</div><div class="stat-sub">Needs review</div><div class="stat-icon" data-ico="wallet"></div></div>
 </div>
 <div class="grid section-grid">
   <div class="card">
@@ -566,9 +607,9 @@ function dashboard(){
     <h3>Quick Controls</h3>
     <div class="quick-list" style="margin-top:10px">
       <button type="button" onclick="openMovie()"><span style="font-size:18px">＋</span><span><b>Add Movie</b><br><span class="muted smalltext">Publish title to library</span></span></button>
-      <button type="button" onclick="setSection('ads')"><span style="font-size:18px">◉</span><span><b>Ad IDs</b><br><span class="muted smalltext">Manage every ad block</span></span></button>
-      <button type="button" onclick="setSection('content')"><span style="font-size:18px">🔗</span><span><b>Links & Video</b><br><span class="muted smalltext">Telegram + How to Watch</span></span></button>
-      <button type="button" onclick="setSection('categories')"><span style="font-size:18px">▦</span><span><b>Categories</b><br><span class="muted smalltext">Add / rename / delete</span></span></button>
+      <button type="button" onclick="setSection('ads')"><span class="adm-ico" data-ico="ad"></span><span><b>Ad IDs</b><br><span class="muted smalltext">Manage every ad block</span></span></button>
+      <button type="button" onclick="setSection('content')"><span class="adm-ico" data-ico="link"></span><span><b>Links & Video</b><br><span class="muted smalltext">Telegram + How to Watch</span></span></button>
+      <button type="button" onclick="setSection('categories')"><span class="adm-ico" data-ico="grid"></span><span><b>Categories</b><br><span class="muted smalltext">Add / rename / delete</span></span></button>
     </div>
   </div>
 </div>
