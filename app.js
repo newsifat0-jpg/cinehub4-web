@@ -254,21 +254,54 @@ function openSharedMovie(id){
   var realId=found?String(found.id):id;
   var isAdult=found?!!found.adult:false;
   try{
-    // Keep only until first successful user navigation
     sessionStorage.setItem("cinehub4_detail", realId);
-    localStorage.setItem("cinehub4_page", isAdult && !state.adultOK ? "adult" : "detail");
   }catch(e){}
+  // Movies not loaded yet — remember id; adult check runs when list arrives
+  if(!found && (!movies || !movies.length)){
+    state.detailId=realId;
+    state.pendingAdultDetail=null;
+    try{ localStorage.setItem("cinehub4_page","detail"); }catch(e){}
+    return true;
+  }
   if(isAdult && !state.adultOK){
     state.pendingAdultDetail=realId;
     state.detailId=realId;
     state.page="adult";
+    state.history=[];
+    try{ localStorage.setItem("cinehub4_page","adult"); sessionStorage.setItem("cinehub4_page","adult"); }catch(e){}
   }else{
     state.pendingAdultDetail=null;
     state.detailId=realId;
     state.page="detail";
-    state.history=[];
+    // Adult movie → back goes to Adult tab; normal → movies
+    state.history = isAdult ? ["adult"] : ["movies"];
+    try{
+      sessionStorage.setItem("cinehub4_history", JSON.stringify(state.history));
+      localStorage.setItem("cinehub4_page","detail");
+      sessionStorage.setItem("cinehub4_page","detail");
+    }catch(e){}
   }
   return true;
+}
+/** After movies list loads: if shared id is adult and not verified → 18+ gate */
+function applyAdultGateIfNeeded(){
+  try{
+    if(window.__deeplinkUserNav) return false;
+    if(state.adultOK) return false;
+    var id = state.pendingAdultDetail || state.detailId || sessionStorage.getItem("cinehub4_detail") || "";
+    if(!id) return false;
+    var found = resolveMovieByParam(id);
+    if(!found || !found.adult) return false;
+    state.pendingAdultDetail = String(found.id);
+    state.detailId = String(found.id);
+    state.page = "adult";
+    state.history = [];
+    try{
+      sessionStorage.setItem("cinehub4_page","adult");
+      localStorage.setItem("cinehub4_page","adult");
+    }catch(e){}
+    return true;
+  }catch(e){ return false; }
 }
 
 function shareMovie(id){
@@ -493,6 +526,7 @@ function loadMoviesFromFB(){
       if(!window.__deeplinkUserNav && typeof handleStartParam==="function"){
         handleStartParam();
       }
+      if(typeof applyAdultGateIfNeeded==="function") applyAdultGateIfNeeded();
     }catch(e){}
     safeRender(false);
   });
@@ -508,6 +542,7 @@ function loadMoviesFromFB(){
             if(!window.__deeplinkUserNav && typeof handleStartParam==="function"){
               handleStartParam();
             }
+            if(typeof applyAdultGateIfNeeded==="function") applyAdultGateIfNeeded();
           }catch(e){}
           safeRender(false);
         }
@@ -707,10 +742,20 @@ function goBack(){
   let prev=null;
   try{prev=state.history.pop()}catch(e){}
   try{sessionStorage.setItem("cinehub4_history",JSON.stringify(state.history||[]))}catch(e){}
-  if(!prev) prev="movies";
+  if(!prev){
+    // Adult movie detail → Adult tab; otherwise movies
+    prev="movies";
+    try{
+      if(state.page==="detail" && state.detailId){
+        var mm=(movies||[]).find(function(x){return String(x.id)===String(state.detailId)});
+        if(mm && mm.adult) prev="adult";
+      }
+    }catch(e){}
+  }
   const go=function(){
     state.page=prev;
     state.detailId=null;
+    state.pendingAdultDetail=null;
     try{sessionStorage.setItem("cinehub4_page",prev);localStorage.setItem("cinehub4_page",prev)}catch(e){}
     render(true);
     try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){}
@@ -1698,8 +1743,16 @@ function detail(id){
     return;
   }
   if(state.page!=="detail"){
-    state.history.push(state.page);
+    var fromPage = state.page;
+    // Opening adult content from share/home → ensure back lands on Adult tab
+    if(m.adult && fromPage!=="adult" && fromPage!=="adultSearch"){
+      fromPage = "adult";
+    }
+    state.history.push(fromPage);
     if(state.history.length>30)state.history.shift();
+    try{sessionStorage.setItem("cinehub4_history",JSON.stringify(state.history))}catch(e){}
+  }else if(m.adult && (!state.history || !state.history.length)){
+    state.history = ["adult"];
     try{sessionStorage.setItem("cinehub4_history",JSON.stringify(state.history))}catch(e){}
   }
   state.detailId=id;
