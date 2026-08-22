@@ -1,6 +1,9 @@
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 const DEFAULT={
   appName:"Cine Hub4",
+  menuTitle:"Cine Hub4 Menu",
+  menuTitleBn:"Cine Hub4 মেনু",
+  menuLogoUrl:"assets/logo.png",
   botUsername:"@Cinehub4bot",
   telegramBotLink:"https://t.me/Cinehub4bot",
   miniAppName:"Hub4",
@@ -15,6 +18,11 @@ const DEFAULT={
   adReward:2,
   dailyAdLimit:20,
   joinBonus:10,
+  welcomeEnabled:true,
+  welcomeTitle:"Welcome to Cine Hub4",
+  welcomeTitleBn:"Cine Hub4-এ স্বাগতম",
+  welcomeBody:"Watch all kinds of movies & series and download for free. Enjoy unlimited entertainment!",
+  welcomeBodyBn:"সকল প্রকার মুভি ও সিরিজ দেখুন এবং ফ্রিতে ডাউনলোড করুন। সীমাহীন বিনোদন উপভোগ করুন!",
   referralReward:20,
   downloadServers:1,
   adsForUnlock:5,
@@ -1761,6 +1769,10 @@ function settings(){
   <div class="card"><h3>Brand & Links</h3>
     <div class="form-grid">
       <div class="field"><label>App Name</label><input id="s_appName" value="${s.appName||""}"></div>
+      <div class="field"><label>Side menu title (EN)</label><input id="s_menuTitle" value="${s.menuTitle||"Cine Hub4 Menu"}" placeholder="Cine Hub4 Menu"></div>
+      <div class="field"><label>Side menu title (বাংলা)</label><input id="s_menuTitleBn" value="${s.menuTitleBn||""}" placeholder="Cine Hub4 মেনু"></div>
+      <div class="field" style="grid-column:1/-1"><label>Side menu logo URL</label><input id="s_menuLogo" value="${s.menuLogoUrl||"assets/logo.png"}" placeholder="assets/logo.png or https://..."></div>
+      <div class="field" style="grid-column:1/-1"><label class="muted smalltext">মেনু টাইটেল ও লোগো ইউজার অ্যাপের সাইড মেনুতে দেখাবে। লোগো: হোস্টিং পাথ বা ইমেজ লিংক।</label></div>
       <div class="field"><label>Bot Username</label><input id="s_botUser" value="${s.botUsername||""}" placeholder="@Cinehub4bot"></div>
       <div class="field"><label>Bot Link</label><input id="s_botLink" value="${s.telegramBotLink||""}" placeholder="https://t.me/Cinehub4bot"></div>
       <div class="field"><label>Channel Link</label><input id="s_channel" value="${s.telegramChannelLink||""}"></div>
@@ -1811,6 +1823,15 @@ function settings(){
       <div class="field"><label>Daily ad limit</label><input id="s_dailyAd" type="number" value="${s.dailyAdLimit||20}"></div>
       <div class="field"><label>Download servers count</label><input id="s_servers" type="number" value="${s.downloadServers||1}"></div>
       <div class="field"><label>Join Bonus points</label><input id="s_joinBonus" type="number" value="${s.joinBonus||10}"></div>
+      <div class="field" style="grid-column:1/-1"><h4 style="margin:12px 0 6px">Welcome popup (new users)</h4></div>
+      <div class="field"><label>Enable welcome popup</label>
+        <select id="s_welcomeEnabled"><option value="1" ${s.welcomeEnabled!==false?"selected":""}>Yes</option><option value="0" ${s.welcomeEnabled===false?"selected":""}>No</option></select>
+      </div>
+      <div class="field"><label>Welcome title (EN)</label><input id="s_welcomeTitle" value="${s.welcomeTitle||"Welcome to Cine Hub4"}"></div>
+      <div class="field"><label>Welcome title (বাংলা)</label><input id="s_welcomeTitleBn" value="${s.welcomeTitleBn||""}" placeholder="Cine Hub4-এ স্বাগতম"></div>
+      <div class="field" style="grid-column:1/-1"><label>Welcome message (EN)</label><textarea id="s_welcomeBody" rows="2">${s.welcomeBody||""}</textarea></div>
+      <div class="field" style="grid-column:1/-1"><label>Welcome message (বাংলা)</label><textarea id="s_welcomeBodyBn" rows="2">${s.welcomeBodyBn||""}</textarea></div>
+      <div class="field" style="grid-column:1/-1"><label class="muted smalltext">নতুন ইউজার মিনি অ্যাপ খুললে পপআপ দেখাবে + Join Bonus পয়েন্ট দেখাবে। Cancel বা বাইরে ক্লিক করলে বন্ধ।</label></div>
       <div class="field"><label>Referral Reward points</label><input id="s_refReward" type="number" value="${s.referralReward||20}"></div>
     </div>
   </div>
@@ -1860,6 +1881,9 @@ function saveAllSettings(){
   const g=id=>document.getElementById(id);
   const s=A.settings;
   if(g("s_appName")) s.appName=g("s_appName").value;
+  if(g("s_menuTitle")) s.menuTitle=g("s_menuTitle").value.trim()||"Cine Hub4 Menu";
+  if(g("s_menuTitleBn")) s.menuTitleBn=g("s_menuTitleBn").value.trim();
+  if(g("s_menuLogo")) s.menuLogoUrl=g("s_menuLogo").value.trim()||"assets/logo.png";
   if(g("s_botUser")) s.botUsername=g("s_botUser").value;
   if(g("s_botLink")) s.telegramBotLink=g("s_botLink").value;
   if(g("s_channel")) s.telegramChannelLink=g("s_channel").value;
@@ -1901,6 +1925,11 @@ function saveAllSettings(){
   if(g("s_dailyAd")) s.dailyAdLimit=Number(g("s_dailyAd").value)||20;
   if(g("s_servers")) s.downloadServers=Number(g("s_servers").value)||1;
   if(g("s_joinBonus")) s.joinBonus=Number(g("s_joinBonus").value)||10;
+  if(g("s_welcomeEnabled")) s.welcomeEnabled=g("s_welcomeEnabled").value!=="0";
+  if(g("s_welcomeTitle")) s.welcomeTitle=g("s_welcomeTitle").value.trim();
+  if(g("s_welcomeTitleBn")) s.welcomeTitleBn=g("s_welcomeTitleBn").value.trim();
+  if(g("s_welcomeBody")) s.welcomeBody=g("s_welcomeBody").value.trim();
+  if(g("s_welcomeBodyBn")) s.welcomeBodyBn=g("s_welcomeBodyBn").value.trim();
   if(g("s_refReward")) s.referralReward=Number(g("s_refReward").value)||20;
   if(g("s_usdt")) s.usdtWallet=g("s_usdt").value;
   if(g("s_usdtNet")) s.usdtNetwork=g("s_usdtNet").value;
