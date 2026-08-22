@@ -206,6 +206,13 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
   box-shadow:0 8px 28px rgba(0,0,0,.4);
   overflow:hidden;
   isolation:isolate;
+  transition:transform .28s cubic-bezier(.4,0,.2,1), opacity .28s ease;
+  will-change:transform, opacity;
+}
+.bottom-nav.bn-hide{
+  transform:translateY(calc(100% + 24px));
+  opacity:0;
+  pointer-events:none;
 }
 /* Fixed ring — only colors rotate, shape never moves */
 .bottom-nav::before{

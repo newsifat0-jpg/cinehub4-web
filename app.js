@@ -718,15 +718,17 @@ let userData={points:0,unlocks:{},ads_today:0,ads_day:"",language:"en",refs:0};
 const state={page:(function(){
   try{
     var p=sessionStorage.getItem("cinehub4_page")||localStorage.getItem("cinehub4_page")||"movies";
-    // Never restore stuck "detail" without an active non-dismissed share
     if(p==="detail"){
-      var disc=sessionStorage.getItem("cinehub4_share_dismissed")==="1";
-      var pend=sessionStorage.getItem("cinehub4_share_pending")||"";
-      if(disc || !pend) p="movies";
+      var did=sessionStorage.getItem("cinehub4_detail")||localStorage.getItem("cinehub4_detail")||"";
+      if(!String(did).trim()){
+        p=sessionStorage.getItem("cinehub4_page_fallback")||localStorage.getItem("cinehub4_page_fallback")||"movies";
+      }
     }
     return p;
   }catch(e){ return "movies"; }
-})(),adultOK:(function(){ try{ return sessionStorage.getItem("cinehub4_adult_ok")==="1"; }catch(e){ return false; } })(),points:0,query:"",category:"All Movies",mode:"new",adultCategory:"All",adultMode:"new",moviePage:1,adultPage:1,history:JSON.parse(sessionStorage.getItem("cinehub4_history")||"[]"),unlockProgress:0,buyStep:null,buyOrder:null,moviesLoaded:false,userLoaded:false,firstPaint:true};
+})(),adultOK:(function(){ try{ return sessionStorage.getItem("cinehub4_adult_ok")==="1"; }catch(e){ return false; } })(),detailId:(function(){
+  try{ return sessionStorage.getItem("cinehub4_detail")||localStorage.getItem("cinehub4_detail")||null; }catch(e){ return null; }
+})(),points:0,query:"",category:"All Movies",mode:"new",adultCategory:"All",adultMode:"new",moviePage:1,adultPage:1,history:JSON.parse(sessionStorage.getItem("cinehub4_history")||"[]"),unlockProgress:0,buyStep:null,buyOrder:null,moviesLoaded:false,userLoaded:false,firstPaint:true};
 const MOVIE_PAGE_SIZE=20;
 function goMoviePage(n){
   n=Math.max(1, Number(n)||1);
@@ -1169,6 +1171,23 @@ function showPageTransition(cb,opts){
   },hold);
 }
 
+
+function persistPage(){
+  try{
+    var p=state.page||"movies";
+    sessionStorage.setItem("cinehub4_page", p);
+    localStorage.setItem("cinehub4_page", p);
+    if(p==="detail" && state.detailId){
+      sessionStorage.setItem("cinehub4_detail", String(state.detailId));
+      localStorage.setItem("cinehub4_detail", String(state.detailId));
+    } else if(p!=="detail"){
+      sessionStorage.removeItem("cinehub4_detail");
+      localStorage.removeItem("cinehub4_detail");
+      sessionStorage.setItem("cinehub4_page_fallback", p);
+      localStorage.setItem("cinehub4_page_fallback", p);
+    }
+  }catch(e){}
+}
 function nav(p,opts={}){
   if(p==="telegram"){openLink(cfg.telegramBotLink);return}
   if(p===state.page&&!opts.force)return;
@@ -1194,7 +1213,8 @@ function nav(p,opts={}){
   }
   const go=function(){
     state.page=p;
-    try{sessionStorage.setItem("cinehub4_page",p);localStorage.setItem("cinehub4_page",p)}catch(e){}
+    if(p!=="detail"){ try{ state.detailId=null; }catch(e){} }
+    persistPage();
     try{window.Telegram?.WebApp?.HapticFeedback?.selectionChanged()}catch(e){}
     render(true);
     try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){}
@@ -2407,7 +2427,8 @@ function setAdUnlockProgress(id,n){
   if(!userData.unlock_ad_prog) userData.unlock_ad_prog={};
   userData.unlock_ad_prog[String(id)]=v;
   try{ localStorage.setItem("cinehub4_uad_"+String(id), String(v)); }catch(e){}
-  try{ persistUnlockMaps_(); }catch(e){}
+  // Network save deferred — UI must update first
+  try{ setTimeout(function(){ try{ persistUnlockMaps_(); }catch(e){} }, 0); }catch(e){}
   return v;
 }
 function tryCompleteUnlock(id){
@@ -2456,12 +2477,12 @@ function detail(id){
   if(typeof showPageTransition==="function"){
     showPageTransition(function(){
       state.page="detail";
-      try{sessionStorage.setItem("cinehub4_page","detail");localStorage.setItem("cinehub4_page","detail")}catch(e){}
+      try{ persistPage(); }catch(e){}
       render(false);
     });
   }else{
     state.page="detail";
-    try{sessionStorage.setItem("cinehub4_page","detail");localStorage.setItem("cinehub4_page","detail")}catch(e){}
+    try{ persistPage(); }catch(e){}
     render(false);
   }
 }
@@ -2632,7 +2653,7 @@ function detailView(){
       </div>
       <div class="ps-metrics">
         <div class="ps-m need"><span class="ps-m-ico ps-i-key" aria-hidden="true">${ico("star",14)}</span><span class="ps-m-lbl">${t("Required")}</span><b>${cost}</b></div>
-        <div class="ps-m myp"><span class="ps-m-ico ps-i-coin" aria-hidden="true">${ico("coin",14)}</span><span class="ps-m-lbl">${t("My Points")}</span><b>${my}</b></div>
+        <div class="ps-m myp"><span class="ps-m-ico ps-i-coin" aria-hidden="true">${ico("coin",14)}</span><span class="ps-m-lbl">${t("My Points")}</span><b class="live-points" data-live-points>${my}</b></div>
         <div class="ps-m rem"><span class="ps-m-ico ps-i-time" aria-hidden="true">${ico("clock",14)}</span><span class="ps-m-lbl">${t("Remaining")}</span><b>${rem}</b></div>
       </div>
       <div class="ps-progress ps-progress-split">
@@ -2641,8 +2662,8 @@ function detailView(){
           <div class="ps-bar"><i style="width:${pctPts}%"></i></div>
         </div>
         <div class="ps-prog-line">
-          <div class="ps-prog-lbl">${t("Ads")}: ${adProg}/${adsNeed}</div>
-          <div class="ps-bar ps-bar-ads"><i style="width:${pctAds}%"></i></div>
+          <div class="ps-prog-lbl unlock-ads-line" data-live-ads-lbl data-prefix="${t("Ads")}: ">${t("Ads")}: <span data-live-ads>${adProg}/${adsNeed}</span></div>
+          <div class="ps-bar ps-bar-ads"><i data-live-ads-bar style="width:${pctAds}%"></i></div>
         </div>
       </div>
       <div class="ps-hint">${t("Unlock with points or ads")}</div>
@@ -3129,7 +3150,7 @@ function playMonetag(zoneId, onDone, onFail){
           });
         } else {
           // No promise API — assume shown; reward after short delay if no crash
-          setTimeout(function(){ finish(true); }, 1200);
+          setTimeout(function(){ finish(true); }, 300);
         }
         return true;
       }catch(e){ console.warn(e); }
@@ -3353,7 +3374,34 @@ function watchAd(mode){
     if(watched>=limit){toast(t("Daily ad limit reached"));return}
   }
 
-  function onAdDone(){
+  
+function paintProgressInstant(opts){
+  try{
+    opts=opts||{};
+    if(opts.points!=null){
+      document.querySelectorAll("[data-live-points], .live-points, .my-points-val").forEach(function(el){
+        el.textContent=String(opts.points);
+      });
+    }
+    if(opts.adProg!=null && opts.needAds!=null){
+      document.querySelectorAll("[data-live-ads]").forEach(function(el){
+        el.textContent=opts.adProg+"/"+opts.needAds;
+      });
+      var pct = opts.needAds>0 ? Math.min(100, (opts.adProg/opts.needAds)*100) : 0;
+      document.querySelectorAll("[data-live-ads-bar]").forEach(function(el){
+        el.style.width=pct+"%";
+        el.style.transition="width .15s ease";
+      });
+    }
+    if(opts.taskCount!=null && opts.taskLimit!=null){
+      var sel='[data-live-task="'+String(opts.taskIndex)+'"]';
+      document.querySelectorAll(sel).forEach(function(el){
+        el.textContent=opts.taskCount+"/"+opts.taskLimit;
+      });
+    }
+  }catch(e){}
+}
+function onAdDone(){
     // Update progress FIRST (instant UI), cooldown after
     if(mode==="unlock" || mode==="adult"){
       const mid=state.detailId;
@@ -3362,6 +3410,8 @@ function watchAd(mode){
       const needAds=getUnlockRules(mid).adsNeed;
       let adProg=getAdUnlockProgress(mid)+1;
       adProg=setAdUnlockProgress(mid, adProg);
+      // Instant UI before any heavy work
+      try{ paintProgressInstant({adProg:adProg, needAds:needAds, points:state.points}); }catch(e){}
       markAdCooldown(cdKey);
       try{ render(false); }catch(e){}
       toast("+1 "+t("ad progress")+" ("+adProg+"/"+needAds+")");
@@ -3391,7 +3441,7 @@ function watchAd(mode){
           if(userData) userData.points=state.points;
         }
         const finished=markTaskProgress(ti,tk);
-        try{ save(); }catch(e){}
+        try{ paintProgressInstant({points:state.points, taskCount:next, taskLimit:st2.limit, taskIndex:ti}); }catch(e){}
         try{ render(false); }catch(e){}
         if(tk.rewardOnce){
           if(finished) toast("+"+(tk.reward||0)+" points · "+t("Done"));
@@ -3399,6 +3449,8 @@ function watchAd(mode){
         }else{
           toast("+"+(tk.reward||0)+" points"+(finished?" · "+t("Done"):" · "+t("Progress")));
         }
+        // Network save after UI (non-blocking)
+        try{ setTimeout(function(){ try{ save(); }catch(e){} }, 0); }catch(e){}
         return;
       }
     }
@@ -3637,16 +3689,36 @@ function bindLangSwitch(){
   syncLangButtons();
 }
 
-function markDrawerActive(){
-  try{
-    const page=state.page==="detail"?"movies":state.page;
-    document.querySelectorAll("#drawer button[data-page]").forEach(function(b){
-      const p=b.getAttribute("data-page");
-      if(p===page){ b.classList.add("active"); b.classList.add("is-active"); }
-      else { b.classList.remove("active"); b.classList.remove("is-active"); }
-    });
-  }catch(e){}
-}
+
+/* Facebook-style: hide bottom nav on scroll down, show on scroll up */
+(function setupBottomNavScroll(){
+  var lastY=0, ticking=false, hidden=false;
+  function apply(hide){
+    var bn=document.getElementById("bottomNav");
+    if(!bn) return;
+    if(hide && !hidden){ bn.classList.add("bn-hide"); hidden=true; }
+    else if(!hide && hidden){ bn.classList.remove("bn-hide"); hidden=false; }
+  }
+  function onScroll(){
+    var y=window.pageYOffset||document.documentElement.scrollTop||document.body.scrollTop||0;
+    var dy=y-lastY;
+    if(y<40){ apply(false); }
+    else if(dy>6){ apply(true); }
+    else if(dy<-6){ apply(false); }
+    lastY=y;
+    ticking=false;
+  }
+  function req(){
+    if(!ticking){ ticking=true; requestAnimationFrame(onScroll); }
+  }
+  window.addEventListener("scroll", req, {passive:true});
+  document.addEventListener("scroll", req, {passive:true, capture:true});
+  document.addEventListener("touchstart", function(e){
+    var bn=document.getElementById("bottomNav");
+    if(bn && e.target && bn.contains(e.target)) apply(false);
+  }, {passive:true});
+})();
+
 function bindDrawer(){
   bindLangSwitch();
   const ham=document.getElementById("hamBtn");
@@ -3838,6 +3910,7 @@ function bindHomeStickyScroll(){
 }
 
 function render(animate=false){
+try{ persistPage(); }catch(e){}
 /* Blocked users never see normal UI */
 if(window.__cinehub_blocked){ return; }
 /* Users blocked by Maintenance Mode never see normal UI */
