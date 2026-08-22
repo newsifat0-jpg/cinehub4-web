@@ -1280,9 +1280,16 @@ function getTasks(){
   // Always prefer live admin settings
   try{
     const s=JSON.parse(localStorage.getItem("cinehub4_settings")||"{}");
-    if(s.tasks&&s.tasks.length){cfg.tasks=s.tasks;return s.tasks}
+    if(Array.isArray(s.tasks)){
+      cfg.tasks=s.tasks;
+      if(s.tasks.length) return s.tasks;
+      if(s._tasksCleared) return []; // admin intentionally deleted all tasks
+    }
   }catch(e){}
-  if(cfg.tasks&&cfg.tasks.length) return cfg.tasks;
+  if(Array.isArray(cfg.tasks)){
+    if(cfg.tasks.length) return cfg.tasks;
+    if(cfg._tasksCleared) return []; // admin intentionally deleted all tasks
+  }
   return [
     {name:"one click",reward:2,limit:1,type:"countdown",seconds:5,resetHours:24,permanent:false},
     {name:"Watch rewarded ad",reward:cfg.adReward||2,limit:cfg.dailyAdLimit||20,type:"ad",resetHours:24,permanent:false},
@@ -2793,8 +2800,22 @@ function watchAd(mode){
   if(!slotHasAds(slot) && mode!=="countdown"){ toast(t("Admin has not configured this Ad Block ID")); return; }
 
   // Per-ad-system cooldown: block until the configured delay has passed since the last ad.
-  const cdKey = adCooldownKeyForMode(mode);
-  const cdMs = getAdCooldownMs(cdKey);
+  // For a "task" ad, each task can have its own separate cooldown (falls back to the
+  // shared "task" ad slot cooldown when the task doesn't set one of its own).
+  let cdKey = adCooldownKeyForMode(mode);
+  let cdMs = getAdCooldownMs(cdKey);
+  if(mode==="task" && window.__cinehub_pendingTask!=null){
+    try{
+      const tks=getTasks();
+      const tk0=tks[window.__cinehub_pendingTask];
+      if(tk0){
+        const tid=String(tk0.id||("t"+window.__cinehub_pendingTask)).replace(/[^a-zA-Z0-9_]/g,"");
+        cdKey="task_"+tid;
+        const perTaskMs=parseAdCooldownMs(tk0.cooldown);
+        if(perTaskMs>0) cdMs=perTaskMs;
+      }
+    }catch(e){}
+  }
   if(cdMs>0){
     const last = Number(localStorage.getItem("cinehub4_adcd_"+cdKey))||0;
     const remain = cdMs - (Date.now()-last);

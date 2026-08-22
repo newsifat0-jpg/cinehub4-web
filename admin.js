@@ -1294,6 +1294,10 @@ function tasks(){
       '</select>'+
       rows+
       '<button type="button" class="btn" style="margin-top:8px" onclick="addTaskAdNetwork('+i+')">＋ Add Network</button>'+
+      '<div class="field" style="max-width:280px;margin-top:12px"><label>এই টাস্কে পরের এড কতক্ষণ পর (খালি/0 = গ্লোবাল Daily Task Ads সেটিং ব্যবহার হবে)</label>'+
+      '<input value="'+String(t.cooldown!=null?t.cooldown:"0").replace(/"/g,"&quot;")+'" placeholder="0" onchange="A.settings.tasks['+i+'].cooldown=this.value;save()">'+
+      '<p class="muted smalltext" style="margin-top:4px">0 = সাথে সাথে · 0+সংখ্যা = সেকেন্ড (010 = ১০ সেকেন্ড) · শুধু সংখ্যা = মিনিট (5 = ৫ মিনিট)</p>'+
+      '</div>'+
       '</div>';
   }
   const cards=A.settings.tasks.map((t,i)=>`
