@@ -284,7 +284,9 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
 .drawer{position:absolute;left:0;top:0;bottom:0;width:min(86vw,320px);background:#0e1320;border-right:1px solid #222a42;padding:18px 12px 14px;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
 .drawer-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;padding:2px 0 10px}
 .drawer-brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
-.drawer-logo{width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid rgba(124,92,255,.45);box-shadow:0 0 14px rgba(59,130,246,.35)}
+.drawer-logo-wrap{position:relative;width:42px;height:42px;flex-shrink:0}
+.drawer-logo{width:42px;height:42px;border-radius:12px;object-fit:cover;display:block;border:2px solid rgba(124,92,255,.45);box-shadow:0 0 14px rgba(59,130,246,.35);background:#161b2c}
+.drawer-logo-fallback{position:absolute;inset:0;display:grid;place-items:center;border-radius:12px;font-size:13px;font-weight:900;color:#e2e8f0;background:linear-gradient(145deg,#3b82f6,#7c5cff);border:2px solid rgba(124,92,255,.45)}
 .drawer-brand-text{min-width:0}
 .drawer-title,.drawer-head strong.drawer-title{
   display:block;font-size:16px;font-weight:900;letter-spacing:.2px;line-height:1.25;

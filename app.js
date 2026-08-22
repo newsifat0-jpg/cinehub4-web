@@ -313,35 +313,51 @@ function resolveMovieByParam(rawId){
   m=list.find(function(x){ return String(x.tmdb_id)===id; });
   return m||null;
 }
-function clearShareSticky(){
-  // User navigated away / opened another movie — stop forcing the shared one
+function clearShareSticky(hard){
   try{
-    window.__deeplinkUserNav = true;
     sessionStorage.removeItem("cinehub4_detail");
+    if(hard){
+      dismissShareCompletely();
+    }
   }catch(e){}
 }
+
+function dismissShareCompletely(){
+  // User closed share / went to list — do not auto-open that movie on reload
+  try{
+    window.__deeplinkUserNav = true;
+    var last=sessionStorage.getItem("cinehub4_last_start")||sessionStorage.getItem("cinehub4_share_pending")||"";
+    if(last) sessionStorage.setItem("cinehub4_dismissed_sp", last);
+    sessionStorage.removeItem("cinehub4_share_pending");
+    sessionStorage.removeItem("cinehub4_last_start");
+    sessionStorage.removeItem("cinehub4_detail");
+    sessionStorage.removeItem("cinehub4_start_consumed");
+    sessionStorage.setItem("cinehub4_share_dismissed","1");
+  }catch(e){}
+  state.detailId=null;
+  state.pendingAdultDetail=null;
+}
+
 function openSharedMovie(id){
   id=String(id||"").trim();
   if(!id) return false;
-  // After user leaves the shared movie, never force it again
-  if(window.__deeplinkUserNav) return false;
+  // User dismissed share or navigated away — do not force movie again
+  try{
+    if(window.__deeplinkUserNav || sessionStorage.getItem("cinehub4_share_dismissed")==="1") return false;
+  }catch(e){ if(window.__deeplinkUserNav) return false; }
   var found=resolveMovieByParam(id);
   var realId=found?String(found.id):id;
   var isAdult=found?!!found.adult:false;
   try{
     sessionStorage.setItem("cinehub4_detail", realId);
     sessionStorage.setItem("cinehub4_share_pending", id);
+    sessionStorage.setItem("cinehub4_last_start", "movie_"+id);
   }catch(e){}
-  // Movies not loaded yet — remember id; retry when list arrives
-  if(!found && (!movies || !movies.length)){
+  // Movies not loaded yet — remember and wait
+  if(!found && (!movies || !movies.length || !state.moviesLoaded)){
     state.detailId=realId;
-    if(isAdult && !state.adultOK){
-      state.pendingAdultDetail=realId;
-      state.page="adult";
-    }else{
-      state.pendingAdultDetail=null;
-      state.page="movies";
-    }
+    state.pendingAdultDetail=isAdult?realId:null;
+    state.page=isAdult?"adult":"movies";
     try{
       localStorage.setItem("cinehub4_page", state.page);
       sessionStorage.setItem("cinehub4_page", state.page);
@@ -349,6 +365,7 @@ function openSharedMovie(id){
     return true;
   }
   if(!found){
+    // List loaded but movie missing — still keep pending; show home of that section
     state.detailId=realId;
     state.page="movies";
     try{
@@ -358,36 +375,30 @@ function openSharedMovie(id){
     return true;
   }
   state.detailId=realId;
-  // Adult share: must pass 18+ gate first, then show preview card
   if(isAdult && !state.adultOK){
     state.pendingAdultDetail=realId;
     state.page="adult";
     state.history=[];
     try{
-      sessionStorage.setItem("cinehub4_history", "[]");
+      sessionStorage.setItem("cinehub4_history","[]");
       localStorage.setItem("cinehub4_page","adult");
       sessionStorage.setItem("cinehub4_page","adult");
     }catch(e){}
     return true;
   }
-  // Non-adult OR adult already verified → shared preview card
-  try{ showSharedLanding(found); }catch(e){ console.error(e); }
-  if(isAdult){
-    state.pendingAdultDetail=null;
-    state.page="adult";
-    state.history=["adult"];
-  }else{
-    state.pendingAdultDetail=null;
-    state.page="movies";
-    state.history=["movies"];
-  }
+  // Ready: go detail page + show shared landing card
+  state.pendingAdultDetail=null;
+  state.page="detail";
+  state.history=[];
   try{
-    sessionStorage.setItem("cinehub4_history", JSON.stringify(state.history||[]));
-    localStorage.setItem("cinehub4_page", state.page);
-    sessionStorage.setItem("cinehub4_page", state.page);
+    sessionStorage.setItem("cinehub4_history","[]");
+    localStorage.setItem("cinehub4_page","detail");
+    sessionStorage.setItem("cinehub4_page","detail");
   }catch(e){}
+  try{ showSharedLanding(found); }catch(e){}
   return true;
 }
+
 function closeSharedLanding(){
   var el=document.getElementById("sharedLanding");
   if(el) el.remove();
@@ -399,39 +410,34 @@ function goSharedWatch(id){
   var realId=found?String(found.id):id;
   var isAdult=found?!!found.adult:false;
   try{ sessionStorage.removeItem("cinehub4_share_pending"); }catch(e){}
+  // Keep last_start so reload can recover until user leaves
   if(isAdult && !state.adultOK){
     state.pendingAdultDetail=realId;
     state.detailId=realId;
     state.page="adult";
     state.history=[];
-  }else{
-    state.pendingAdultDetail=null;
-    state.detailId=realId;
-    state.page="detail";
-    state.history = isAdult ? ["adult"] : ["movies"];
+    try{ render(false); }catch(e){}
+    return;
   }
+  // Open unlock/detail page for this movie
+  state.pendingAdultDetail=null;
+  state.detailId=realId;
+  state.page="detail";
   try{
+    localStorage.setItem("cinehub4_page","detail");
+    sessionStorage.setItem("cinehub4_page","detail");
     sessionStorage.setItem("cinehub4_detail", realId);
-    sessionStorage.setItem("cinehub4_history", JSON.stringify(state.history||[]));
-    localStorage.setItem("cinehub4_page", state.page);
-    sessionStorage.setItem("cinehub4_page", state.page);
   }catch(e){}
-  try{ render(true); }catch(e){}
+  try{ render(false); }catch(e){}
 }
 function goSharedAllMovies(id){
   closeSharedLanding();
   var found=resolveMovieByParam(id);
   var isAdult=found?!!found.adult:false;
-  window.__deeplinkUserNav = true;
-  try{ sessionStorage.removeItem("cinehub4_share_pending"); }catch(e){}
-  state.detailId = null;
+  dismissShareCompletely();
   if(isAdult){
-    if(!state.adultOK){
-      state.pendingAdultDetail = found ? String(found.id) : String(id||"");
-      state.page = "adult";
-    }else{
-      state.page = "adult";
-    }
+    state.page = "adult";
+    // already confirmed this session — show list, not a stuck detail
   }else{
     state.page = "movies";
   }
@@ -692,7 +698,8 @@ function shareRefLink(){
 }
 function openLink(u){if(!u)return;try{window.Telegram?.WebApp?.openTelegramLink?.(u)||window.Telegram?.WebApp?.openLink?.(u)||window.open(u,"_blank")}catch(e){window.open(u,"_blank")}}
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
-const defaults={appName:"Cine Hub4",menuTitle:"Cine Hub4 Menu",menuTitleBn:"Cine Hub4 মেনু",menuLogoUrl:"assets/logo.png",botUsername:"@Cinehub4bot",telegramBotLink:"https://t.me/Cinehub4bot",miniAppName:"Hub4",miniAppLink:"https://t.me/Cinehub4bot/Hub4",telegramChannelLink:"",howToWatchVideo:"",watchTutorialVideo:"",howToWatchText:"Unlock this content using ads or points.",unlockCost:5,unlockHours:15,adsForUnlock:5,adultUnlockCost:3,adultAdsForUnlock:5,adultUnlockHours:15,downloadServers:3,adReward:2,dailyAdLimit:20,joinBonus:10,referralReward:20,welcomeEnabled:true,welcomeTitle:"Welcome to Cine Hub4",welcomeTitleBn:"Cine Hub4-এ স্বাগতম",welcomeBody:"Watch all kinds of movies & series and download for free. Enjoy unlimited entertainment!",welcomeBodyBn:"সকল প্রকার মুভি ও সিরিজ দেখুন এবং ফ্রিতে ডাউনলোড করুন। সীমাহীন বিনোদন উপভোগ করুন!",categories:["All Movies","Bangla Moves","Hollywood Movie Hindi"],adultCategories:["All","Adult Movie","Anime"],tickerText:"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ",adultTickerText:"18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ",tickerTextBn:"প্রিয় কনটেন্ট শেয়ার করুন ও পয়েন্ট দিয়ে আনলক করুন 🚀 • নিয়মিত নতুন মুভি ও সিরিজ • অ্যাড দেখে বা পয়েন্ট দিয়ে আনলক করুন • ",adultTickerTextBn:"১৮+ অ্যাডাল্ট জোন • নিয়মিত নতুন অ্যাডাল্ট কনটেন্ট • অ্যাড দেখে বা পয়েন্ট দিয়ে আনলক করুন • ",libraryBadge:"MOVIE ZONE",libraryTitle:"Cinema Library",libraryDesc:"Curated movies, web series and premium entertainment updates.",adultLibraryBadge:"ADULT ZONE",adultHeaderTitle:"Adult",adultDetailTitle:"",movieDetailTitle:"",adultLibraryTitle:"Adult Library",adultLibraryDesc:"Curated 18+ content and premium entertainment updates.",howToWatchLabel:"▶ How to Watch",adultHowToWatchLabel:"▶ How to Watch",newMoviesLabel:"New Movies",newMoviesSub:"LATEST UPLOADS",trendingLabel:"Trending",trendingSub:"MOST WATCHED",adultNewLabel:"New Movies",adultNewSub:"LATEST UPLOADS",adultTrendingLabel:"Trending",adultTrendingSub:"MOST WATCHED",packages:[
+const CINEHUB_LOGO_DATA="data:image/jpeg;base64,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";
+const defaults={appName:"Cine Hub4",menuTitle:"Cine Hub4 Menu",menuTitleBn:"Cine Hub4 মেনু",menuLogoUrl:"assets/logo.jpg",botUsername:"@Cinehub4bot",telegramBotLink:"https://t.me/Cinehub4bot",miniAppName:"Hub4",miniAppLink:"https://t.me/Cinehub4bot/Hub4",telegramChannelLink:"",howToWatchVideo:"",watchTutorialVideo:"",howToWatchText:"Unlock this content using ads or points.",unlockCost:5,unlockHours:15,adsForUnlock:5,adultUnlockCost:3,adultAdsForUnlock:5,adultUnlockHours:15,downloadServers:3,adReward:2,dailyAdLimit:20,joinBonus:10,referralReward:20,welcomeEnabled:true,welcomeTitle:"Welcome to Cine Hub4",welcomeTitleBn:"Cine Hub4-এ স্বাগতম",welcomeBody:"Watch all kinds of movies & series and download for free. Enjoy unlimited entertainment!",welcomeBodyBn:"সকল প্রকার মুভি ও সিরিজ দেখুন এবং ফ্রিতে ডাউনলোড করুন। সীমাহীন বিনোদন উপভোগ করুন!",categories:["All Movies","Bangla Moves","Hollywood Movie Hindi"],adultCategories:["All","Adult Movie","Anime"],tickerText:"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ",adultTickerText:"18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ",tickerTextBn:"প্রিয় কনটেন্ট শেয়ার করুন ও পয়েন্ট দিয়ে আনলক করুন 🚀 • নিয়মিত নতুন মুভি ও সিরিজ • অ্যাড দেখে বা পয়েন্ট দিয়ে আনলক করুন • ",adultTickerTextBn:"১৮+ অ্যাডাল্ট জোন • নিয়মিত নতুন অ্যাডাল্ট কনটেন্ট • অ্যাড দেখে বা পয়েন্ট দিয়ে আনলক করুন • ",libraryBadge:"MOVIE ZONE",libraryTitle:"Cinema Library",libraryDesc:"Curated movies, web series and premium entertainment updates.",adultLibraryBadge:"ADULT ZONE",adultHeaderTitle:"Adult",adultHeaderTitleBn:"অ্যাডাল্ট",adultDetailTitle:"",adultDetailTitleBn:"",movieDetailTitle:"",movieDetailTitleBn:"",moviesHeaderTitle:"",moviesHeaderTitleBn:"",appNameBn:"Cine Hub4",adultLibraryTitle:"Adult Library",adultLibraryDesc:"Curated 18+ content and premium entertainment updates.",howToWatchLabel:"▶ How to Watch",adultHowToWatchLabel:"▶ How to Watch",newMoviesLabel:"New Movies",newMoviesSub:"LATEST UPLOADS",trendingLabel:"Trending",trendingSub:"MOST WATCHED",adultNewLabel:"New Movies",adultNewSub:"LATEST UPLOADS",adultTrendingLabel:"Trending",adultTrendingSub:"MOST WATCHED",packages:[
     {name:"Basic Package",price:0.99,points:110,tag:"SMART CHOICE"},
     {name:"Standard Package",price:4.99,points:550,tag:"STARTER"},
     {name:"Premium Package",price:9.99,points:1200,tag:"BEST VALUE"},
@@ -708,7 +715,18 @@ if(!cfg.categories||!cfg.categories.length)cfg.categories=defaults.categories.sl
 if(!cfg.adultCategories||!cfg.adultCategories.length)cfg.adultCategories=defaults.adultCategories.slice();
 let movies=[];
 let userData={points:0,unlocks:{},ads_today:0,ads_day:"",language:"en",refs:0};
-const state={page:(sessionStorage.getItem("cinehub4_page")||"movies"),adultOK:false,points:0,query:"",category:"All Movies",mode:"new",adultCategory:"All",adultMode:"new",moviePage:1,adultPage:1,history:JSON.parse(sessionStorage.getItem("cinehub4_history")||"[]"),unlockProgress:0,buyStep:null,buyOrder:null,moviesLoaded:false,userLoaded:false,firstPaint:true};
+const state={page:(function(){
+  try{
+    var p=sessionStorage.getItem("cinehub4_page")||localStorage.getItem("cinehub4_page")||"movies";
+    // Never restore stuck "detail" without an active non-dismissed share
+    if(p==="detail"){
+      var disc=sessionStorage.getItem("cinehub4_share_dismissed")==="1";
+      var pend=sessionStorage.getItem("cinehub4_share_pending")||"";
+      if(disc || !pend) p="movies";
+    }
+    return p;
+  }catch(e){ return "movies"; }
+})(),adultOK:(function(){ try{ return sessionStorage.getItem("cinehub4_adult_ok")==="1"; }catch(e){ return false; } })(),points:0,query:"",category:"All Movies",mode:"new",adultCategory:"All",adultMode:"new",moviePage:1,adultPage:1,history:JSON.parse(sessionStorage.getItem("cinehub4_history")||"[]"),unlockProgress:0,buyStep:null,buyOrder:null,moviesLoaded:false,userLoaded:false,firstPaint:true};
 const MOVIE_PAGE_SIZE=20;
 function goMoviePage(n){
   n=Math.max(1, Number(n)||1);
@@ -834,11 +852,31 @@ function loadMoviesFromFB(){
     got=true;
     movies=list||[];
     state.moviesLoaded=true;
-    // Share deep-link: apply ONCE if user has not navigated away
+    // Share deep-link: re-apply when library arrives
     try{
       if(!window.__deeplinkUserNav && typeof handleStartParam==="function"){
         handleStartParam();
       }
+      // If share still pending and movie now exists → open it
+      try{
+        var dismissed=false;
+        try{ dismissed=sessionStorage.getItem("cinehub4_share_dismissed")==="1"; }catch(e){}
+        var sp2=sessionStorage.getItem("cinehub4_share_pending")||"";
+        if(sp2 && !window.__deeplinkUserNav && !dismissed){
+          var fm2=resolveMovieByParam(sp2);
+          if(fm2){
+            if(fm2.adult && !state.adultOK){
+              state.pendingAdultDetail=String(fm2.id);
+              state.detailId=String(fm2.id);
+              state.page="adult";
+            } else {
+              state.detailId=String(fm2.id);
+              state.page="detail";
+              setTimeout(function(){ try{ showSharedLanding(fm2); }catch(e){} }, 80);
+            }
+          }
+        }
+      }catch(e3){}
       if(typeof applyAdultGateIfNeeded==="function") applyAdultGateIfNeeded();
     }catch(e){}
     safeRender(false);
@@ -1139,6 +1177,15 @@ function nav(p,opts={}){
     if(mainTabs.includes(p)){
       // Switching main tabs: reset history so home back = leave dialog
       state.history=[];
+      // Leaving detail via tab → clear sticky share so reload won't reopen it
+      if(state.page==="detail" || p==="adult" || p==="movies"){
+        try{
+          if(sessionStorage.getItem("cinehub4_share_pending")){
+            // User chose list/tab over the shared movie
+            if(p!=="detail") dismissShareCompletely();
+          }
+        }catch(e){}
+      }
     }else{
       state.history.push(state.page);
       if(state.history.length>30)state.history.shift();
@@ -1289,7 +1336,35 @@ function menuOnlyHeader(title, opts){
   return '<div class="page-back-bar"><button type="button" class="menu-ham" id="hamBtn">☰</button><span class="page-back-title">'+(title||"")+'</span>'+av+"</div>";
 }
 function bindPageBack(){const b=$("#pageBackBtn");if(b)b.onclick=()=>goBack()}
-function primeHeader(){return`<div class="prime-row"><button type="button" class="menu-ham" id="hamBtn">☰</button><div class="prime-title">Cine <span class="scene-pill">Hub4</span></div>${headerAvatarBtn()}</div>`}
+
+function cfgText(enKey, bnKey, fallback){
+  loadSharedSettings();
+  var en="", bn="";
+  try{ en=String((cfg&&cfg[enKey])||"").trim(); }catch(e){}
+  try{ bn=String((cfg&&cfg[bnKey])||"").trim(); }catch(e){}
+  var isBn=false;
+  try{ isBn=typeof langIsBn==="function"?langIsBn():false; }catch(e){}
+  if(isBn && bn) return bn;
+  if(en) return en;
+  if(isBn && fallback) return fallback;
+  return en||fallback||"";
+}
+function formatPrimeTitle(title){
+  title=String(title||"Cine Hub4").trim();
+  var parts=title.split(/\s+/).filter(Boolean);
+  if(parts.length>=2){
+    var last=parts.pop();
+    return parts.join(" ")+' <span class="scene-pill">'+last.replace(/</g,"&lt;")+"</span>";
+  }
+  return title.replace(/</g,"&lt;");
+}
+function primeHeader(){
+  loadSharedSettings();
+  var title=cfgText("moviesHeaderTitle","moviesHeaderTitleBn","")
+    || cfgText("appName","appNameBn","Cine Hub4")
+    || "Cine Hub4";
+  return '<div class="prime-row"><button type="button" class="menu-ham" id="hamBtn">☰</button><div class="prime-title">'+formatPrimeTitle(title)+'</div>'+headerAvatarBtn()+"</div>";
+}
 function heroPills(){return`<div class="hero-pills-sticky"><div class="hero-pills"><button type="button" class="hero-pill blue ${state.mode==="new"?"active":""}" onclick="setMode('new')"><span class="hp-label">${cfg.newMoviesLabel||"New Movies"}</span><span class="hp-sub">${cfg.newMoviesSub||"LATEST UPLOADS"}</span></button><button type="button" class="hero-pill orange ${state.mode==="trending"?"active":""}" onclick="setMode('trending')"><span class="hp-label">${cfg.trendingLabel||"Trending"}</span><span class="hp-sub">${cfg.trendingSub||"MOST WATCHED"}</span></button></div></div>`}
 function catRow(){const cats=cfg.categories||defaults.categories;return`<div class="cat-row">${cats.map(c=>{const k=catKey(c);return `<button type="button" class="cat-chip ${state.category===k?"active":""}" onclick="filterCat('${String(k).replace(/'/g,"\\'")}')">${catLabel(c)}</button>`}).join("")}</div>`}
 function libCard(){
@@ -1452,7 +1527,10 @@ function adult(){
 }
 function adultHeaderWithSearch(){
   loadSharedSettings();
-  var title = (cfg.adultHeaderTitle || cfg.adultPageTitle || "").trim() || t("Adult");
+  var title = cfgText("adultHeaderTitle","adultHeaderTitleBn","")
+    || cfgText("adultPageTitle","adultPageTitleBn","")
+    || t("Adult");
+  title=String(title).replace(/</g,"&lt;");
   return '<div class="page-back-bar adult-head-bar">'+
     '<button type="button" class="menu-ham" id="hamBtn">☰</button>'+
     '<span class="page-back-title">'+title+'</span>'+
@@ -1528,31 +1606,44 @@ window.adultSearchPage = adultSearchPage;
 
 function confirmAdult(){
   state.adultOK=true;
+  try{ sessionStorage.setItem("cinehub4_adult_ok","1"); }catch(e){}
   var pending = state.pendingAdultDetail;
   var sharePend="";
-  try{ sharePend=sessionStorage.getItem("cinehub4_share_pending")||""; }catch(e){}
+  try{ sharePend=sessionStorage.getItem("cinehub4_share_pending")||sessionStorage.getItem("cinehub4_detail")||""; }catch(e){}
   state.pendingAdultDetail = null;
-  // Came from shared adult link → show preview card (not skip to detail)
-  if(sharePend){
-    var fm=resolveMovieByParam(sharePend) || (pending?resolveMovieByParam(pending):null);
+  function openShareOrDetail(id){
+    var fm=resolveMovieByParam(id);
     if(fm){
-      state.page="adult";
       state.detailId=String(fm.id);
+      state.page="detail";
       try{
-        localStorage.setItem("cinehub4_page","adult");
-        sessionStorage.setItem("cinehub4_page","adult");
+        localStorage.setItem("cinehub4_page","detail");
+        sessionStorage.setItem("cinehub4_page","detail");
+        sessionStorage.setItem("cinehub4_share_pending", String(fm.id));
       }catch(e){}
       try{ render(false); }catch(e){}
-      try{ showSharedLanding(fm); }catch(e){}
-      return;
+      setTimeout(function(){ try{ showSharedLanding(fm); }catch(e){} }, 50);
+      return true;
     }
+    return false;
   }
-  if(pending){
-    detail(pending);
-    return;
+  if(sharePend && openShareOrDetail(sharePend)) return;
+  if(pending && openShareOrDetail(pending)) return;
+  if(pending && sessionStorage.getItem("cinehub4_share_dismissed")!=="1"){
+    try{ sessionStorage.setItem("cinehub4_share_pending", String(pending)); }catch(e){}
+    state.detailId=String(pending);
+  } else {
+    // Normal adult enter — show library list, stay on adult after reload
+    state.page="adult";
+    state.detailId=null;
+    try{
+      localStorage.setItem("cinehub4_page","adult");
+      sessionStorage.setItem("cinehub4_page","adult");
+    }catch(e){}
   }
   render(true);
 }
+
 
 function profile(){
   const tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -2409,8 +2500,8 @@ function detailView(){
   const unlocked=isMovieUnlocked(m.id);
   const backPage=isAdult?"adult":"movies";
   const pageLabel=isAdult
-    ? ((cfg.adultDetailTitle||"").trim() || (t("Adult")+" · "+t("Movie")))
-    : ((cfg.movieDetailTitle||"").trim() || t("Movie"));
+    ? (cfgText("adultDetailTitle","adultDetailTitleBn","") || (t("Adult")+" · "+t("Movie")))
+    : (cfgText("movieDetailTitle","movieDetailTitleBn","") || t("Movie"));
   const clicks=Number(m.clicks||m.views||0);
 
   // shared poster header — TMDB meta on unlock / detail
@@ -3449,6 +3540,17 @@ function closeDrawer(){
   const d=document.getElementById("drawer");
   if(d) d.classList.add("hidden");
 }
+function resolveAssetUrl(url){
+  url=String(url||"").trim();
+  if(!url) return "";
+  if(/^https?:\/\//i.test(url) || /^data:/i.test(url) || /^blob:/i.test(url)) return url;
+  try{ return new URL(url, location.href).href; }catch(e){}
+  try{
+    var base=(location.origin||"")+(location.pathname||"/").replace(/[^\/]+$/,"");
+    return base+url.replace(/^\.\//,"");
+  }catch(e2){}
+  return url;
+}
 function applyDrawerBrand(){
   try{
     loadSharedSettings();
@@ -3456,18 +3558,43 @@ function applyDrawerBrand(){
     try{ bn=typeof langIsBn==="function"?langIsBn():false; }catch(e){}
     var title;
     if(bn){
-      title = (cfg && cfg.menuTitleBn) || (cfg && cfg.menuTitle) || "Cine Hub4 মেনু";
+      title = (cfg && cfg.menuTitleBn) || (cfg && cfg.appNameBn) || (cfg && cfg.menuTitle) || (cfg && cfg.appName) || "Cine Hub4 মেনু";
     }else{
-      title = (cfg && cfg.menuTitle) || (cfg && cfg.appName ? (cfg.appName + " Menu") : "Cine Hub4 Menu");
+      title = (cfg && cfg.menuTitle) || (cfg && cfg.appName ? (String(cfg.appName)+" Menu") : "Cine Hub4 Menu");
     }
-    var logo = (cfg && cfg.menuLogoUrl) || "assets/logo.png";
+    var logoRaw = (cfg && cfg.menuLogoUrl) || "assets/logo.jpg";
+    var candidates = [];
+    if(logoRaw) candidates.push(resolveAssetUrl(logoRaw));
+    candidates.push(resolveAssetUrl("assets/logo.jpg"));
+    candidates.push(resolveAssetUrl("assets/logo.png"));
+    if(typeof CINEHUB_LOGO_DATA==="string" && CINEHUB_LOGO_DATA) candidates.push(CINEHUB_LOGO_DATA);
+    // unique
+    candidates = candidates.filter(function(u,i,a){ return u && a.indexOf(u)===i; });
     var elT = document.getElementById("drawerTitle");
     var elL = document.getElementById("drawerLogo");
+    var elF = document.getElementById("drawerLogoFallback");
     if(elT) elT.textContent = title;
-    if(elL){
-      elL.style.display = "";
-      if(elL.getAttribute("src") !== logo) elL.src = logo;
-      elL.onerror = function(){ this.style.display="none"; };
+    var initials = String((cfg&&cfg.appName)||"CH").trim().split(/\s+/).map(function(w){return w.charAt(0);}).join("").slice(0,2).toUpperCase() || "CH";
+    if(elF) elF.textContent = initials;
+    function showFallback(){
+      if(elL) elL.style.display="none";
+      if(elF) elF.style.display="grid";
+    }
+    function showLogo(){
+      if(elL) elL.style.display="";
+      if(elF) elF.style.display="none";
+    }
+    if(elL && candidates.length){
+      var idx=0;
+      elL.onload=function(){ showLogo(); };
+      elL.onerror=function(){
+        idx++;
+        if(idx<candidates.length){ elL.src=candidates[idx]; }
+        else showFallback();
+      };
+      elL.src=candidates[0];
+    } else {
+      showFallback();
     }
   }catch(e){}
 }
@@ -3870,13 +3997,34 @@ function handleStartParam(){
       const hm=location.hash.match(/(?:startapp|start)=([A-Za-z0-9_\-]+)/i);
       if(hm) sp=hm[1];
     }
-    // Recover pending share if Telegram start_param already cleared this session
+    // User dismissed a share — block ONLY that same start param (reload of same link)
+    try{
+      var dSp=sessionStorage.getItem("cinehub4_dismissed_sp")||"";
+      if(sp && dSp && (sp===dSp || sp.indexOf(dSp)>=0 || dSp.indexOf(sp)>=0)){
+        return false;
+      }
+      // No live start_param: do not recover last_start after dismiss
+      if(!sp && (sessionStorage.getItem("cinehub4_share_dismissed")==="1" || window.__deeplinkUserNav)){
+        return false;
+      }
+      // Different movie share than dismissed → allow, clear dismiss
+      if(sp && dSp && sp!==dSp){
+        sessionStorage.removeItem("cinehub4_share_dismissed");
+        sessionStorage.removeItem("cinehub4_dismissed_sp");
+        window.__deeplinkUserNav=false;
+      }
+    }catch(e){}
+    // Recover pending share only if user has NOT dismissed it
     if(!sp){
-      try{ sp = sessionStorage.getItem("cinehub4_last_start") || ""; }catch(e){}
+      try{
+        if(sessionStorage.getItem("cinehub4_share_dismissed")!=="1"){
+          sp = sessionStorage.getItem("cinehub4_last_start") || "";
+        }
+      }catch(e){}
     }
     if(!sp){
       try{
-        var pendingOnly = sessionStorage.getItem("cinehub4_share_pending") || sessionStorage.getItem("cinehub4_detail") || "";
+        var pendingOnly = sessionStorage.getItem("cinehub4_share_pending") || "";
         if(pendingOnly){
           return openSharedMovie(pendingOnly);
         }
@@ -3884,7 +4032,15 @@ function handleStartParam(){
       return false;
     }
     sp=String(sp).trim();
-    try{ sessionStorage.setItem("cinehub4_last_start", sp); }catch(e){}
+    // Fresh start_param from Telegram link = intentional open → allow share again
+    try{
+      var prev=sessionStorage.getItem("cinehub4_last_start")||"";
+      if(sp && sp!==prev){
+        sessionStorage.removeItem("cinehub4_share_dismissed");
+        window.__deeplinkUserNav=false;
+      }
+      sessionStorage.setItem("cinehub4_last_start", sp);
+    }catch(e){}
 
     // Extract optional __r_REFERRER (or _r_REFERRER) from any start param
     var refEmbedded = "";
@@ -3903,7 +4059,16 @@ function handleStartParam(){
     try{
       needRetry = !!(sessionStorage.getItem("cinehub4_share_pending") || (state.page==="detail" && state.detailId && !resolveMovieByParam(state.detailId)));
     }catch(e){}
-    if(already && !needRetry) return false;
+    if(already && !needRetry){
+      // Still reopen if share_pending exists and landing not shown
+      try{
+        var spKeep=sessionStorage.getItem("cinehub4_share_pending")||"";
+        if(spKeep && !document.getElementById("sharedLanding")){
+          return openSharedMovie(spKeep);
+        }
+      }catch(e){}
+      return false;
+    }
 
     // movie_<id> or movie_<id>__r_<uid> → open unlock/detail
     if(/^movie_/i.test(spCore)){
@@ -3913,7 +4078,8 @@ function handleStartParam(){
         if(ok){
           try{
             // Only mark fully consumed once the movie exists in the library
-            if(resolveMovieByParam(id)) sessionStorage.setItem("cinehub4_start_consumed", sp);
+            // Don't consume until user opens Watch — allow retry on reload
+            try{ sessionStorage.setItem("cinehub4_share_pending", id); }catch(e){}
           }catch(e){}
         }
         return ok;
@@ -3926,7 +4092,7 @@ function handleStartParam(){
       if(id && (resolveMovieByParam(id) || /^\d+$/.test(id) || /^m_/.test(id) || /^manual_/.test(id) || /^tmdb_/i.test(id))){
         var ok2=openSharedMovie(id);
         if(ok2){
-          try{ if(resolveMovieByParam(id)) sessionStorage.setItem("cinehub4_start_consumed", sp); }catch(e){}
+          try{ sessionStorage.setItem("cinehub4_share_pending", id); }catch(e){}
         }
         return ok2;
       }

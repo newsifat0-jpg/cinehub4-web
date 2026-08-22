@@ -3,7 +3,7 @@ const DEFAULT={
   appName:"Cine Hub4",
   menuTitle:"Cine Hub4 Menu",
   menuTitleBn:"Cine Hub4 মেনু",
-  menuLogoUrl:"assets/logo.png",
+  menuLogoUrl:"assets/logo.jpg",
   botUsername:"@Cinehub4bot",
   telegramBotLink:"https://t.me/Cinehub4bot",
   miniAppName:"Hub4",
@@ -41,6 +41,13 @@ const DEFAULT={
   adultLibraryBadge:"ADULT ZONE",
   adultLibraryTitle:"Adult Library",
   adultHeaderTitle:"Adult",
+  adultHeaderTitleBn:"অ্যাডাল্ট",
+  moviesHeaderTitle:"",
+  moviesHeaderTitleBn:"",
+  appNameBn:"Cine Hub4",
+  adultDetailTitleBn:"",
+  movieDetailTitleBn:"",
+
   adultDetailTitle:"",
   movieDetailTitle:"",
 
@@ -1604,9 +1611,12 @@ function adult(){
 </div>
 <div class="card" style="margin-top:14px"><h3>Adult Page Text (EN + বাংলা)</h3><div class="muted smalltext">মুভির মতো — ইংরেজি ও বাংলা আলাদা। ইউজার ভাষা অনুযায়ী দেখাবে।</div>
 <div class="form-grid" style="margin-top:12px">
-  <div class="field"><label>Adult page header title</label><input id="aHeaderTitle" value="${A.settings.adultHeaderTitle||'Adult'}" placeholder="Adult"></div>
-  <div class="field"><label>Adult detail top title</label><input id="aDetailTitle" value="${A.settings.adultDetailTitle||''}" placeholder="Adult · Movie"></div>
-  <div class="field"><label>Movie detail top title</label><input id="mDetailTitle" value="${A.settings.movieDetailTitle||''}" placeholder="Movie"></div>
+  <div class="field"><label>Adult page header (EN)</label><input id="aHeaderTitle" value="${A.settings.adultHeaderTitle||'Adult'}" placeholder="Adult"></div>
+  <div class="field"><label>Adult page header (বাংলা)</label><input id="aHeaderTitleBn" value="${A.settings.adultHeaderTitleBn||''}" placeholder="অ্যাডাল্ট"></div>
+  <div class="field"><label>Adult detail title (EN)</label><input id="aDetailTitle" value="${A.settings.adultDetailTitle||''}" placeholder="Adult · Movie"></div>
+  <div class="field"><label>Adult detail title (বাংলা)</label><input id="aDetailTitleBn" value="${A.settings.adultDetailTitleBn||''}" placeholder="অ্যাডাল্ট · মুভি"></div>
+  <div class="field"><label>Movie detail title (EN)</label><input id="mDetailTitle" value="${A.settings.movieDetailTitle||''}" placeholder="Movie"></div>
+  <div class="field"><label>Movie detail title (বাংলা)</label><input id="mDetailTitleBn" value="${A.settings.movieDetailTitleBn||''}" placeholder="মুভি"></div>
   <div class="field"><label>Badge (EN)</label><input id="aLibBadge" value="${A.settings.adultLibraryBadge||''}"></div>
   <div class="field"><label>ব্যাজ (বাংলা)</label><input id="aLibBadgeBn" value="${A.settings.adultLibraryBadgeBn||''}" placeholder="অ্যাডাল্ট জোন"></div>
   <div class="field"><label>Title (EN)</label><input id="aLibTitle" value="${A.settings.adultLibraryTitle||''}"></div>
@@ -1630,8 +1640,11 @@ function adult(){
 function saveAdultTexts(){
   function gv(id){ return (($('#'+id)||{}).value||'').trim(); }
   A.settings.adultHeaderTitle=gv('aHeaderTitle');
+  A.settings.adultHeaderTitleBn=gv('aHeaderTitleBn');
   A.settings.adultDetailTitle=gv('aDetailTitle');
+  A.settings.adultDetailTitleBn=gv('aDetailTitleBn');
   A.settings.movieDetailTitle=gv('mDetailTitle');
+  A.settings.movieDetailTitleBn=gv('mDetailTitleBn');
   A.settings.adultLibraryBadge=gv('aLibBadge');
   A.settings.adultLibraryBadgeBn=gv('aLibBadgeBn');
   A.settings.adultLibraryTitle=gv('aLibTitle');
@@ -1778,10 +1791,14 @@ function settings(){
   return `<div class="grid section-grid">
   <div class="card"><h3>Brand & Links</h3>
     <div class="form-grid">
-      <div class="field"><label>App Name</label><input id="s_appName" value="${s.appName||""}"></div>
+      <div class="field"><label>App Name (EN)</label><input id="s_appName" value="${s.appName||""}" placeholder="Cine Hub4"></div>
+      <div class="field"><label>App Name (বাংলা)</label><input id="s_appNameBn" value="${s.appNameBn||""}" placeholder="Cine Hub4"></div>
+      <div class="field"><label>Movies page header (EN)</label><input id="s_moviesHeaderTitle" value="${s.moviesHeaderTitle||""}" placeholder="খালি = App Name"></div>
+      <div class="field"><label>Movies page header (বাংলা)</label><input id="s_moviesHeaderTitleBn" value="${s.moviesHeaderTitleBn||""}" placeholder="খালি = App Name বাংলা"></div>
       <div class="field"><label>Side menu title (EN)</label><input id="s_menuTitle" value="${s.menuTitle||"Cine Hub4 Menu"}" placeholder="Cine Hub4 Menu"></div>
       <div class="field"><label>Side menu title (বাংলা)</label><input id="s_menuTitleBn" value="${s.menuTitleBn||""}" placeholder="Cine Hub4 মেনু"></div>
-      <div class="field" style="grid-column:1/-1"><label>Side menu logo URL</label><input id="s_menuLogo" value="${s.menuLogoUrl||"assets/logo.png"}" placeholder="assets/logo.png or https://..."></div>
+      <div class="field" style="grid-column:1/-1"><label>Side menu logo URL (Adult + Movies same)</label><input id="s_menuLogo" value="${s.menuLogoUrl||"assets/logo.jpg"}" placeholder="https://... full image URL recommended"></div>
+      <div class="field" style="grid-column:1/-1"><div class="muted smalltext">লোগো একই থাকবে সব পেজে। Telegram Mini App-এ <b>https://</b> ফুল লিংক দিলেই নিশ্চিত দেখাবে। Side menu title (EN/বাংলা) ভাষা অনুযায়ী বদলায়।</div></div>
       <div class="field" style="grid-column:1/-1"><label class="muted smalltext">মেনু টাইটেল ও লোগো ইউজার অ্যাপের সাইড মেনুতে দেখাবে। লোগো: হোস্টিং পাথ বা ইমেজ লিংক।</label></div>
       <div class="field"><label>Bot Username</label><input id="s_botUser" value="${s.botUsername||""}" placeholder="@Cinehub4bot"></div>
       <div class="field"><label>Bot Link</label><input id="s_botLink" value="${s.telegramBotLink||""}" placeholder="https://t.me/Cinehub4bot"></div>
@@ -1891,9 +1908,12 @@ function saveAllSettings(){
   const g=id=>document.getElementById(id);
   const s=A.settings;
   if(g("s_appName")) s.appName=g("s_appName").value;
+  if(g("s_appNameBn")) s.appNameBn=g("s_appNameBn").value.trim();
+  if(g("s_moviesHeaderTitle")) s.moviesHeaderTitle=g("s_moviesHeaderTitle").value.trim();
+  if(g("s_moviesHeaderTitleBn")) s.moviesHeaderTitleBn=g("s_moviesHeaderTitleBn").value.trim();
   if(g("s_menuTitle")) s.menuTitle=g("s_menuTitle").value.trim()||"Cine Hub4 Menu";
   if(g("s_menuTitleBn")) s.menuTitleBn=g("s_menuTitleBn").value.trim();
-  if(g("s_menuLogo")) s.menuLogoUrl=g("s_menuLogo").value.trim()||"assets/logo.png";
+  if(g("s_menuLogo")) s.menuLogoUrl=g("s_menuLogo").value.trim()||"assets/logo.jpg";
   if(g("s_botUser")) s.botUsername=g("s_botUser").value;
   if(g("s_botLink")) s.telegramBotLink=g("s_botLink").value;
   if(g("s_channel")) s.telegramChannelLink=g("s_channel").value;

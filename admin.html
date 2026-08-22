@@ -82,7 +82,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="config.js?v=20260822userfix1"></script>
   <script src="firebase-helper.js?v=20260822userfix1"></script>
-  <script src="admin.js?v=20260822hdr"></script>
+  <script src="admin.js?v=20260822menu"></script>
   <script>
     // Hard bind Enter button (survives any earlier onclick loss)
     document.addEventListener("DOMContentLoaded", function(){
@@ -92,7 +92,7 @@
           e.preventDefault();
           if(typeof window.adminLogin === "function") window.adminLogin();
           else if(typeof adminLogin === "function") adminLogin();
-          else alert("adminLogin missing — admin.js?v=20260822hdr load failed");
+          else alert("adminLogin missing — admin.js?v=20260822menu");
         });
       }
     });
