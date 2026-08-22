@@ -76,7 +76,15 @@ const DEFAULT={
   themeAccent2:"#5b8cff",
   themeOrange:"#f59e0b",
   themePink:"#ec4899",
-  themeBg:"#0a0c14"
+  themeBg:"#0a0c14",
+
+  maintenanceMode:false,
+  maintenanceTitle:"🛠 Under Maintenance",
+  maintenanceMessage:"We're updating the app right now. Please check back soon.",
+  maintenanceButtonText:"Join Telegram Channel",
+  maintenanceLinkText:"Tap here for updates",
+  maintenanceLinkUrl:"",
+  maintenanceAllowedUsers:""
 };
 
 function admIco(name, size){
@@ -97,7 +105,8 @@ function admIco(name, size){
     link: '<path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L11 5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.81 13.12a5 5 0 0 0 7.07 7.07L13 19"/>',
     send: '<path d="M21 5L3 12.5l5 1.8L18 8l-8 7.2v3.3l2.8-2.5 4.2 3.1L21 5z"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
-    pay: '<path d="M12 2v20M17 7H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'
+    pay: '<path d="M12 2v20M17 7H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+    lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'
   };
   return '<svg class="ui-ico" '+common+'>'+(p[name]||p.film)+'</svg>';
 }
@@ -546,7 +555,7 @@ function boot(){
   // Always re-verify with server (never trust old session alone)
   try{ loadAdminIdsFromFB(false); }catch(e){ console.warn(e); }
 }
-function sectionTitle(s){const map={dashboard:'Dashboard',movies:'Movies',categories:'Categories',users:'Users',points:'Points & Unlocks',ads:'Ads & Ad IDs',tasks:'Daily Tasks',payments:'Payments',adult:'Adult Library',requests:'Movie Requests',content:'Links & Videos',broadcast:'Broadcast',settings:'Settings'};return map[s]||s}
+function sectionTitle(s){const map={dashboard:'Dashboard',movies:'Movies',categories:'Categories',users:'Users',points:'Points & Unlocks',ads:'Ads & Ad IDs',tasks:'Daily Tasks',payments:'Payments',adult:'Adult Library',requests:'Movie Requests',content:'Links & Videos',broadcast:'Broadcast',maintenance:'Maintenance',settings:'Settings'};return map[s]||s}
 function closeSidebar(){const sb=document.querySelector('.sidebar');if(sb)sb.classList.remove('open');const bd=document.getElementById('sideBackdrop');if(bd)bd.classList.add('hidden')}
 function openSidebar(){const sb=document.querySelector('.sidebar');if(sb)sb.classList.add('open');const bd=document.getElementById('sideBackdrop');if(bd)bd.classList.remove('hidden')}
 function setSection(s){ if(s==='payments') window.__payLoaded=false; if(s==='requests') window.__reqLoaded=false; 
@@ -1609,6 +1618,53 @@ function saveAllLinks(){
 }
 function saveVideo(){saveAllLinks()}
 function broadcast(){return `<div class="card"><h3>Broadcast Center</h3><p class="muted">Bot broadcast is handled from your Telegram Bot (BotBusiness / bot commands). This panel does not send demo messages.</p><div class="field" style="margin-top:12px"><label>Tip</label><p class="muted smalltext">Use your bot admin commands to notify users. Mini App + Firebase data stays shared.</p></div></div>`}
+function maintenancePage(){
+  const s=A.settings;
+  return `<div class="toolbar"><div><h2 style="margin:0;font-size:18px">Maintenance Mode</h2><p class="muted smalltext" style="margin:4px 0 0">চালু করলে সাধারণ ইউজাররা মিনি অ্যাপের বদলে এই মেসেজ ও লিংক দেখবে। শুধু Admin এবং নিচে সিলেক্ট করা ইউজাররা মিনি অ্যাপ ব্যবহার করতে পারবে।</p></div></div>
+  <div class="grid section-grid">
+    <div class="card">
+      <h3>Status</h3>
+      <div class="switch"><span>Maintenance Mode</span><span class="toggle ${s.maintenanceMode?'on':''}" id="maintModeToggle" onclick="A.settings.maintenanceMode=!A.settings.maintenanceMode;this.classList.toggle('on');save();toast(A.settings.maintenanceMode?'✓ Maintenance Mode ON':'✓ Maintenance Mode OFF')"><i></i></span></div>
+      <p class="muted smalltext" style="margin-top:8px">${s.maintenanceMode?'⚠️ Mini app is currently in maintenance for normal users.':'Mini app is live for all users.'}</p>
+    </div>
+    <div class="card">
+      <h3>Message shown to users</h3>
+      <div class="form-grid">
+        <div class="field" style="grid-column:1/-1"><label>Title</label><input id="mnt_title" value="${(s.maintenanceTitle||'').replace(/"/g,'&quot;')}" placeholder="🛠 Under Maintenance"></div>
+        <div class="field" style="grid-column:1/-1"><label>Message</label><textarea id="mnt_message" rows="3">${s.maintenanceMessage||''}</textarea></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Button & Link</h3>
+      <div class="form-grid">
+        <div class="field"><label>Button text</label><input id="mnt_btnText" value="${(s.maintenanceButtonText||'').replace(/"/g,'&quot;')}" placeholder="Join Telegram Channel"></div>
+        <div class="field"><label>Link text (below button)</label><input id="mnt_linkText" value="${(s.maintenanceLinkText||'').replace(/"/g,'&quot;')}" placeholder="Tap here for updates"></div>
+        <div class="field" style="grid-column:1/-1"><label>Link URL (button + link both open this)</label><input id="mnt_linkUrl" value="${(s.maintenanceLinkUrl||'').replace(/"/g,'&quot;')}" placeholder="https://t.me/yourchannel"></div>
+        <div class="field" style="grid-column:1/-1"><label class="muted smalltext">খালি রাখলে Links & Videos ট্যাবের Telegram Channel Link (${s.telegramChannelLink||'—'}) ব্যবহার হবে।</label></div>
+      </div>
+    </div>
+    <div class="card" style="grid-column:1/-1">
+      <h3>Allowed users during maintenance</h3>
+      <p class="muted smalltext">Admin সবসময় ব্যবহার করতে পারবে। এখানে অতিরিক্ত Telegram User ID (কমা দিয়ে আলাদা) দিলে তারাও maintenance চলাকালীন মিনি অ্যাপ ব্যবহার করতে পারবে।</p>
+      <div class="field" style="margin-top:8px"><label>Selected User IDs (comma separated)</label><textarea id="mnt_allowedUsers" rows="2" placeholder="123456789, 987654321">${s.maintenanceAllowedUsers||''}</textarea></div>
+    </div>
+    <div class="card" style="grid-column:1/-1">
+      <button class="btn primary" style="width:100%;padding:14px;font-size:15px" onclick="saveMaintenance()">💾 Save Maintenance Settings</button>
+    </div>
+  </div>`;
+}
+function saveMaintenance(){
+  const g=id=>document.getElementById(id);
+  const s=A.settings;
+  if(g('mnt_title')) s.maintenanceTitle=g('mnt_title').value;
+  if(g('mnt_message')) s.maintenanceMessage=g('mnt_message').value;
+  if(g('mnt_btnText')) s.maintenanceButtonText=g('mnt_btnText').value;
+  if(g('mnt_linkText')) s.maintenanceLinkText=g('mnt_linkText').value;
+  if(g('mnt_linkUrl')) s.maintenanceLinkUrl=g('mnt_linkUrl').value.trim();
+  if(g('mnt_allowedUsers')) s.maintenanceAllowedUsers=g('mnt_allowedUsers').value.trim();
+  save();
+  toast('✓ Maintenance settings saved to Firebase');
+}
 function settings(){
   const s=A.settings;
   const pkgs=(s.packages||[]).map((p,i)=>`<div class="field" style="grid-column:1/-1;border:1px solid #243049;border-radius:12px;padding:12px;margin-bottom:8px">
@@ -2131,7 +2187,7 @@ function render(){
   try{
     const box=contentEl();
     if(!box){console.error('content missing');return}
-    const views={dashboard,movies,categories,users,points,ads,tasks,payments,adult,requests,content:contentPage,broadcast,settings};
+    const views={dashboard,movies,categories,users,points,ads,tasks,payments,adult,requests,content:contentPage,broadcast,maintenance:maintenancePage,settings};
     const fn=views[A.section];
     if(typeof fn!=='function'){box.innerHTML='<div class="card"><p>Unknown section: '+A.section+'</p></div>';return}
     box.innerHTML=fn();

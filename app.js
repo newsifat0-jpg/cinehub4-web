@@ -350,36 +350,20 @@ function openSharedMovie(id){
 function applyAdultGateIfNeeded(){
   try{
     if(window.__deeplinkUserNav) return false;
+    if(state.adultOK) return false;
     var id = state.pendingAdultDetail || state.detailId || sessionStorage.getItem("cinehub4_detail") || "";
     if(!id) return false;
     var found = resolveMovieByParam(id);
-    if(!found) return false;
-    if(found.adult && !state.adultOK){
-      state.pendingAdultDetail = String(found.id);
-      state.detailId = String(found.id);
-      state.page = "adult";
-      state.history = [];
-      try{
-        sessionStorage.setItem("cinehub4_page","adult");
-        localStorage.setItem("cinehub4_page","adult");
-      }catch(e){}
-      return true;
-    }
-    // Non-adult shared movie arrived after the movies list loaded — make sure
-    // it actually opens the detail page instead of sitting on detailId only.
-    if(!found.adult && state.page!=="detail"){
-      state.pendingAdultDetail = null;
-      state.detailId = String(found.id);
-      state.page = "detail";
-      state.history = ["movies"];
-      try{
-        sessionStorage.setItem("cinehub4_history", JSON.stringify(state.history));
-        sessionStorage.setItem("cinehub4_page","detail");
-        localStorage.setItem("cinehub4_page","detail");
-      }catch(e){}
-      return true;
-    }
-    return false;
+    if(!found || !found.adult) return false;
+    state.pendingAdultDetail = String(found.id);
+    state.detailId = String(found.id);
+    state.page = "adult";
+    state.history = [];
+    try{
+      sessionStorage.setItem("cinehub4_page","adult");
+      localStorage.setItem("cinehub4_page","adult");
+    }catch(e){}
+    return true;
   }catch(e){ return false; }
 }
 
@@ -548,7 +532,8 @@ function shareRefLink(){
   var refMsg = langIsBn()
     ? "Cine Hub4-এ যোগ দিন — মুভি ও সিরিজ দেখুন, সহজে ডাউনলোড করুন, একদম ফ্রি!"
     : "Join Cine Hub4 — stream movies & series, download easily, completely free!";
-  nativeShare({title: langIsBn() ? "Cine Hub4 আমন্ত্রণ" : "Cine Hub4 Invite", text: refMsg, url: link});
+  var shareBody = refMsg + "\n" + link;
+  nativeShare({title: langIsBn() ? "Cine Hub4 আমন্ত্রণ" : "Cine Hub4 Invite", text: shareBody, url: link});
 }
 function openLink(u){if(!u)return;try{window.Telegram?.WebApp?.openTelegramLink?.(u)||window.Telegram?.WebApp?.openLink?.(u)||window.open(u,"_blank")}catch(e){window.open(u,"_blank")}}
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
@@ -561,7 +546,8 @@ const defaults={appName:"Cine Hub4",botUsername:"@Cinehub4bot",telegramBotLink:"
   wallets:[{name:"USDT TRC20",address:"",network:"TRC20"}],
   tasks:[],
   customPointRate:100,
-  adBlocks:{rewarded:"",interstitial:"",banner:"",bannerAdult:"",task:"",adult:""},showMovieBanner:true,showAdultBanner:true,movieBannerImg:"",movieBannerLink:"",adultBannerImg:"",adultBannerLink:""};
+  adBlocks:{rewarded:"",interstitial:"",banner:"",bannerAdult:"",task:"",adult:""},showMovieBanner:true,showAdultBanner:true,movieBannerImg:"",movieBannerLink:"",adultBannerImg:"",adultBannerLink:"",
+  maintenanceMode:false,maintenanceTitle:"🛠 Under Maintenance",maintenanceMessage:"We're updating the app right now. Please check back soon.",maintenanceButtonText:"Join Telegram Channel",maintenanceLinkText:"Tap here for updates",maintenanceLinkUrl:"",maintenanceAllowedUsers:""};
 let cfg={...defaults,...JSON.parse(localStorage.getItem("cinehub4_settings")||"{}")};
 if(!cfg.categories||!cfg.categories.length)cfg.categories=defaults.categories.slice();
 if(!cfg.adultCategories||!cfg.adultCategories.length)cfg.adultCategories=defaults.adultCategories.slice();
@@ -695,6 +681,80 @@ function hideBlockedScreen(){
     clearInterval(window.__blockPoll);
     window.__blockPoll = null;
   }
+}
+function escMaintText_(s){
+  return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+function isMaintenanceActive(){
+  try{ return !!(cfg && cfg.maintenanceMode === true); }catch(e){ return false; }
+}
+function isMaintenanceAllowedUser(){
+  try{
+    if(typeof isAdminUser==="function" && isAdminUser()) return true;
+    var uid = "";
+    try{ uid = String((window.CineHubFB && window.CineHubFB.getUid && window.CineHubFB.getUid()) || ""); }catch(e){}
+    if(!uid) return false;
+    var allowed = String((cfg && cfg.maintenanceAllowedUsers) || "").split(",").map(function(x){return x.trim();}).filter(Boolean);
+    return allowed.indexOf(uid) !== -1;
+  }catch(e){ return false; }
+}
+function showMaintenanceScreen(){
+  window.__cinehub_maintenance = true;
+  var old = document.getElementById("maintenanceOverlay");
+  if(old) old.remove();
+  var linkUrl = String((cfg && (cfg.maintenanceLinkUrl || cfg.telegramChannelLink)) || "").trim();
+  var btnText = (cfg && cfg.maintenanceButtonText) || "Join Telegram Channel";
+  var linkText = (cfg && cfg.maintenanceLinkText) || "";
+  var title = (cfg && cfg.maintenanceTitle) || "🛠 Under Maintenance";
+  var msg = (cfg && cfg.maintenanceMessage) || "We're updating the app right now. Please check back soon.";
+  var btnHtml = linkUrl ? '<a class="primary" href="'+escMaintText_(linkUrl)+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:14px;padding:12px 22px;text-decoration:none">'+escMaintText_(btnText)+'</a>' : '';
+  var linkHtml = (linkUrl && linkText) ? '<p class="blocked-sub" style="margin-top:12px"><a href="'+escMaintText_(linkUrl)+'" target="_blank" rel="noopener" style="color:#7c5cff">'+escMaintText_(linkText)+'</a></p>' : '';
+  var ov = document.createElement("div");
+  ov.id = "maintenanceOverlay";
+  ov.className = "blocked-overlay";
+  ov.innerHTML =
+    '<div class="blocked-card">'+
+      '<div class="blocked-ico" aria-hidden="true">🛠</div>'+
+      '<h2 class="blocked-title">'+escMaintText_(title)+'</h2>'+
+      '<p class="blocked-msg">'+escMaintText_(msg)+'</p>'+
+      btnHtml+linkHtml+
+    '</div>';
+  document.body.appendChild(ov);
+  try{
+    var app = document.getElementById("app");
+    if(app) app.style.visibility = "hidden";
+    var splash = document.getElementById("appSplash");
+    if(splash){ splash.className = "gone"; splash.style.display = "none"; }
+  }catch(e){}
+  if(!window.__maintPoll){
+    window.__maintPoll = setInterval(checkMaintenanceGate, 15000);
+  }
+}
+function hideMaintenanceScreen(){
+  window.__cinehub_maintenance = false;
+  var old = document.getElementById("maintenanceOverlay");
+  if(old) old.remove();
+  try{
+    var app = document.getElementById("app");
+    if(app) app.style.visibility = "";
+  }catch(e){}
+  if(window.__maintPoll){
+    clearInterval(window.__maintPoll);
+    window.__maintPoll = null;
+  }
+}
+/* Re-evaluate maintenance gate whenever config or admin status is (re)loaded */
+function checkMaintenanceGate(){
+  try{
+    if(isMaintenanceActive() && !isMaintenanceAllowedUser()){
+      showMaintenanceScreen();
+    }else if(window.__cinehub_maintenance){
+      hideMaintenanceScreen();
+      try{ safeRender(false); }catch(e){}
+    }
+  }catch(e){}
 }
 function loadUserFromFB(){
   if(!window.CineHubFB){state.userLoaded=true;tryApplyReferralLocal();return}
@@ -2949,6 +3009,7 @@ function loadAdminIdsApp(){
         try{ sessionStorage.removeItem("cinehub4_is_admin"); localStorage.removeItem("cinehub4_admin_session"); }catch(e){}
       }
       try{setupAdminButton()}catch(e){}
+      try{checkMaintenanceGate()}catch(e){}
     }).catch(function(err){
       console.warn("[admin] fetch error", err);
       // retry once after 1.2s (slow network / cold start)
@@ -2990,6 +3051,7 @@ function loadPublicAppConfig(forceRender){
         localStorage.setItem("cinehub4_settings", JSON.stringify(c));
       }catch(e){}
       try{ applyTheme(); }catch(e){}
+      try{ checkMaintenanceGate(); }catch(e){}
       // Background config — queue if UI frozen/splash
       if(forceRender !== false && !window.__cinehub_splashUp && !window.__cinehub_bootFreeze){
         try{ render(false); }catch(e){}
@@ -3079,6 +3141,8 @@ function bindHomeStickyScroll(){
 function render(animate=false){
 /* Blocked users never see normal UI */
 if(window.__cinehub_blocked){ return; }
+/* Users blocked by Maintenance Mode never see normal UI */
+if(window.__cinehub_maintenance){ return; }
 /* Skip paints while splash is covering the screen (prevents open-time jerk) */
 if(window.__cinehub_splashUp && !window.__cinehub_forcePaint){ window.__cinehub_needPaint=true; return; }
 try{const views={movies:moviesPage,search:searchPage,series,adult,adultSearch:adultSearchPage,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate && !state.firstPaint && !window.__cinehub_noAnim){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>{
