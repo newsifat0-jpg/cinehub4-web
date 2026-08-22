@@ -69,6 +69,80 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="config.js?v=20260820final"></script>
+<script>
+/* Independent maintenance gate — self-contained, does NOT depend on app.js.
+   Runs even if app.js is fully rewritten/replaced later; only removing THIS
+   block (or turning Maintenance Mode off in Admin Panel) disables it. */
+(function(){
+  try{
+    var cfg = window.APP_CONFIG || {};
+    var api = cfg.apiBaseUrl;
+    if(!api) return;
+    var initData = "";
+    try{ initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || ""; }catch(e){}
+    function escG(s){
+      return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+        return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+      });
+    }
+    function post(action){
+      return fetch(api,{
+        method:"POST",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body:JSON.stringify({action:action, initData:initData})
+      }).then(function(r){ return r.json(); }).catch(function(){ return null; });
+    }
+    function showGate(c){
+      if(document.getElementById("preGateMaintenance")) return;
+      var linkUrl = String((c.maintenanceLinkUrl || c.telegramChannelLink || cfg.telegramChannelLink) || "").trim();
+      var btnText = c.maintenanceButtonText || "Join Telegram Channel";
+      var linkText = c.maintenanceLinkText || "";
+      var title = c.maintenanceTitle || "🛠 Under Maintenance";
+      var msg = c.maintenanceMessage || "We're updating the app right now. Please check back soon.";
+      var btnHtml = linkUrl ? '<a class="primary" href="'+escG(linkUrl)+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:14px;padding:12px 22px;text-decoration:none">'+escG(btnText)+'</a>' : '';
+      var linkHtml = (linkUrl && linkText) ? '<p class="blocked-sub" style="margin-top:12px"><a href="'+escG(linkUrl)+'" target="_blank" rel="noopener" style="color:#7c5cff">'+escG(linkText)+'</a></p>' : '';
+      var ov = document.createElement("div");
+      ov.id = "preGateMaintenance";
+      ov.className = "blocked-overlay";
+      ov.style.zIndex = "999999";
+      ov.innerHTML =
+        '<div class="blocked-card">'+
+          '<div class="blocked-ico" aria-hidden="true">🛠</div>'+
+          '<h2 class="blocked-title">'+escG(title)+'</h2>'+
+          '<p class="blocked-msg">'+escG(msg)+'</p>'+
+          btnHtml+linkHtml+
+        '</div>';
+      document.body.appendChild(ov);
+      window.__cinehub_hardMaintenance = true;
+      try{
+        var s=document.getElementById("appSplash"); if(s){ s.style.display="none"; }
+        var app=document.getElementById("app"); if(app){ app.style.display="none"; }
+      }catch(e){}
+    }
+    post("loadPublicConfig").then(function(res){
+      var c = (res && res.ok && res.data) ? res.data : null;
+      if(!c || c.maintenanceMode !== true) return;
+      post("adminCheck").then(function(ares){
+        var isAdmin = !!(ares && ares.ok && ares.data && ares.data.isAdmin);
+        if(isAdmin) return;
+        var uid = "";
+        try{ uid = String((window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user && window.Telegram.WebApp.initDataUnsafe.user.id) || ""); }catch(e){}
+        var allowed = String(c.maintenanceAllowedUsers||"").split(",").map(function(x){return x.trim();}).filter(Boolean);
+        if(uid && allowed.indexOf(uid) !== -1) return;
+        showGate(c);
+        // Poll so the screen unlocks itself once admin turns Maintenance off
+        setInterval(function(){
+          post("loadPublicConfig").then(function(res2){
+            var c2 = (res2 && res2.ok && res2.data) ? res2.data : null;
+            if(c2 && c2.maintenanceMode === true) return; // still on, keep waiting
+            location.reload();
+          }).catch(function(){});
+        }, 15000);
+      }).catch(function(){ showGate(c); });
+    }).catch(function(){});
+  }catch(e){}
+})();
+</script>
 <script src="firebase-helper.js?v=20260821unlock1"></script>
 <script src="app.js?v=20260822gate2"></script>
 <script>

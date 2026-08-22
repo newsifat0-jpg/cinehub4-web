@@ -704,7 +704,7 @@ function showMaintenanceScreen(){
   window.__cinehub_maintenance = true;
   var old = document.getElementById("maintenanceOverlay");
   if(old) old.remove();
-  var linkUrl = String((cfg && (cfg.maintenanceLinkUrl || cfg.telegramChannelLink)) || "").trim();
+  var linkUrl = String((cfg && (cfg.maintenanceLinkUrl || cfg.telegramChannelLink)) || (window.APP_CONFIG && window.APP_CONFIG.telegramChannelLink) || "").trim();
   var btnText = (cfg && cfg.maintenanceButtonText) || "Join Telegram Channel";
   var linkText = (cfg && cfg.maintenanceLinkText) || "";
   var title = (cfg && cfg.maintenanceTitle) || "🛠 Under Maintenance";
@@ -1337,6 +1337,17 @@ function taskResetInfo(i,tk){
     } else if(!entry.day){
       entry.day=today;
       map[sid]=entry;
+    }
+  } else if(mode==="minutes"){
+    const doneAt=Number(entry.done_at)||0;
+    if(doneAt){
+      const mins=Number(tk&&tk.resetMinutes);
+      const m=(isFinite(mins)&&mins>0)?mins:60;
+      if((Date.now()-doneAt)/60000 >= m){
+        count=0;
+        entry={count:0};
+        map[sid]=entry;
+      }
     }
   } else {
     const doneAt=Number(entry.done_at)||0;
@@ -2465,9 +2476,9 @@ function openAdLink(url){
   return false;
 }
 
-function playLinkAd(slot, onDone){
+function playLinkAd(slot, onDone, onFail){
   var id = String((slot&&slot.id)||"").trim();
-  if(!id){ toast(t("Admin has not configured this Ad Block ID")); if(onDone) onDone(); return; }
+  if(!id){ toast(t("Admin has not configured this Ad Block ID")); if(onFail) onFail(); return; }
   var url = id;
   if(!/^https?:\/\//i.test(id)){
     var net = String((slot&&slot.network)||"").toLowerCase();
@@ -2479,6 +2490,7 @@ function playLinkAd(slot, onDone){
         url = "https://otieu.com/4/"+encodeURIComponent(id);
       } else {
         toast(t("Paste full ad URL for this network"));
+        if(onFail) onFail();
         return;
       }
     }
@@ -2520,11 +2532,12 @@ function playLinkAd(slot, onDone){
   if(cancel) cancel.onclick = function(){
     cancelled=true; clearInterval(tick); try{ov.remove()}catch(e){}
     toast(t("Ad closed"));
+    if(onFail) onFail();
   };
 }
 
-function playAdsgram(blockId, onDone){
-  if(!blockId){ toast(t("Admin has not configured this Ad Block ID")); return; }
+function playAdsgram(blockId, onDone, onFail){
+  if(!blockId){ toast(t("Admin has not configured this Ad Block ID")); if(onFail) onFail(); return; }
   var loadToastTimer = null;
   var finished = false;
   function clearLoadToast(){
@@ -2534,7 +2547,12 @@ function playAdsgram(blockId, onDone){
     if(finished) return;
     finished = true;
     clearLoadToast();
-    try{ if(onDone) onDone(); }catch(e){ console.warn(e); }
+    if(ok){
+      try{ if(onDone) onDone(); }catch(e){ console.warn(e); }
+    } else {
+      toast(t("Ad was not completed. Try again."));
+      try{ if(onFail) onFail(); }catch(e){ console.warn(e); }
+    }
   }
   function tryShow(){
     if(window.Adsgram && typeof window.Adsgram.init==="function"){
@@ -2543,7 +2561,9 @@ function playAdsgram(blockId, onDone){
         loadToastTimer = setTimeout(function(){
           if(!finished) toast(t("Ad loading…"));
         }, 800);
-        ad.show().then(function(){ finish(true); }).catch(function(){ finish(true); });
+        // Only reward when the ad actually finished (promise resolves).
+        // A rejection means the ad was skipped/closed early/failed to fill — no reward.
+        ad.show().then(function(){ finish(true); }).catch(function(){ finish(false); });
         return true;
       }catch(e){ console.warn(e); }
     }
@@ -2557,38 +2577,44 @@ function playAdsgram(blockId, onDone){
     .then(function(ok){
       if(ok && tryShow()) return;
       clearLoadToast();
-      // fallback: do not leave user stuck — treat as soft fail so multi-net can try next
+      // Script never loaded — soft fail so multi-net waterfall can try the next network.
+      // Never reward on total failure.
       if(!finished){
         finished = true;
         toast(t("Ad failed to load. Try again."));
-        // still do NOT call onDone on total failure of single adsgram — parent waterfall decides
-        if(onDone && onDone._allowFailReward){ try{ onDone(); }catch(e){} }
+        try{ if(onFail) onFail(); }catch(e){ console.warn(e); }
       }
     });
 }
 
-function playMonetag(zoneId, onDone){
+function playMonetag(zoneId, onDone, onFail){
   var raw = String(zoneId||"").trim();
-  if(!raw){ toast(t("Admin has not configured this Ad Block ID")); return; }
+  if(!raw){ toast(t("Admin has not configured this Ad Block ID")); if(onFail) onFail(); return; }
   var id = raw.replace(/^show_/i,"");
   var fnName = "show_"+id;
   var loadToastTimer = null;
   var finished = false;
   function clearLoadToast(){ if(loadToastTimer){ clearTimeout(loadToastTimer); loadToastTimer=null; } }
-  function finish(){
+  function finish(ok){
     if(finished) return;
     finished = true;
     clearLoadToast();
-    try{ if(onDone) onDone(); }catch(e){}
+    if(ok){
+      try{ if(onDone) onDone(); }catch(e){}
+    } else {
+      toast(t("Ad was not completed. Try again."));
+      try{ if(onFail) onFail(); }catch(e){}
+    }
   }
   function tryShow(){
     if(typeof window[fnName]==="function"){
       try{
         var p = window[fnName]();
         if(p && typeof p.then==="function"){
-          p.then(function(){ finish(); }).catch(function(){ finish(); });
+          // Only reward when the ad promise resolves; a rejection means no fill / skipped.
+          p.then(function(){ finish(true); }).catch(function(){ finish(false); });
         } else {
-          finish();
+          finish(true);
         }
         return true;
       }catch(e){ console.warn(e); }
@@ -2609,20 +2635,20 @@ function playMonetag(zoneId, onDone){
   setTimeout(function(){
     if(tryShow()) return;
     clearLoadToast();
-    playLinkAd({network:"monetag", id:id}, onDone);
+    playLinkAd({network:"monetag", id:id}, onDone, onFail);
   }, 1500);
 }
 
-function playTads(widgetId, onDone){
+function playTads(widgetId, onDone, onFail){
   var id = String(widgetId||"").trim();
-  if(!id){ toast(t("Admin has not configured this Ad Block ID")); return; }
+  if(!id){ toast(t("Admin has not configured this Ad Block ID")); if(onFail) onFail(); return; }
   if(window.TADS && typeof window.TADS.show==="function"){
     try{
-      window.TADS.show(id).then(function(){ if(onDone) onDone(); }).catch(function(){ if(onDone) onDone(); });
+      window.TADS.show(id).then(function(){ if(onDone) onDone(); }).catch(function(){ if(onFail) onFail(); });
       return;
     }catch(e){}
   }
-  playLinkAd({network:"tads", id:id}, onDone);
+  playLinkAd({network:"tads", id:id}, onDone, onFail);
 }
 
 
@@ -2634,20 +2660,10 @@ function playSingleAdUnit(unit, onDone, onFail){
   function ok(){ if(doneOnce) return; doneOnce=true; try{ if(onDone) onDone(); }catch(e){} }
   function fail(){ if(doneOnce) return; doneOnce=true; try{ if(onFail) onFail(); }catch(e){} }
   try{
-    if(net==="adsgram"){
-      // Original adsgram always rewards on show resolve/reject; only fail if script never loads
-      var rewarded=false;
-      function wrapOk(){ if(rewarded)return; rewarded=true; ok(); }
-      // Patch: playAdsgram calls onDone on success; if it toasts fail without onDone, use timeout only as last resort
-      var orig = onDone;
-      playAdsgram(id, function(){ wrapOk(); });
-      // If adsgram never fires callback in 20s, fail for waterfall
-      setTimeout(function(){ if(!rewarded) fail(); }, 20000);
-      return;
-    }
-    if(net==="monetag"){ playMonetag(id, ok); return; }
-    if(net==="tads"){ playTads(id, ok); return; }
-    playLinkAd({network:net, id:id}, ok);
+    if(net==="adsgram"){ playAdsgram(id, ok, fail); return; }
+    if(net==="monetag"){ playMonetag(id, ok, fail); return; }
+    if(net==="tads"){ playTads(id, ok, fail); return; }
+    playLinkAd({network:net, id:id}, ok, fail);
   }catch(e){ fail(); }
 }
 
@@ -2710,14 +2726,64 @@ function resetDailyAdsIfNeeded(){
       if(userData){userData.ads_today=0;userData.ads_day=today;}
       if(window.CineHubFB) try{window.CineHubFB.updateUserField(null,{ads_today:0,ads_day:today});}catch(e){}
     }
+  } else if(mode==="minutes"){
+    const start=Number((userData&&userData.ads_cycle_start)||0);
+    const m=Number(cfg.dailyAdResetMinutes||60);
+    if(!start){
+      if(userData) userData.ads_cycle_start=Date.now();
+      if(window.CineHubFB) try{window.CineHubFB.updateUserField(null,{ads_cycle_start:Date.now()});}catch(e){}
+    } else if((Date.now()-start)/60000 >= m){
+      if(userData){userData.ads_today=0;userData.ads_cycle_start=Date.now();}
+      if(window.CineHubFB) try{window.CineHubFB.updateUserField(null,{ads_today:0,ads_cycle_start:Date.now()});}catch(e){}
+    }
   } else {
     const start=Number((userData&&userData.ads_cycle_start)||0);
     const h=Number(cfg.dailyAdResetHours||24);
-    if(start && (Date.now()-start)/3600000 >= h){
+    if(!start){
+      // Cycle never started (new user, or switched from midnight mode) — start counting from now
+      if(userData) userData.ads_cycle_start=Date.now();
+      if(window.CineHubFB) try{window.CineHubFB.updateUserField(null,{ads_cycle_start:Date.now()});}catch(e){}
+    } else if((Date.now()-start)/3600000 >= h){
       if(userData){userData.ads_today=0;userData.ads_cycle_start=Date.now();}
       if(window.CineHubFB) try{window.CineHubFB.updateUserField(null,{ads_today:0,ads_cycle_start:Date.now()});}catch(e){}
     }
   }
+}
+function adCooldownKeyForMode(mode){
+  if(mode==="adult") return "adult";
+  if(mode==="task") return "task";
+  if(mode==="unlock") return "unlock";
+  if(mode==="banner") return "banner";
+  if(mode==="bannerAdult") return "bannerAdult";
+  if(mode==="interstitial") return "interstitial";
+  return "rewarded";
+}
+// Admin encoding: "0" = no delay, "0" + digits = that many SECONDS (e.g. "010" = 10s),
+// plain digits with no leading 0 = that many MINUTES (e.g. "5" = 5 minutes).
+function parseAdCooldownMs(raw){
+  const s=String(raw==null?"":raw).trim();
+  if(!s || s==="0") return 0;
+  if(s.charAt(0)==="0" && s.length>1){
+    const secs=parseInt(s.slice(1),10);
+    return (isFinite(secs)&&secs>0) ? secs*1000 : 0;
+  }
+  const mins=parseInt(s,10);
+  return (isFinite(mins)&&mins>0) ? mins*60000 : 0;
+}
+function getAdCooldownMs(key){
+  try{
+    const slots=cfg.adSlots||{};
+    const raw=slots[key]&&slots[key].cooldown;
+    return parseAdCooldownMs(raw);
+  }catch(e){ return 0; }
+}
+function markAdCooldown(key){
+  try{ localStorage.setItem("cinehub4_adcd_"+key, String(Date.now())); }catch(e){}
+}
+function formatCooldownRemain(ms){
+  const totalSec=Math.max(1, Math.ceil(ms/1000));
+  if(totalSec<60) return totalSec+t(" second(s)");
+  return Math.ceil(totalSec/60)+t(" minute(s)");
 }
 function watchAd(mode){
   resetDailyAdsIfNeeded();
@@ -2725,6 +2791,18 @@ function watchAd(mode){
   loadSharedSettings();
   const slot = resolveAdSlot(mode);
   if(!slotHasAds(slot) && mode!=="countdown"){ toast(t("Admin has not configured this Ad Block ID")); return; }
+
+  // Per-ad-system cooldown: block until the configured delay has passed since the last ad.
+  const cdKey = adCooldownKeyForMode(mode);
+  const cdMs = getAdCooldownMs(cdKey);
+  if(cdMs>0){
+    const last = Number(localStorage.getItem("cinehub4_adcd_"+cdKey))||0;
+    const remain = cdMs - (Date.now()-last);
+    if(remain>0){
+      toast(t("Please try again after")+" "+formatCooldownRemain(remain));
+      return;
+    }
+  }
 
   // Daily limit only for earning modes (not unlock/adult unlock path)
   if(mode!=="unlock" && mode!=="adult"){
@@ -2734,6 +2812,7 @@ function watchAd(mode){
   }
 
   function onAdDone(){
+    markAdCooldown(cdKey);
     if(mode==="unlock" || mode==="adult"){
       const mid=state.detailId;
       if(!mid){toast(t("Open a movie first"));return;}

@@ -998,9 +998,11 @@ function points(){return `<div class="toolbar"><div><h2 style="margin:0;font-siz
         <select id="dailyAdResetMode">
           <option value="midnight" ${(A.settings.dailyAdResetMode||"midnight")==="midnight"?"selected":""}>Every night 12:00 AM</option>
           <option value="hours" ${A.settings.dailyAdResetMode==="hours"?"selected":""}>After X hours</option>
+          <option value="minutes" ${A.settings.dailyAdResetMode==="minutes"?"selected":""}>After X minutes</option>
         </select>
       </div>
       <div class="field"><label>Reset after hours (if hours mode)</label><input id="dailyAdResetHours" type="number" value="${A.settings.dailyAdResetHours||24}"></div>
+      <div class="field"><label>Reset after minutes (if minutes mode)</label><input id="dailyAdResetMinutes" type="number" value="${A.settings.dailyAdResetMinutes||60}"></div>
       <div class="field"><label>Daily ad earning limit</label><input id="dailyLimitP" type="number" value="${A.settings.dailyAdLimit}"></div>
     </div>
   </div>
@@ -1040,6 +1042,7 @@ function savePoints(){
   const rm=document.getElementById("dailyAdResetMode");
   if(rm) A.settings.dailyAdResetMode=rm.value||"midnight";
   A.settings.dailyAdResetHours=Number(($('#dailyAdResetHours')||{}).value)||24;
+  A.settings.dailyAdResetMinutes=Number(($('#dailyAdResetMinutes')||{}).value)||60;
   A.settings.unlockCost=Math.max(1, Number(($('#unlockCost')||{}).value)||5);
   A.settings.unlockHours=Math.max(1, Number(($('#unlockHours')||{}).value)||15);
   A.settings.adReward=Math.max(0, Number(($('#adRewardP')||{}).value)||2);
@@ -1101,6 +1104,39 @@ function removeAdNetwork(slotKey, idx){
   render();
 }
 
+function addTaskAdNetwork(i){
+  var t = A.settings.tasks && A.settings.tasks[i]; if(!t) return;
+  if(!Array.isArray(t.adNetworks)) t.adNetworks=[];
+  try{
+    var nets=[];
+    document.querySelectorAll('.tn-net[data-task="'+i+'"]').forEach(function(el){
+      var j=el.getAttribute("data-i");
+      var idEl=document.querySelector('.tn-id[data-task="'+i+'"][data-i="'+j+'"]');
+      nets.push({network:el.value, id:(idEl&&idEl.value)||""});
+    });
+    t.adNetworks=nets;
+  }catch(e){}
+  t.adNetworks.push({network:"adsgram",id:""});
+  save();
+  render();
+}
+function removeTaskAdNetwork(i, idx){
+  var t = A.settings.tasks && A.settings.tasks[i]; if(!t) return;
+  try{
+    var nets=[];
+    document.querySelectorAll('.tn-net[data-task="'+i+'"]').forEach(function(el){
+      var j=el.getAttribute("data-i");
+      var idEl=document.querySelector('.tn-id[data-task="'+i+'"][data-i="'+j+'"]');
+      nets.push({network:el.value, id:(idEl&&idEl.value)||""});
+    });
+    t.adNetworks=nets;
+  }catch(e){}
+  if(!Array.isArray(t.adNetworks)) t.adNetworks=[];
+  t.adNetworks.splice(idx,1);
+  save();
+  render();
+}
+
 function ads(){
   ensureAdSlots();
   const slots = A.settings.adSlots || {};
@@ -1134,6 +1170,7 @@ function ads(){
         '<div class="field" style="display:flex;align-items:flex-end"><button type="button" class="btn" onclick="removeAdNetwork(\''+key+'\','+i+')">✕</button></div>'+
         '</div>';
     }).join("");
+    var cooldown = (sl.cooldown!=null) ? String(sl.cooldown) : "0";
     return '<div class="card" style="margin-bottom:12px" id="slotcard_'+key+'">'+
       '<h3>'+title+'</h3>'+
       '<p class="muted smalltext">'+(hint||"")+'</p>'+
@@ -1144,6 +1181,10 @@ function ads(){
       '</select></div>'+
       '<div id="nets_'+key+'">'+rows+'</div>'+
       '<button type="button" class="btn" style="margin-top:10px" onclick="addAdNetwork(\''+key+'\')">＋ Add Network</button>'+
+      '<div class="field" style="max-width:280px;margin-top:12px"><label>পরের এড আসবে কতক্ষণ পর</label>'+
+      '<input id="cooldown_'+key+'" value="'+cooldown.replace(/"/g,"&quot;")+'" placeholder="0">'+
+      '<p class="muted smalltext" style="margin-top:4px">0 = সাথে সাথে · 0+সংখ্যা = সেকেন্ড (010 = ১০ সেকেন্ড) · শুধু সংখ্যা = মিনিট (5 = ৫ মিনিট)</p>'+
+      '</div>'+
       '</div>';
   }
 
@@ -1197,11 +1238,14 @@ function saveAds(){
       if(id) networks.push({ network: network, id: id });
     }
     var primary = networks[0] || { network: "adsgram", id: "" };
+    var cdEl = document.getElementById("cooldown_"+key);
+    var cooldown = cdEl ? String(cdEl.value||"0").trim() : "0";
     A.settings.adSlots[key] = {
       network: primary.network,
       id: primary.id,
       mode: mode === "sequential" ? "sequential" : "first",
-      networks: networks
+      networks: networks,
+      cooldown: cooldown
     };
     A.settings.adBlocks[key] = primary.id;
   });
@@ -1226,6 +1270,31 @@ function tasks(){
       {name:"Watch ads task",nameBn:"এড দেখুন",reward:2,limit:5,type:"ad",seconds:0,link:"",resetHours:24,resetMode:"midnight",permanent:false},
       {name:"Refer a friend",nameBn:"বন্ধু রেফার করুন",reward:A.settings.referralReward||20,limit:10,type:"share",seconds:0,link:"",resetHours:24,resetMode:"hours",permanent:false}
     ];
+  }
+  function taskMultiAdRows(t,i){
+    if(t.type!=="ad") return "";
+    var nets = (Array.isArray(t.adNetworks)&&t.adNetworks.length) ? t.adNetworks : [];
+    var mode = t.adMode||"first";
+    var netOptsFor=function(cur){
+      var arr=[["adsgram","Adsgram"],["monetag","Monetag"],["richads","RichAds"],["onclicka","OnClicka"],["tads","TADS"],["custom","Custom Link / URL"]];
+      return arr.map(function(n){return '<option value="'+n[0]+'"'+(cur===n[0]?" selected":"")+'>'+n[1]+'</option>';}).join('');
+    };
+    var rows = nets.map(function(n,j){
+      return '<div class="form-grid" data-task="'+i+'" data-i="'+j+'" style="margin-top:6px">'+
+        '<div class="field"><label>Network #'+(j+1)+'</label><select class="tn-net" data-task="'+i+'" data-i="'+j+'" onchange="A.settings.tasks['+i+'].adNetworks['+j+'].network=this.value;save()">'+netOptsFor(n.network||"adsgram")+'</select></div>'+
+        '<div class="field"><label>ID / URL</label><input class="tn-id" data-task="'+i+'" data-i="'+j+'" value="'+String(n.id||"").replace(/"/g,"&quot;")+'" onchange="A.settings.tasks['+i+'].adNetworks['+j+'].id=this.value;save()"></div>'+
+        '<div class="field" style="display:flex;align-items:flex-end"><button type="button" class="btn" onclick="removeTaskAdNetwork('+i+','+j+')">✕</button></div>'+
+        '</div>';
+    }).join("");
+    return '<div class="field" style="grid-column:1/-1;margin-top:8px;border-top:1px dashed #444;padding-top:10px">'+
+      '<label>একাধিক এড এই টাস্কে (খালি রাখলে উপরের Ad Network/ID ব্যবহার হবে)</label>'+
+      '<select style="max-width:280px" onchange="A.settings.tasks['+i+'].adMode=this.value;save()">'+
+      '<option value="first"'+(mode==="first"?" selected":"")+'>First load wins</option>'+
+      '<option value="sequential"'+(mode==="sequential"?" selected":"")+'>Sequential (একটার পর একটা)</option>'+
+      '</select>'+
+      rows+
+      '<button type="button" class="btn" style="margin-top:8px" onclick="addTaskAdNetwork('+i+')">＋ Add Network</button>'+
+      '</div>';
   }
   const cards=A.settings.tasks.map((t,i)=>`
   <div class="card task-admin-card" style="margin-bottom:12px">
@@ -1260,8 +1329,9 @@ function tasks(){
         </select>
       </div>
       <div class="field"><label>Reset mode</label>
-        <select onchange="A.settings.tasks[${i}].resetMode=this.value;save()">
+        <select onchange="A.settings.tasks[${i}].resetMode=this.value;save();render()">
           <option value="hours" ${(t.resetMode||"hours")==="hours"?"selected":""}>After X hours</option>
+          <option value="minutes" ${t.resetMode==="minutes"?"selected":""}>After X minutes</option>
           <option value="midnight" ${t.resetMode==="midnight"?"selected":""}>Every day at 12:00 AM</option>
         </select>
       </div>
@@ -1269,11 +1339,13 @@ function tasks(){
       <div class="field" style="grid-column:1/-1"><label>Link / Channel (t.me/… or -100… for private, or any https:// social link)</label>
         <input value="${(t.link||"").replace(/"/g,"&quot;")}" placeholder="https://t.me/..." onchange="A.settings.tasks[${i}].link=this.value;save()">
       </div>
-      <div class="field"><label>Reset Every (Hours)</label><input type="number" min="1" value="${t.resetHours||24}" ${t.permanent?"disabled":""} onchange="A.settings.tasks[${i}].resetHours=Number(this.value)||24;save()" placeholder="e.g. 24"></div>
+      <div class="field"><label>Reset Every (Hours)</label><input type="number" min="1" value="${t.resetHours||24}" ${t.permanent||t.resetMode==="minutes"?"disabled":""} onchange="A.settings.tasks[${i}].resetHours=Number(this.value)||24;save()" placeholder="e.g. 24"></div>
+      <div class="field"><label>Reset Every (Minutes)</label><input type="number" min="1" value="${t.resetMinutes||60}" ${t.permanent||t.resetMode!=="minutes"?"disabled":""} onchange="A.settings.tasks[${i}].resetMinutes=Number(this.value)||60;save()" placeholder="e.g. 30"></div>
       <div class="field" style="display:flex;align-items:center;gap:8px;margin-top:22px">
         <input type="checkbox" id="perm-${i}" style="width:16px;height:16px" ${t.permanent?"checked":""} onchange="A.settings.tasks[${i}].permanent=this.checked;save();render()">
         <label for="perm-${i}" style="margin:0">Permanent (one-time, never resets)</label>
       </div>
+      ${taskMultiAdRows(t,i)}
     </div>
   </div>`).join("");
   return `<div class="toolbar">
