@@ -77,6 +77,11 @@ window.CINEHUB4_LANG = (() => {
     "Keep this page open until countdown ends.": "কাউন্টডাউন শেষ না হওয়া পর্যন্ত এই পেজ খোলা রাখুন।",
     "Watching Ad": "অ্যাড দেখা হচ্ছে",
     "Ad closed": "অ্যাড বন্ধ",
+    "Cancelled": "বাতিল করা হয়েছে",
+    "No points": "পয়েন্ট নেই",
+    "Continue": "কন্টিনিউ",
+    "Admin has not configured this Ad Block ID": "অ্যাডমিন এখনো Ad Block ID সেট করেননি",
+    "Daily ad limit reached": "আজকের অ্যাড লিমিট শেষ",
     "Link opened — wait for timer": "লিংক খোলা হয়েছে — টাইমার শেষ হওয়া পর্যন্ত অপেক্ষা করুন",
 
     

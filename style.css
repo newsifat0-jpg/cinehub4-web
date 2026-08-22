@@ -972,6 +972,32 @@ body{background:radial-gradient(1200px 600px at 50% -10%,#152038 0%,#070b14 55%,
   box-shadow:none!important;
 }
 .pf-btn.cancel-buy:active{background:#3a4560!important}
+/* Ad countdown Cancel — full width, polished */
+.ad-cancel-btn,
+.cd-card .pf-btn.cancel-buy,
+.open-ad-card .pf-btn.cancel-buy{
+  display:flex!important;
+  align-items:center;
+  justify-content:center;
+  width:100%!important;
+  margin-top:14px!important;
+  padding:13px 16px!important;
+  border-radius:14px!important;
+  font-size:14px!important;
+  font-weight:700!important;
+  letter-spacing:.2px;
+  background:linear-gradient(180deg,#2f374f,#252c40)!important;
+  color:#e8ecf8!important;
+  border:1px solid #4a5578!important;
+  box-shadow:0 2px 10px rgba(0,0,0,.25)!important;
+  cursor:pointer;
+}
+.ad-cancel-btn:active,
+.cd-card .pf-btn.cancel-buy:active,
+.open-ad-card .pf-btn.cancel-buy:active{
+  background:linear-gradient(180deg,#3a4560,#2f374f)!important;
+  transform:scale(.98);
+}
 .buy-modal .pf-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .buy-modal .pf-actions .pf-btn.copy,
 .buy-modal .pf-actions button.pf-btn:not(.cancel-buy){

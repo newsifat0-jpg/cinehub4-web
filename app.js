@@ -642,7 +642,7 @@ function showBlockedScreen(){
   ov.className = "blocked-overlay";
   ov.innerHTML =
     '<div class="blocked-card">'+
-      '<div class="blocked-ico" aria-hidden="true">${ico("shield",40)}</div>'+
+      '<div class="blocked-ico" aria-hidden="true">'+(typeof ico==="function"?ico("shield",40):"🛡")+'</div>'+
       '<h2 class="blocked-title">'+t("Account Blocked")+'</h2>'+
       '<p class="blocked-msg">'+t("Your account has been blocked by the admin. You cannot use this app right now.")+'</p>'+
       '<p class="blocked-sub">'+t("Contact admin if you think this is a mistake.")+'</p>'+
@@ -2406,18 +2406,24 @@ function resolveAdSlot(mode){
   else if(mode==="bannerAdult") key="bannerAdult";
   else if(mode==="interstitial") key="interstitial";
 
-  // Pending task may override with its own networks
+  // Pending task may override with its own networks (NEVER use tk.id — that's the task doc id, not an ad block)
   if(key==="task" && window.__cinehub_pendingTask!=null){
     try{
       var tk = getTasks()[window.__cinehub_pendingTask];
-      if(tk && (slotHasAds(tk) || (tk.adId||tk.adNetworks))){
-        var tSlot = {
-          network: tk.adNetwork || tk.network || "adsgram",
-          id: tk.adId || tk.id || "",
-          mode: tk.adMode || "first",
-          networks: tk.adNetworks || null
-        };
-        if(slotHasAds(tSlot) || normalizeSlotNetworks(tSlot).length) return tSlot;
+      if(tk){
+        var taskNets = Array.isArray(tk.adNetworks) ? tk.adNetworks.filter(function(n){ return n && String(n.id||"").trim(); }) : [];
+        var taskAdId = String(tk.adId || "").trim();
+        // Reject values that look like internal task ids (task_123..., t123, etc.)
+        if(taskAdId && /^task[_-]/i.test(taskAdId)) taskAdId = "";
+        if(taskNets.length || taskAdId){
+          var tSlot = {
+            network: tk.adNetwork || tk.network || "adsgram",
+            id: taskAdId,
+            mode: tk.adMode || "first",
+            networks: taskNets.length ? taskNets : (taskAdId ? [{ network: tk.adNetwork || tk.network || "adsgram", id: taskAdId }] : null)
+          };
+          if(slotHasAds(tSlot) || normalizeSlotNetworks(tSlot).length) return tSlot;
+        }
       }
     }catch(e){}
   }
@@ -2514,7 +2520,7 @@ function playLinkAd(slot, onDone, onFail){
     '<div class="muted cd-sub">'+String((slot&&slot.network)||"ad").toUpperCase()+' · '+t("Keep this page open until countdown ends.")+'</div>'+
     '<div class="cd-num" id="adNetNum">'+left+'s</div>'+
     '<div class="muted" style="font-size:11px;margin-top:6px">'+t("After timer ends, press Back to return")+'</div>'+
-    '<button type="button" class="btn" style="margin-top:12px" id="adNetCancel">'+t("Cancel")+'</button></div>';
+    '<button type="button" class="pf-btn cancel-buy ad-cancel-btn" id="adNetCancel">'+t("Cancel")+'</button></div>';
   document.body.appendChild(ov);
   var circ = 2*Math.PI*42;
   var tick = setInterval(function(){
@@ -2543,8 +2549,24 @@ function playLinkAd(slot, onDone, onFail){
   };
 }
 
+function isValidAdsgramBlockId(id){
+  id = String(id||"").trim();
+  if(!id) return false;
+  // Adsgram: pure digits, or int- / task- prefix + digits. Reject internal task doc ids.
+  if(/^task_\d+/i.test(id)) return false;
+  if(/^[0-9]+$/.test(id)) return true;
+  if(/^(int|task)-[0-9]+$/i.test(id)) return true;
+  // Allow other official-looking short alphanumerics from Adsgram dashboard
+  if(/^[A-Za-z0-9_-]{3,40}$/.test(id) && !/^task[_-]/i.test(id)) return true;
+  return false;
+}
 function playAdsgram(blockId, onDone, onFail){
-  if(!blockId){ toast(t("Admin has not configured this Ad Block ID")); if(onFail) onFail(); return; }
+  blockId = String(blockId||"").trim();
+  if(!blockId || !isValidAdsgramBlockId(blockId)){
+    toast(t("Admin has not configured this Ad Block ID"));
+    if(onFail) onFail();
+    return;
+  }
   var loadToastTimer = null;
   var finished = false;
   function clearLoadToast(){
@@ -2682,6 +2704,15 @@ function playAdNetwork(slot, onDone){
       list = [{ network: String(slot.network||"adsgram").toLowerCase(), id: String(slot.id).trim() }];
     }
   }
+  // Drop invalid Adsgram block ids (e.g. internal task_… ids) so waterfall can use Monetag/others
+  list = list.filter(function(u){
+    if(!u) return false;
+    var net = String(u.network||"adsgram").toLowerCase();
+    var id = String(u.id||"").trim();
+    if(!id) return false;
+    if(net==="adsgram" && typeof isValidAdsgramBlockId==="function" && !isValidAdsgramBlockId(id)) return false;
+    return true;
+  });
   if(!list.length){ toast(t("Admin has not configured this Ad Block ID")); return; }
 
   var mode = String((slot&&slot.mode)||"first").toLowerCase();
