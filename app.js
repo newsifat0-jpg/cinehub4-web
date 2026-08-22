@@ -854,9 +854,12 @@ function loadMoviesFromFB(){
     got=true;
     movies=list||[];
     state.moviesLoaded=true;
-    // Share deep-link: re-apply when library arrives
+    // Share deep-link: re-apply when library arrives (ONLY on the first
+    // realtime snapshot — later snapshots must never re-trigger this, or
+    // any background movie-list update would force the user back Home)
     try{
-      if(!window.__deeplinkUserNav && typeof handleStartParam==="function"){
+      if(!window.__cinehub_startHandledOnce && !window.__deeplinkUserNav && typeof handleStartParam==="function"){
+        window.__cinehub_startHandledOnce = true;
         handleStartParam();
       }
       // If share still pending and movie now exists → open it
@@ -892,7 +895,8 @@ function loadMoviesFromFB(){
           movies=list;
           state.moviesLoaded=true;
           try{
-            if(!window.__deeplinkUserNav && typeof handleStartParam==="function"){
+            if(!window.__cinehub_startHandledOnce && !window.__deeplinkUserNav && typeof handleStartParam==="function"){
+              window.__cinehub_startHandledOnce = true;
               handleStartParam();
             }
             if(typeof applyAdultGateIfNeeded==="function") applyAdultGateIfNeeded();
@@ -1494,7 +1498,8 @@ function moviesPage(){
   const full=listForHome();
   const pg=paginateList(full, state.moviePage);
   state.moviePage=pg.page;
-  const cards=pg.items.map(function(m,i){return card(m,i);}).join("")||`<div class="empty">${t("No movies found.")}</div>`;
+  const cardsInner=pg.items.map(function(m,i){return card(m,i);}).join("");
+  const cards=cardsInner?`<div class="movie-grid">${cardsInner}</div>`:`<div class="empty">${t("No movies found.")}</div>`;
   return `<div class="home-sticky-top" id="homeSticky">`+primeHeader()+heroPills()+catRow()+`<div class="home-sticky-line"></div></div>`+libCard()+ticker()+cards+renderPager(pg.page, pg.totalPages);
 }
 function setAdultMode(m){
@@ -1518,7 +1523,7 @@ function tickerAdult(){
   return `<div class="ticker"><span>${tx}${tx}</span></div>`;
 }
 function listForAdult(){let list=movies.filter(m=>m.adult);if(state.adultCategory&&state.adultCategory!=="All"){list=list.filter(m=>(m.category||"").toLowerCase()===state.adultCategory.toLowerCase())}if(state.adultMode==="trending")list=list.slice().sort((a,b)=>(b.views||b.clicks||0)-(a.views||a.clicks||0));else list=list.slice().sort((a,b)=>b.id-a.id);return list}
-function series(){const list=movies.filter(m=>!m.adult&&(m.category||"").toLowerCase().includes("series"));return menuOnlyHeader(t("Series"))+`<div class="section-title"><b>${t("Series")}</b><span>${t("Complete series")}</span></div>${list.map((m,i)=>card(m,i)).join("")||`<div class="panel">${t("Series not added yet.")}</div>`}`}
+function series(){const list=movies.filter(m=>!m.adult&&(m.category||"").toLowerCase().includes("series"));const inner=list.map((m,i)=>card(m,i)).join("");const grid=inner?`<div class="movie-grid">${inner}</div>`:`<div class="panel">${t("Series not added yet.")}</div>`;return menuOnlyHeader(t("Series"))+`<div class="section-title"><b>${t("Series")}</b><span>${t("Complete series")}</span></div>${grid}`}
 function adult(){
   // Adult library fully off from admin → hide everything on user side
   if(cfg.adultEnabled===false || cfg.adultLibraryEnabled===false){
@@ -1542,7 +1547,8 @@ function adult(){
   const full=listForAdult();
   const pg=paginateList(full, state.adultPage);
   state.adultPage=pg.page;
-  const cards=pg.items.map(function(m,i){return card(m,i);}).join("")||`<div class="empty">${t("No adult content yet. Add from Admin Panel.")}</div>`;
+  const cardsInnerA=pg.items.map(function(m,i){return card(m,i);}).join("");
+  const cards=cardsInnerA?`<div class="movie-grid">${cardsInnerA}</div>`:`<div class="empty">${t("No adult content yet. Add from Admin Panel.")}</div>`;
   return `<div class="home-sticky-top" id="homeSticky">`+adultHeaderWithSearch()+heroPillsAdult()+catRowAdult()+`<div class="home-sticky-line"></div></div>`+libCardAdult()+tickerAdult()+cards+renderPager(pg.page, pg.totalPages);
 }
 function adultHeaderWithSearch(){

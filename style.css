@@ -160,6 +160,24 @@ html,body{margin:0;padding:0;background:var(--bg,#07090f);color:#eef1ff;font-fam
 .lib-badge b{display:block;font-size:16px;color:#fff}
 .btn-how{width:100%;border:0;border-radius:14px;padding:12px;font-weight:800;color:#fff;background:linear-gradient(90deg,#00c6ff,#22d3ee);cursor:pointer}
 
+/* Movie cards grid — 2 per row, posters shrink to fit */
+.movie-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;
+  margin-bottom:14px;
+}
+.movie-grid .movie-card{margin-bottom:0}
+.movie-grid .mtitle{font-size:12.5px}
+.movie-grid .myear{font-size:10.5px}
+.movie-grid .mupload-inline{font-size:9.5px}
+.movie-grid .movie-body{padding:10px 10px 10px}
+.movie-grid .share-btn-round{width:32px;height:32px;font-size:13px}
+.movie-grid .movie-rating{font-size:10px;padding:3px 6px}
+.movie-grid .movie-dur{font-size:9px;padding:3px 6px}
+.movie-grid .movie-top{font-size:9px;padding:3px 6px}
+@media (max-width:340px){
+  .movie-grid{grid-template-columns:1fr}
+}
+
 /* Movie cards */
 .movie-card{
   background:#12172a;
