@@ -152,8 +152,20 @@ function toast(msg){
   }catch(e){ try{ console.log(msg); }catch(e2){} }
 }
 function movieShareLink(id){
-  var mid = String(id||"").trim();
-  var param = ("movie_"+mid).replace(/[^A-Za-z0-9_\-]/g,"").slice(0,64);
+  var mid = String(id||"").trim().replace(/[^A-Za-z0-9_\-]/g,"");
+  // Include referrer so new users who open this share get join+ref bonus once (server-side).
+  var uid = "";
+  try{
+    var tg = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user;
+    if(tg && tg.id) uid = String(tg.id);
+  }catch(e){}
+  if(!uid){
+    try{ uid = String(localStorage.getItem("cinehub4_uid")||"").replace(/[^0-9]/g,""); }catch(e2){}
+  }
+  var param = "movie_"+mid;
+  if(uid) param += "__r_"+uid;
+  // Telegram startapp max ~64 chars
+  param = param.replace(/[^A-Za-z0-9_\-]/g,"").slice(0,64);
   return buildMiniAppLink(param);
 }
 function showLinkSheet(link, title){
@@ -3351,9 +3363,19 @@ function handleStartParam(){
     try{
       if(sessionStorage.getItem("cinehub4_start_consumed")===sp) return false;
     }catch(e){}
-    // movie_<id> → open unlock/detail (or adult gate first)
-    if(/^movie_/i.test(sp)){
-      const id=String(sp.replace(/^movie_/i,"")).trim();
+    // Extract optional __r_REFERRER (or _r_REFERRER) from any start param
+    var refEmbedded = "";
+    var spCore = sp;
+    var refMatch = sp.match(/__r_(\d{3,15})$/i) || sp.match(/_r_(\d{3,15})$/i);
+    if(refMatch){
+      refEmbedded = refMatch[1];
+      spCore = sp.slice(0, refMatch.index);
+      try{ localStorage.setItem("cinehub4_ref_from", refEmbedded); }catch(e){}
+    }
+
+    // movie_<id> or movie_<id>__r_<uid> → open unlock/detail
+    if(/^movie_/i.test(spCore)){
+      const id=String(spCore.replace(/^movie_/i,"")).replace(/_+$/,"").trim();
       if(id){
         var ok=openSharedMovie(id);
         if(ok){ try{ sessionStorage.setItem("cinehub4_start_consumed", sp); }catch(e){} }
@@ -3361,18 +3383,18 @@ function handleStartParam(){
       }
       return false;
     }
-    // plain id / tmdb id
-    if(/^[\w\-]+$/.test(sp) && !/^ref_/i.test(sp)){
-      const id=String(sp).trim();
+    // plain id / tmdb id (ref already stripped into cinehub4_ref_from)
+    if(/^[\w\-]+$/.test(spCore) && !/^ref_/i.test(spCore)){
+      const id=String(spCore).trim();
       if(id && (resolveMovieByParam(id) || /^\d+$/.test(id) || /^m_/.test(id) || /^manual_/.test(id) || /^tmdb_/i.test(id))){
         var ok2=openSharedMovie(id);
         if(ok2){ try{ sessionStorage.setItem("cinehub4_start_consumed", sp); }catch(e){} }
         return ok2;
       }
     }
-    // ref_USERID — store referrer for bonus (bot/backend usually handles)
-    if(/^ref_/i.test(sp)){
-      try{localStorage.setItem("cinehub4_ref_from",sp.replace(/^ref_/i,""))}catch(e){}
+    // ref_USERID — store referrer for bonus (server applies once)
+    if(/^ref_/i.test(spCore)){
+      try{localStorage.setItem("cinehub4_ref_from",spCore.replace(/^ref_/i,""))}catch(e){}
     }
   }catch(e){}
   return false;
