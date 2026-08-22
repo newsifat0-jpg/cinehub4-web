@@ -62,7 +62,16 @@
       likes: Number(d.likes) || 0, views: Number(d.views || d.clicks) || 0,
       status: d.status || "Published", added_by: d.added_by || "",
       added_time: added, updated_time: Number(d.updated_time) || added,
-      source: d.source || (d.manual_movie ? "manual" : "tmdb")
+      source: d.source || (d.manual_movie ? "manual" : "tmdb"),
+      // Per-movie unlock overrides (null = use admin defaults)
+      unlock_points: (function(){
+        var n = Number(d.unlock_points);
+        return (isFinite(n) && n > 0) ? Math.floor(n) : null;
+      })(),
+      unlock_ads: (function(){
+        var n = Number(d.unlock_ads);
+        return (isFinite(n) && n > 0) ? Math.floor(n) : null;
+      })()
     };
   }
   function normalizeMovieDoc(raw) {
@@ -99,12 +108,15 @@
         var s1 = String(m.server1 || m.server1_link || m.s1 || "");
         var s2 = String(m.server2 || m.server2_link || m.s2 || "");
         var s3 = String(m.server3 || m.server3_link || m.s3 || "");
+        var up = Number(m.unlock_points);
+        var ua = Number(m.unlock_ads);
         var data = {
           title: String(m.title || "Untitled"),
           year: String(m.year || ""),
           poster: String(m.poster || ""),
           overview: String(m.overview || ""),
           rating: Number(m.rating) || 0,
+          runtime: Number(m.runtime) || 0,
           category: String(m.category || "All Movies"),
           type: String(m.type || (m.adult ? "Adult" : "Movie")),
           adult: !!m.adult,
@@ -120,6 +132,8 @@
           clicks: Number(m.clicks) || 0,
           downloads: Number(m.downloads) || 0,
           views: Number(m.views || m.clicks) || 0,
+          unlock_points: (isFinite(up) && up > 0) ? Math.floor(up) : null,
+          unlock_ads: (isFinite(ua) && ua > 0) ? Math.floor(ua) : null,
           added_time: Number(m.added_time) || Date.now(),
           created_time: String(m.created_time || new Date().toISOString()),
           updated_time: Date.now()

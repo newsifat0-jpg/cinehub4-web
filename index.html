@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#0a0c14">
 <title>Cine Hub4</title>
 <style>html,body{background:#0a0c14!important;margin:0}</style>
-<link rel="stylesheet" href="style.css?v=20260822share1">
-<script src="language.js?v=20260822share1"></script>
+<link rel="stylesheet" href="style.css?v=20260822full3">
+<script src="language.js?v=20260822full3"></script>
 <script src="https://sad.adsgram.ai/js/sad.min.js" async></script>
 </head>
 <body style="background:#0a0c14">
@@ -65,10 +65,10 @@
 </div>
 <div id="toast"></div>
 </div>
-<script src="https://telegram.org/js/telegram-web-app.js?v=20260822per1"></script>
+<script src="https://telegram.org/js/telegram-web-app.js?v=20260822full3"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-<script src="config.js?v=20260822share1"></script>
+<script src="config.js?v=20260822full3"></script>
 <script>
 /* Independent maintenance gate — self-contained, does NOT depend on app.js.
    Runs even if app.js is fully rewritten/replaced later; only removing THIS
@@ -94,12 +94,14 @@
     }
     function showGate(c){
       if(document.getElementById("preGateMaintenance")) return;
-      var linkUrl = String((c.maintenanceLinkUrl || c.telegramChannelLink || cfg.telegramChannelLink) || "").trim();
+      var fallbackUrl = String((c.telegramChannelLink || (cfg&&cfg.telegramChannelLink) || "")).trim();
+      var btnUrl = String((c.maintenanceButtonUrl || c.maintenanceLinkUrl || fallbackUrl) || "").trim();
+      var linkUrl = String((c.maintenanceLinkUrl || fallbackUrl) || "").trim();
       var btnText = c.maintenanceButtonText || "Join Telegram Channel";
       var linkText = c.maintenanceLinkText || "";
       var title = c.maintenanceTitle || "🛠 Under Maintenance";
       var msg = c.maintenanceMessage || "We're updating the app right now. Please check back soon.";
-      var btnHtml = linkUrl ? '<a class="primary" href="'+escG(linkUrl)+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:14px;padding:12px 22px;text-decoration:none">'+escG(btnText)+'</a>' : '';
+      var btnHtml = btnUrl ? '<a class="primary" href="'+escG(btnUrl)+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:14px;padding:12px 22px;text-decoration:none">'+escG(btnText)+'</a>' : '';
       var linkHtml = (linkUrl && linkText) ? '<p class="blocked-sub" style="margin-top:12px"><a href="'+escG(linkUrl)+'" target="_blank" rel="noopener" style="color:#7c5cff">'+escG(linkText)+'</a></p>' : '';
       var ov = document.createElement("div");
       ov.id = "preGateMaintenance";
@@ -143,8 +145,8 @@
   }catch(e){}
 })();
 </script>
-<script src="firebase-helper.js?v=20260822share1"></script>
-<script src="app.js?v=20260822per1"></script>
+<script src="firebase-helper.js?v=20260822full3"></script>
+<script src="app.js?v=20260822full3"></script>
 <script>
 /* last-resort safety net — only runs if app.js failed to boot */
 (function(){

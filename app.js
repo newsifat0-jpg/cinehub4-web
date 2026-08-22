@@ -559,7 +559,7 @@ const defaults={appName:"Cine Hub4",botUsername:"@Cinehub4bot",telegramBotLink:"
   tasks:[],
   customPointRate:100,
   adBlocks:{rewarded:"",interstitial:"",banner:"",bannerAdult:"",task:"",adult:""},showMovieBanner:true,showAdultBanner:true,movieBannerImg:"",movieBannerLink:"",adultBannerImg:"",adultBannerLink:"",
-  maintenanceMode:false,maintenanceTitle:"🛠 Under Maintenance",maintenanceMessage:"We're updating the app right now. Please check back soon.",maintenanceButtonText:"Join Telegram Channel",maintenanceLinkText:"Tap here for updates",maintenanceLinkUrl:"",maintenanceAllowedUsers:""};
+  maintenanceMode:false,maintenanceTitle:"🛠 Under Maintenance",maintenanceMessage:"We're updating the app right now. Please check back soon.",maintenanceButtonText:"Join Telegram Channel",maintenanceButtonUrl:"",maintenanceLinkText:"Tap here for updates",maintenanceLinkUrl:"",maintenanceAllowedUsers:""};
 let cfg={...defaults,...JSON.parse(localStorage.getItem("cinehub4_settings")||"{}")};
 if(!cfg.categories||!cfg.categories.length)cfg.categories=defaults.categories.slice();
 if(!cfg.adultCategories||!cfg.adultCategories.length)cfg.adultCategories=defaults.adultCategories.slice();
@@ -716,12 +716,14 @@ function showMaintenanceScreen(){
   window.__cinehub_maintenance = true;
   var old = document.getElementById("maintenanceOverlay");
   if(old) old.remove();
-  var linkUrl = String((cfg && (cfg.maintenanceLinkUrl || cfg.telegramChannelLink)) || (window.APP_CONFIG && window.APP_CONFIG.telegramChannelLink) || "").trim();
+  var fallbackUrl = String((cfg && cfg.telegramChannelLink) || (window.APP_CONFIG && window.APP_CONFIG.telegramChannelLink) || "").trim();
+  var btnUrl = String((cfg && (cfg.maintenanceButtonUrl || cfg.maintenanceLinkUrl)) || fallbackUrl || "").trim();
+  var linkUrl = String((cfg && cfg.maintenanceLinkUrl) || fallbackUrl || "").trim();
   var btnText = (cfg && cfg.maintenanceButtonText) || "Join Telegram Channel";
   var linkText = (cfg && cfg.maintenanceLinkText) || "";
   var title = (cfg && cfg.maintenanceTitle) || "🛠 Under Maintenance";
   var msg = (cfg && cfg.maintenanceMessage) || "We're updating the app right now. Please check back soon.";
-  var btnHtml = linkUrl ? '<a class="primary" href="'+escMaintText_(linkUrl)+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:14px;padding:12px 22px;text-decoration:none">'+escMaintText_(btnText)+'</a>' : '';
+  var btnHtml = btnUrl ? '<a class="primary" href="'+escMaintText_(btnUrl)+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:14px;padding:12px 22px;text-decoration:none">'+escMaintText_(btnText)+'</a>' : '';
   var linkHtml = (linkUrl && linkText) ? '<p class="blocked-sub" style="margin-top:12px"><a href="'+escMaintText_(linkUrl)+'" target="_blank" rel="noopener" style="color:#7c5cff">'+escMaintText_(linkText)+'</a></p>' : '';
   var ov = document.createElement("div");
   ov.id = "maintenanceOverlay";
@@ -1562,7 +1564,18 @@ function runTask(i){
   // Watch ads until limit — each completion counts
   if(type==="ad"){
     window.__cinehub_pendingTask = i;
-    try{ watchAd("task"); }catch(e){ window.__cinehub_pendingTask=null; toast(t("Ad failed to load. Try again.")); }
+    try{
+      watchAd("task");
+    }catch(e){
+      window.__cinehub_pendingTask=null;
+      toast(t("Ad failed to load. Try again."));
+    }
+    // Safety: if ad UI never starts, clear pending after 45s so Start is not stuck
+    setTimeout(function(){
+      try{
+        if(window.__cinehub_pendingTask===i) window.__cinehub_pendingTask=null;
+      }catch(e2){}
+    }, 45000);
     return;
   }
 
@@ -2738,15 +2751,18 @@ function playAdNetwork(slot, onDone){
 
   var mode = String((slot&&slot.mode)||"first").toLowerCase();
 
-  // Single network → direct play (most reliable, no waterfall fail toast)
+  // Single network → direct play; onFail clears task pending so Start can be retried cleanly
   if(list.length===1 && mode!=="sequential" && mode!=="sequence" && mode!=="all"){
     var u = list[0];
     var net = String(u.network||"adsgram").toLowerCase();
     var id = String(u.id||"").trim();
-    if(net==="adsgram"){ playAdsgram(id, onDone); return; }
-    if(net==="monetag"){ playMonetag(id, onDone); return; }
-    if(net==="tads"){ playTads(id, onDone); return; }
-    playLinkAd(u, onDone);
+    var failOne = function(){
+      try{ if(window.__cinehub_pendingTask!=null) window.__cinehub_pendingTask=null; }catch(e){}
+    };
+    if(net==="adsgram"){ playAdsgram(id, onDone, failOne); return; }
+    if(net==="monetag"){ playMonetag(id, onDone, failOne); return; }
+    if(net==="tads"){ playTads(id, onDone, failOne); return; }
+    playLinkAd(u, onDone, failOne);
     return;
   }
 
@@ -2908,10 +2924,24 @@ function watchAd(mode){
       window.__cinehub_pendingTask=null;
       const tk=getTasks()[ti];
       if(tk){
-        state.points+=Number(tk.reward||0);
-        if(userData) userData.points=state.points;
-        const finished=markTaskProgress(ti,tk); // writes points + task_progress together
-        toast("+"+(tk.reward||0)+" points"+(finished?" · "+t("Done"):" · "+t("Progress")));
+        // Avoid double-pay if rewardOnce path already handled in runTask credit()
+        const st2=taskResetInfo(ti,tk);
+        const next=st2.count+1;
+        const willFinish=next>=st2.limit;
+        if(tk.rewardOnce){
+          if(willFinish){
+            state.points+=Number(tk.reward||0);
+            if(userData) userData.points=state.points;
+          }
+          const finished=markTaskProgress(ti,tk);
+          if(finished) toast("+"+(tk.reward||0)+" points · "+t("Done"));
+          else toast(t("Ad progress")+" "+next+"/"+st2.limit);
+        }else{
+          state.points+=Number(tk.reward||0);
+          if(userData) userData.points=state.points;
+          const finished=markTaskProgress(ti,tk);
+          toast("+"+(tk.reward||0)+" points"+(finished?" · "+t("Done"):" · "+t("Progress")));
+        }
         render(false);
         return;
       }

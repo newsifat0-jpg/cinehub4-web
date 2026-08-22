@@ -82,6 +82,7 @@ const DEFAULT={
   maintenanceTitle:"🛠 Under Maintenance",
   maintenanceMessage:"We're updating the app right now. Please check back soon.",
   maintenanceButtonText:"Join Telegram Channel",
+  maintenanceButtonUrl:"",
   maintenanceLinkText:"Tap here for updates",
   maintenanceLinkUrl:"",
   maintenanceAllowedUsers:""
@@ -1714,9 +1715,10 @@ function maintenancePage(){
       <h3>Button & Link</h3>
       <div class="form-grid">
         <div class="field"><label>Button text</label><input id="mnt_btnText" value="${(s.maintenanceButtonText||'').replace(/"/g,'&quot;')}" placeholder="Join Telegram Channel"></div>
+        <div class="field"><label>Button URL</label><input id="mnt_btnUrl" value="${(s.maintenanceButtonUrl||s.maintenanceLinkUrl||'').replace(/"/g,'&quot;')}" placeholder="https://t.me/channel"></div>
         <div class="field"><label>Link text (below button)</label><input id="mnt_linkText" value="${(s.maintenanceLinkText||'').replace(/"/g,'&quot;')}" placeholder="Tap here for updates"></div>
-        <div class="field" style="grid-column:1/-1"><label>Link URL (button + link both open this)</label><input id="mnt_linkUrl" value="${(s.maintenanceLinkUrl||'').replace(/"/g,'&quot;')}" placeholder="https://t.me/yourchannel"></div>
-        <div class="field" style="grid-column:1/-1"><label class="muted smalltext">খালি রাখলে Links & Videos ট্যাবের Telegram Channel Link (${s.telegramChannelLink||'—'}) ব্যবহার হবে।</label></div>
+        <div class="field"><label>Link URL (below button)</label><input id="mnt_linkUrl" value="${(s.maintenanceLinkUrl||'').replace(/"/g,'&quot;')}" placeholder="https://t.me/other"></div>
+        <div class="field" style="grid-column:1/-1"><label class="muted smalltext">প্রতিটার আলাদা URL। খালি রাখলে Telegram Channel Link (${s.telegramChannelLink||'—'}) ব্যবহার হবে।</label></div>
       </div>
     </div>
     <div class="card" style="grid-column:1/-1">
@@ -1735,6 +1737,7 @@ function saveMaintenance(){
   if(g('mnt_title')) s.maintenanceTitle=g('mnt_title').value;
   if(g('mnt_message')) s.maintenanceMessage=g('mnt_message').value;
   if(g('mnt_btnText')) s.maintenanceButtonText=g('mnt_btnText').value;
+  if(g('mnt_btnUrl')) s.maintenanceButtonUrl=g('mnt_btnUrl').value.trim();
   if(g('mnt_linkText')) s.maintenanceLinkText=g('mnt_linkText').value;
   if(g('mnt_linkUrl')) s.maintenanceLinkUrl=g('mnt_linkUrl').value.trim();
   if(g('mnt_allowedUsers')) s.maintenanceAllowedUsers=g('mnt_allowedUsers').value.trim();
