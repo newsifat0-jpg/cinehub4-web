@@ -1898,28 +1898,37 @@ function isAdultMovie(m){
   }
   return false;
 }
-/** Unlock rules: movie vs adult fully separate (admin Points & Unlocks) */
+/** Unlock rules: per-movie override → else adult/normal admin defaults */
 function getUnlockRules(movieOrAdult){
   loadSharedSettings();
   var isAdult = false;
+  var movie = null;
   if(typeof movieOrAdult === "boolean") isAdult = movieOrAdult;
-  else if(movieOrAdult && typeof movieOrAdult === "object") isAdult = isAdultMovie(movieOrAdult);
-  else if(movieOrAdult != null){
-    var mm = (typeof movies !== "undefined" ? movies : []).find(function(x){ return String(x.id)===String(movieOrAdult); });
-    isAdult = isAdultMovie(mm);
+  else if(movieOrAdult && typeof movieOrAdult === "object"){
+    movie = movieOrAdult;
+    isAdult = isAdultMovie(movieOrAdult);
+  }else if(movieOrAdult != null){
+    movie = (typeof movies !== "undefined" ? movies : []).find(function(x){ return String(x.id)===String(movieOrAdult); });
+    isAdult = isAdultMovie(movie);
   }
+  var cost, adsNeed, hours;
   if(isAdult){
-    return {
-      cost: Math.max(1, Number(cfg.adultUnlockCost != null ? cfg.adultUnlockCost : 3) || 3),
-      adsNeed: Math.max(1, Number(cfg.adultAdsForUnlock != null ? cfg.adultAdsForUnlock : 5) || 5),
-      hours: Math.max(1, Number(cfg.adultUnlockHours != null ? cfg.adultUnlockHours : 15) || 15)
-    };
+    cost = Math.max(1, Number(cfg.adultUnlockCost != null ? cfg.adultUnlockCost : 3) || 3);
+    adsNeed = Math.max(1, Number(cfg.adultAdsForUnlock != null ? cfg.adultAdsForUnlock : 5) || 5);
+    hours = Math.max(1, Number(cfg.adultUnlockHours != null ? cfg.adultUnlockHours : 15) || 15);
+  }else{
+    cost = Math.max(1, Number(cfg.unlockCost != null ? cfg.unlockCost : 5) || 5);
+    adsNeed = Math.max(1, Number(cfg.adsForUnlock != null ? cfg.adsForUnlock : 5) || 5);
+    hours = Math.max(1, Number(cfg.unlockHours != null ? cfg.unlockHours : 15) || 15);
   }
-  return {
-    cost: Math.max(1, Number(cfg.unlockCost != null ? cfg.unlockCost : 5) || 5),
-    adsNeed: Math.max(1, Number(cfg.adsForUnlock != null ? cfg.adsForUnlock : 5) || 5),
-    hours: Math.max(1, Number(cfg.unlockHours != null ? cfg.unlockHours : 15) || 15)
-  };
+  // Per-movie overrides (only when explicitly set > 0)
+  if(movie){
+    var up = Number(movie.unlock_points);
+    var ua = Number(movie.unlock_ads);
+    if(isFinite(up) && up > 0) cost = Math.max(1, Math.floor(up));
+    if(isFinite(ua) && ua > 0) adsNeed = Math.max(1, Math.floor(ua));
+  }
+  return { cost: cost, adsNeed: adsNeed, hours: hours };
 }
 /** Points contributed toward unlockCost — Firebase */
 function getUnlockProgress(id){

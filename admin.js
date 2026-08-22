@@ -1971,11 +1971,15 @@ function openMovie(id=null){
     </div>
     <div class="field"><label>Category</label><select id="mCat">${catOptionsHtml(isAdult, catEn(m&&m.category)||'')}</select></div>
     <div class="field"><label>Rating</label><input id="mRating" type="number" step=".1" value="${m?.rating||8}"></div>
+    <div class="field"><label>Runtime (minutes)</label><input id="mRuntime" type="number" min="0" placeholder="e.g. 135 (empty = keep/TMDB)" value="${m && m.runtime ? m.runtime : ''}"></div>
     <div class="field"><label>Poster URL</label><input id="mPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
+    <div class="field"><label>Unlock points (this movie)</label><input id="mUnlockPts" type="number" min="1" placeholder="Empty = admin default" value="${m && m.unlock_points != null && Number(m.unlock_points) > 0 ? m.unlock_points : ''}"></div>
+    <div class="field"><label>Ads to unlock (this movie)</label><input id="mUnlockAds" type="number" min="1" placeholder="Empty = admin default" value="${m && m.unlock_ads != null && Number(m.unlock_ads) > 0 ? m.unlock_ads : ''}"></div>
     <div class="field" style="grid-column:1/-1"><label>Server 1 URL</label><input id="s1" value="${(m?.server1||m?.server1_link||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
     <div class="field" style="grid-column:1/-1"><label>Server 2 URL</label><input id="s2" value="${(m?.server2||m?.server2_link||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
     <div class="field" style="grid-column:1/-1"><label>Server 3 URL</label><input id="s3" value="${(m?.server3||m?.server3_link||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
   </div>
+  <p class="muted smalltext" style="margin-top:8px">Unlock খালি রাখলে Admin → Points ডিফল্ট ব্যবহার হবে। Runtime মিনিটে (যেমন ১৩৫ = ২h ১৫m)।</p>
   <button type="button" class="btn primary" id="btnSaveMovie" style="margin-top:15px;width:100%" data-movie-id="${m ? String(m.id).replace(/"/g,'&quot;') : ''}">💾 Save Movie</button>`);
   // Reliable click binding (avoids silent inline-onclick failures)
   setTimeout(function(){
@@ -2019,6 +2023,14 @@ function saveMovie(id){
     const ac=acRaw.filter(function(x){return catEn(x)!=='All';});
     if(ac.length&&!ac.some(function(x){return catEn(x)===cat;})) cat=catEn(ac[0])||'Adult Movie';
   }
+  // Per-movie unlock overrides (empty = admin default)
+  var upRaw = gv('mUnlockPts');
+  var uaRaw = gv('mUnlockAds');
+  var unlock_points = upRaw === '' ? null : Math.max(1, parseInt(upRaw, 10) || 0) || null;
+  var unlock_ads = uaRaw === '' ? null : Math.max(1, parseInt(uaRaw, 10) || 0) || null;
+  // Runtime in minutes (TMDB-style). Empty keeps previous / 0
+  var rtRaw = gv('mRuntime');
+  var runtimeVal = rtRaw === '' ? ((old && old.runtime) || 0) : Math.max(0, parseInt(rtRaw, 10) || 0);
   // Stable id: keep existing doc id when editing (TMDB / manual / adult)
   var stableId = id!=null ? String(id) : (old && old.id ? String(old.id) : ("m_" + Date.now()));
   const x={
@@ -2038,7 +2050,9 @@ function saveMovie(id){
     clicks:(old&&old.clicks)||0, downloads:(old&&old.downloads)||0, views:(old&&old.views)||0,
     status:'Published', manual_movie: !(old&&old.tmdb_id), source:(old&&old.source)||'manual',
     tmdb_id:(old&&old.tmdb_id)||'',
-    runtime:(old&&old.runtime)||0,
+    runtime: runtimeVal,
+    unlock_points: unlock_points,
+    unlock_ads: unlock_ads,
     overview:(old&&old.overview)||'',
     added_time:(old&&old.added_time)||Date.now(),
     updated_time: Date.now()
@@ -2068,7 +2082,8 @@ function saveMovie(id){
       server1_link:s1, server2_link:s2, server3_link:s3, s1:s1, s2:s2, s3:s3,
       category:cat, rating:+ratingVal||8,
       year:String(+yearVal||new Date().getFullYear()),
-      poster:posterVal, adult:isAdult, tmdb_id:x.tmdb_id
+      poster:posterVal, adult:isAdult, tmdb_id:x.tmdb_id,
+      runtime: runtimeVal, unlock_points: unlock_points, unlock_ads: unlock_ads
     });
     var found = false;
     A.movies = (A.movies||[]).map(function(m){
@@ -2209,7 +2224,22 @@ function openAdultMovie(id=null){
   if(!Array.isArray(catsRaw)) catsRaw=normalizeCategories(catsRaw);
   const cats=catsRaw.filter(x=>catEn(x)!=='All' && catEn(x));
   const catOpts=(cats.length?cats:[{en:'Adult Movie'}]).map(c=>{const k=catEn(c);return '<option value="'+k.replace(/"/g,'&quot;')+'"'+(m&&catEn(m.category)===k?' selected':'')+'>'+k.replace(/</g,'')+'</option>';}).join('');
-  showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Adult Movie</h2><button type="button" class="btn" onclick="closeModal()">×</button></div><div class="form-grid"><div class="field"><label>Title</label><input id="adultTitle" value="${(m?.title||'').replace(/"/g,'&quot;')}" placeholder="Adult title"></div><div class="field"><label>Year</label><input id="adultYear" type="number" value="${m?.year||new Date().getFullYear()}"></div><div class="field"><label>Category</label><select id="adultCat">${catOpts}</select></div><div class="field"><label>Rating</label><input id="adultRating" type="number" step=".1" value="${m?.rating||0}"></div><div class="field"><label>Poster URL</label><input id="adultPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 1 URL</label><input id="adultS1" value="${(m?.server1||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 2 URL</label><input id="adultS2" value="${(m?.server2||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div><div class="field"><label>Server 3 URL</label><input id="adultS3" value="${(m?.server3||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div></div><button type="button" class="btn primary" id="btnSaveAdult" style="margin-top:15px;width:100%" data-movie-id="${m?String(m.id).replace(/"/g,'&quot;'):''}">Save Adult Movie</button>`);
+  showModal(`<div class="modal-head"><h2>${m?'Edit':'Add'} Adult Movie</h2><button type="button" class="btn" onclick="closeModal()">×</button></div>
+  <div class="form-grid">
+    <div class="field"><label>Title</label><input id="adultTitle" value="${(m?.title||'').replace(/"/g,'&quot;')}" placeholder="Adult title"></div>
+    <div class="field"><label>Year</label><input id="adultYear" type="number" value="${m?.year||new Date().getFullYear()}"></div>
+    <div class="field"><label>Category</label><select id="adultCat">${catOpts}</select></div>
+    <div class="field"><label>Rating</label><input id="adultRating" type="number" step=".1" value="${m?.rating||0}"></div>
+    <div class="field"><label>Runtime (minutes)</label><input id="adultRuntime" type="number" min="0" placeholder="e.g. 90" value="${m && m.runtime ? m.runtime : ''}"></div>
+    <div class="field"><label>Poster URL</label><input id="adultPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
+    <div class="field"><label>Unlock points (this movie)</label><input id="adultUnlockPts" type="number" min="1" placeholder="Empty = admin default" value="${m && m.unlock_points != null && Number(m.unlock_points) > 0 ? m.unlock_points : ''}"></div>
+    <div class="field"><label>Ads to unlock (this movie)</label><input id="adultUnlockAds" type="number" min="1" placeholder="Empty = admin default" value="${m && m.unlock_ads != null && Number(m.unlock_ads) > 0 ? m.unlock_ads : ''}"></div>
+    <div class="field"><label>Server 1 URL</label><input id="adultS1" value="${(m?.server1||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
+    <div class="field"><label>Server 2 URL</label><input id="adultS2" value="${(m?.server2||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
+    <div class="field"><label>Server 3 URL</label><input id="adultS3" value="${(m?.server3||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
+  </div>
+  <p class="muted smalltext" style="margin-top:8px">Unlock খালি = Adult ডিফল্ট। Runtime মিনিটে সেভ হয় (TMDB-এর মতো দেখায়)।</p>
+  <button type="button" class="btn primary" id="btnSaveAdult" style="margin-top:15px;width:100%" data-movie-id="${m?String(m.id).replace(/"/g,'&quot;'):''}">Save Adult Movie</button>`);
   setTimeout(function(){var b=document.getElementById('btnSaveAdult');if(!b)return;b.onclick=function(ev){try{ev&&ev.preventDefault();}catch(e){}var mid=b.getAttribute('data-movie-id')||'';saveAdultMovie(mid||null);};},30);
 }
 function saveAdultMovie(id){
@@ -2219,6 +2249,10 @@ function saveAdultMovie(id){
   const t=gv('adultTitle');
   if(!t){toast('Title required');return;}
   const s1=gv('adultS1'),s2=gv('adultS2'),s3=gv('adultS3');
+  var upRaw=gv('adultUnlockPts'), uaRaw=gv('adultUnlockAds'), rtRaw=gv('adultRuntime');
+  var unlock_points = upRaw==='' ? null : Math.max(1, parseInt(upRaw,10)||0)||null;
+  var unlock_ads = uaRaw==='' ? null : Math.max(1, parseInt(uaRaw,10)||0)||null;
+  var runtimeVal = rtRaw==='' ? ((old&&old.runtime)||0) : Math.max(0, parseInt(rtRaw,10)||0);
   const x={
     id:id!=null?String(id):("manual_"+Date.now()),
     title:t,type:'Adult',
@@ -2232,9 +2266,26 @@ function saveAdultMovie(id){
     s1:s1,s2:s2,s3:s3,s1on:true,s2on:true,s3on:true,
     clicks:old?.clicks||0,downloads:old?.downloads||0,views:old?.views||0,
     status:'Published',manual_movie:true,source:'manual',
-    added_time:old?.added_time||Date.now()
+    runtime:runtimeVal,
+    unlock_points:unlock_points,
+    unlock_ads:unlock_ads,
+    added_time:old?.added_time||Date.now(),
+    updated_time:Date.now()
   };
-toast('Saving...');if(window.CineHubFB){window.CineHubFB.saveMovie(x).then(function(saved){if(id!=null){A.movies=A.movies.map(m=>String(m.id)===String(id)?saved:m);}else if(!A.movies.some(m=>String(m.id)===String(saved&&saved.id))){A.movies.unshift(saved);}save(true);closeModal();render();toast('✓ Adult মুভি Firebase-এ সেভ')}).catch(function(e){console.error(e);toast('⚠ Adult সেভ ব্যর্থ: '+(e&&e.message?e.message:e)+' — Code.gs Deploy চেক করো')})}else{if(id!=null)A.movies=A.movies.map(m=>String(m.id)===String(id)?x:m);else A.movies.unshift(x);save();closeModal();render();toast('✓ Adult মুভি Firebase-এ সেভ')}}
+  toast('Saving...');
+  if(window.CineHubFB){
+    window.CineHubFB.saveMovie(x).then(function(saved){
+      var merged=Object.assign({},x,saved||{},{runtime:runtimeVal,unlock_points:unlock_points,unlock_ads:unlock_ads});
+      if(id!=null){A.movies=A.movies.map(function(m){return String(m.id)===String(id)?merged:m;});}
+      else if(!A.movies.some(function(m){return String(m.id)===String(merged&&merged.id);})){A.movies.unshift(merged);}
+      save(true);closeModal();render();toast('✓ Adult মুভি Firebase-এ সেভ');
+    }).catch(function(e){console.error(e);toast('⚠ Adult সেভ ব্যর্থ: '+(e&&e.message?e.message:e)+' — Code.gs Deploy চেক করো');});
+  }else{
+    if(id!=null)A.movies=A.movies.map(function(m){return String(m.id)===String(id)?x:m;});
+    else A.movies.unshift(x);
+    save();closeModal();render();toast('✓ Adult মুভি Firebase-এ সেভ');
+  }
+}
 function editAdultMovie(id){openAdultMovie(id)}
 function showModal(body){
   var m = document.getElementById('modal');
