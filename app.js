@@ -692,7 +692,7 @@ function shareRefLink(){
 }
 function openLink(u){if(!u)return;try{window.Telegram?.WebApp?.openTelegramLink?.(u)||window.Telegram?.WebApp?.openLink?.(u)||window.open(u,"_blank")}catch(e){window.open(u,"_blank")}}
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
-const defaults={appName:"Cine Hub4",menuTitle:"Cine Hub4 Menu",menuTitleBn:"Cine Hub4 মেনু",menuLogoUrl:"assets/logo.png",botUsername:"@Cinehub4bot",telegramBotLink:"https://t.me/Cinehub4bot",miniAppName:"Hub4",miniAppLink:"https://t.me/Cinehub4bot/Hub4",telegramChannelLink:"",howToWatchVideo:"",watchTutorialVideo:"",howToWatchText:"Unlock this content using ads or points.",unlockCost:5,unlockHours:15,adsForUnlock:5,adultUnlockCost:3,adultAdsForUnlock:5,adultUnlockHours:15,downloadServers:3,adReward:2,dailyAdLimit:20,joinBonus:10,referralReward:20,welcomeEnabled:true,welcomeTitle:"Welcome to Cine Hub4",welcomeTitleBn:"Cine Hub4-এ স্বাগতম",welcomeBody:"Watch all kinds of movies & series and download for free. Enjoy unlimited entertainment!",welcomeBodyBn:"সকল প্রকার মুভি ও সিরিজ দেখুন এবং ফ্রিতে ডাউনলোড করুন। সীমাহীন বিনোদন উপভোগ করুন!",categories:["All Movies","Bangla Moves","Hollywood Movie Hindi"],adultCategories:["All","Adult Movie","Anime"],tickerText:"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ",adultTickerText:"18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ",tickerTextBn:"প্রিয় কনটেন্ট শেয়ার করুন ও পয়েন্ট দিয়ে আনলক করুন 🚀 • নিয়মিত নতুন মুভি ও সিরিজ • অ্যাড দেখে বা পয়েন্ট দিয়ে আনলক করুন • ",adultTickerTextBn:"১৮+ অ্যাডাল্ট জোন • নিয়মিত নতুন অ্যাডাল্ট কনটেন্ট • অ্যাড দেখে বা পয়েন্ট দিয়ে আনলক করুন • ",libraryBadge:"MOVIE ZONE",libraryTitle:"Cinema Library",libraryDesc:"Curated movies, web series and premium entertainment updates.",adultLibraryBadge:"ADULT ZONE",adultLibraryTitle:"Adult Library",adultLibraryDesc:"Curated 18+ content and premium entertainment updates.",howToWatchLabel:"▶ How to Watch",adultHowToWatchLabel:"▶ How to Watch",newMoviesLabel:"New Movies",newMoviesSub:"LATEST UPLOADS",trendingLabel:"Trending",trendingSub:"MOST WATCHED",adultNewLabel:"New Movies",adultNewSub:"LATEST UPLOADS",adultTrendingLabel:"Trending",adultTrendingSub:"MOST WATCHED",packages:[
+const defaults={appName:"Cine Hub4",menuTitle:"Cine Hub4 Menu",menuTitleBn:"Cine Hub4 মেনু",menuLogoUrl:"assets/logo.png",botUsername:"@Cinehub4bot",telegramBotLink:"https://t.me/Cinehub4bot",miniAppName:"Hub4",miniAppLink:"https://t.me/Cinehub4bot/Hub4",telegramChannelLink:"",howToWatchVideo:"",watchTutorialVideo:"",howToWatchText:"Unlock this content using ads or points.",unlockCost:5,unlockHours:15,adsForUnlock:5,adultUnlockCost:3,adultAdsForUnlock:5,adultUnlockHours:15,downloadServers:3,adReward:2,dailyAdLimit:20,joinBonus:10,referralReward:20,welcomeEnabled:true,welcomeTitle:"Welcome to Cine Hub4",welcomeTitleBn:"Cine Hub4-এ স্বাগতম",welcomeBody:"Watch all kinds of movies & series and download for free. Enjoy unlimited entertainment!",welcomeBodyBn:"সকল প্রকার মুভি ও সিরিজ দেখুন এবং ফ্রিতে ডাউনলোড করুন। সীমাহীন বিনোদন উপভোগ করুন!",categories:["All Movies","Bangla Moves","Hollywood Movie Hindi"],adultCategories:["All","Adult Movie","Anime"],tickerText:"Share your favorite content and unlock with points 🚀 • New movies and series added regularly • Watch ads or use points to unlock • ",adultTickerText:"18+ Adult Zone • New adult content added regularly • Watch ads or use points to unlock • ",tickerTextBn:"প্রিয় কনটেন্ট শেয়ার করুন ও পয়েন্ট দিয়ে আনলক করুন 🚀 • নিয়মিত নতুন মুভি ও সিরিজ • অ্যাড দেখে বা পয়েন্ট দিয়ে আনলক করুন • ",adultTickerTextBn:"১৮+ অ্যাডাল্ট জোন • নিয়মিত নতুন অ্যাডাল্ট কনটেন্ট • অ্যাড দেখে বা পয়েন্ট দিয়ে আনলক করুন • ",libraryBadge:"MOVIE ZONE",libraryTitle:"Cinema Library",libraryDesc:"Curated movies, web series and premium entertainment updates.",adultLibraryBadge:"ADULT ZONE",adultHeaderTitle:"Adult",adultDetailTitle:"",movieDetailTitle:"",adultLibraryTitle:"Adult Library",adultLibraryDesc:"Curated 18+ content and premium entertainment updates.",howToWatchLabel:"▶ How to Watch",adultHowToWatchLabel:"▶ How to Watch",newMoviesLabel:"New Movies",newMoviesSub:"LATEST UPLOADS",trendingLabel:"Trending",trendingSub:"MOST WATCHED",adultNewLabel:"New Movies",adultNewSub:"LATEST UPLOADS",adultTrendingLabel:"Trending",adultTrendingSub:"MOST WATCHED",packages:[
     {name:"Basic Package",price:0.99,points:110,tag:"SMART CHOICE"},
     {name:"Standard Package",price:4.99,points:550,tag:"STARTER"},
     {name:"Premium Package",price:9.99,points:1200,tag:"BEST VALUE"},
@@ -1278,8 +1278,16 @@ function headerAvatarBtn(){
     : '<span class="hdr-avatar-letter">'+tgUserInitial()+"</span>";
   return '<button type="button" class="hdr-avatar-btn" onclick="nav(\'profile\')" aria-label="Profile">'+inner+"</button>";
 }
-function pageBackBar(title){return`<div class="page-back-bar"><button type="button" class="page-back-btn" id="pageBackBtn" onclick="goBack()">‹</button><span class="page-back-title">${title||""}</span>${headerAvatarBtn()}</div>`}
-function menuOnlyHeader(title){return`<div class="page-back-bar"><button type="button" class="menu-ham" id="hamBtn">☰</button><span class="page-back-title">${title||""}</span>${headerAvatarBtn()}</div>`}
+function pageBackBar(title, opts){
+  opts = opts || {};
+  var av = opts.noAvatar ? "" : headerAvatarBtn();
+  return '<div class="page-back-bar"><button type="button" class="page-back-btn" id="pageBackBtn" onclick="goBack()">‹</button><span class="page-back-title">'+(title||"")+'</span>'+av+"</div>";
+}
+function menuOnlyHeader(title, opts){
+  opts = opts || {};
+  var av = opts.noAvatar ? "" : headerAvatarBtn();
+  return '<div class="page-back-bar"><button type="button" class="menu-ham" id="hamBtn">☰</button><span class="page-back-title">'+(title||"")+'</span>'+av+"</div>";
+}
 function bindPageBack(){const b=$("#pageBackBtn");if(b)b.onclick=()=>goBack()}
 function primeHeader(){return`<div class="prime-row"><button type="button" class="menu-ham" id="hamBtn">☰</button><div class="prime-title">Cine <span class="scene-pill">Hub4</span></div>${headerAvatarBtn()}</div>`}
 function heroPills(){return`<div class="hero-pills-sticky"><div class="hero-pills"><button type="button" class="hero-pill blue ${state.mode==="new"?"active":""}" onclick="setMode('new')"><span class="hp-label">${cfg.newMoviesLabel||"New Movies"}</span><span class="hp-sub">${cfg.newMoviesSub||"LATEST UPLOADS"}</span></button><button type="button" class="hero-pill orange ${state.mode==="trending"?"active":""}" onclick="setMode('trending')"><span class="hp-label">${cfg.trendingLabel||"Trending"}</span><span class="hp-sub">${cfg.trendingSub||"MOST WATCHED"}</span></button></div></div>`}
@@ -1443,14 +1451,16 @@ function adult(){
   return `<div class="home-sticky-top" id="homeSticky">`+adultHeaderWithSearch()+heroPillsAdult()+catRowAdult()+`<div class="home-sticky-line"></div></div>`+libCardAdult()+tickerAdult()+cards+renderPager(pg.page, pg.totalPages);
 }
 function adultHeaderWithSearch(){
-  return `<div class="page-back-bar adult-head-bar">
-    <button type="button" class="menu-ham" id="hamBtn">☰</button>
-    <span class="page-back-title">${t("Adult")}</span>
-    <button type="button" class="adult-search-btn" onclick="openAdultSearch()" aria-label="Search">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-    </button>
-    ${headerAvatarBtn()}
-  </div>`;
+  loadSharedSettings();
+  var title = (cfg.adultHeaderTitle || cfg.adultPageTitle || "").trim() || t("Adult");
+  return '<div class="page-back-bar adult-head-bar">'+
+    '<button type="button" class="menu-ham" id="hamBtn">☰</button>'+
+    '<span class="page-back-title">'+title+'</span>'+
+    '<button type="button" class="adult-search-btn" onclick="openAdultSearch()" aria-label="Search">'+
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>'+
+    '</button>'+
+    headerAvatarBtn()+
+  '</div>';
 }
 function openAdultSearch(){
   state.query = state.adultQuery || "";
@@ -1556,7 +1566,7 @@ function profile(){
   const refs=Number((userData&&userData.refs)!=null?userData.refs:localStorage.getItem("cinehub4_refs")||0);
   const cur=(window.CINEHUB4_LANG&&window.CINEHUB4_LANG.get&&window.CINEHUB4_LANG.get())||localStorage.getItem("cinehub4_language")||"en";
   const avatar=photo?`<img src="${photo}" alt="">`:(name[0]||"U").toUpperCase();
-  return menuOnlyHeader(t("Profile"))+`
+  return menuOnlyHeader(t("Profile"), {noAvatar:true})+`
   <div class="pf-card">
     <div class="pf-avatar">${avatar}</div>
     <div class="pf-meta">
@@ -2291,9 +2301,11 @@ function setUnlockProgress(id,n){
 function getAdUnlockProgress(id){
   try{
     if(userData && userData.unlock_ad_prog){
-      return Number(userData.unlock_ad_prog[String(id)]||0);
+      var v=Number(userData.unlock_ad_prog[String(id)]||0);
+      if(v) return v;
     }
   }catch(e){}
+  try{ return Number(localStorage.getItem("cinehub4_uad_"+String(id))||0); }catch(e){}
   return 0;
 }
 function setAdUnlockProgress(id,n){
@@ -2303,7 +2315,8 @@ function setAdUnlockProgress(id,n){
   if(!userData) userData={};
   if(!userData.unlock_ad_prog) userData.unlock_ad_prog={};
   userData.unlock_ad_prog[String(id)]=v;
-  persistUnlockMaps_();
+  try{ localStorage.setItem("cinehub4_uad_"+String(id), String(v)); }catch(e){}
+  try{ persistUnlockMaps_(); }catch(e){}
   return v;
 }
 function tryCompleteUnlock(id){
@@ -2395,7 +2408,9 @@ function detailView(){
   const title=(m.title||"").split("|")[0].trim();
   const unlocked=isMovieUnlocked(m.id);
   const backPage=isAdult?"adult":"movies";
-  const pageLabel=isAdult?(t("Adult")+" · "+t("Movie")):t("Movie");
+  const pageLabel=isAdult
+    ? ((cfg.adultDetailTitle||"").trim() || (t("Adult")+" · "+t("Movie")))
+    : ((cfg.movieDetailTitle||"").trim() || t("Movie"));
   const clicks=Number(m.clicks||m.views||0);
 
   // shared poster header — TMDB meta on unlock / detail
@@ -3248,7 +3263,7 @@ function watchAd(mode){
   }
 
   function onAdDone(){
-    markAdCooldown(cdKey);
+    // Update progress FIRST (instant UI), cooldown after
     if(mode==="unlock" || mode==="adult"){
       const mid=state.detailId;
       if(!mid){toast(t("Open a movie first"));return;}
@@ -3256,21 +3271,22 @@ function watchAd(mode){
       const needAds=getUnlockRules(mid).adsNeed;
       let adProg=getAdUnlockProgress(mid)+1;
       adProg=setAdUnlockProgress(mid, adProg);
+      markAdCooldown(cdKey);
+      try{ render(false); }catch(e){}
       toast("+1 "+t("ad progress")+" ("+adProg+"/"+needAds+")");
       if(tryCompleteUnlock(mid)){
-        render(false);
+        try{ render(false); }catch(e){}
         return;
       }
-      render(false);
       return;
     }
+    markAdCooldown(cdKey);
     // Task ad → complete that task (reward from task, not generic ad reward)
     if(mode==="task" && window.__cinehub_pendingTask!=null){
       const ti=window.__cinehub_pendingTask;
       window.__cinehub_pendingTask=null;
       const tk=getTasks()[ti];
       if(tk){
-        // Avoid double-pay if rewardOnce path already handled in runTask credit()
         const st2=taskResetInfo(ti,tk);
         const next=st2.count+1;
         const willFinish=next>=st2.limit;
@@ -3279,16 +3295,19 @@ function watchAd(mode){
             state.points+=Number(tk.reward||0);
             if(userData) userData.points=state.points;
           }
-          const finished=markTaskProgress(ti,tk);
-          if(finished) toast("+"+(tk.reward||0)+" points · "+t("Done"));
-          else toast(t("Ad progress")+" "+next+"/"+st2.limit);
         }else{
           state.points+=Number(tk.reward||0);
           if(userData) userData.points=state.points;
-          const finished=markTaskProgress(ti,tk);
+        }
+        const finished=markTaskProgress(ti,tk);
+        try{ save(); }catch(e){}
+        try{ render(false); }catch(e){}
+        if(tk.rewardOnce){
+          if(finished) toast("+"+(tk.reward||0)+" points · "+t("Done"));
+          else toast(t("Ad progress")+" "+next+"/"+st2.limit);
+        }else{
           toast("+"+(tk.reward||0)+" points"+(finished?" · "+t("Done"):" · "+t("Progress")));
         }
-        render(false);
         return;
       }
     }

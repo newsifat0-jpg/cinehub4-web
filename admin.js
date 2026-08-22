@@ -40,6 +40,10 @@ const DEFAULT={
   libraryDesc:"Curated movies, web series and premium entertainment updates.",
   adultLibraryBadge:"ADULT ZONE",
   adultLibraryTitle:"Adult Library",
+  adultHeaderTitle:"Adult",
+  adultDetailTitle:"",
+  movieDetailTitle:"",
+
   adultLibraryDesc:"Curated 18+ content and premium entertainment updates.",
   howToWatchLabel:"▶ How to Watch",
   adultHowToWatchLabel:"▶ How to Watch",
@@ -1600,6 +1604,9 @@ function adult(){
 </div>
 <div class="card" style="margin-top:14px"><h3>Adult Page Text (EN + বাংলা)</h3><div class="muted smalltext">মুভির মতো — ইংরেজি ও বাংলা আলাদা। ইউজার ভাষা অনুযায়ী দেখাবে।</div>
 <div class="form-grid" style="margin-top:12px">
+  <div class="field"><label>Adult page header title</label><input id="aHeaderTitle" value="${A.settings.adultHeaderTitle||'Adult'}" placeholder="Adult"></div>
+  <div class="field"><label>Adult detail top title</label><input id="aDetailTitle" value="${A.settings.adultDetailTitle||''}" placeholder="Adult · Movie"></div>
+  <div class="field"><label>Movie detail top title</label><input id="mDetailTitle" value="${A.settings.movieDetailTitle||''}" placeholder="Movie"></div>
   <div class="field"><label>Badge (EN)</label><input id="aLibBadge" value="${A.settings.adultLibraryBadge||''}"></div>
   <div class="field"><label>ব্যাজ (বাংলা)</label><input id="aLibBadgeBn" value="${A.settings.adultLibraryBadgeBn||''}" placeholder="অ্যাডাল্ট জোন"></div>
   <div class="field"><label>Title (EN)</label><input id="aLibTitle" value="${A.settings.adultLibraryTitle||''}"></div>
@@ -1622,6 +1629,9 @@ function adult(){
 
 function saveAdultTexts(){
   function gv(id){ return (($('#'+id)||{}).value||'').trim(); }
+  A.settings.adultHeaderTitle=gv('aHeaderTitle');
+  A.settings.adultDetailTitle=gv('aDetailTitle');
+  A.settings.movieDetailTitle=gv('mDetailTitle');
   A.settings.adultLibraryBadge=gv('aLibBadge');
   A.settings.adultLibraryBadgeBn=gv('aLibBadgeBn');
   A.settings.adultLibraryTitle=gv('aLibTitle');
