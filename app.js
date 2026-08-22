@@ -2856,8 +2856,9 @@ function watchAd(mode){
     }
   }
 
-  // Daily limit only for earning modes (not unlock/adult unlock path)
-  if(mode!=="unlock" && mode!=="adult"){
+  // Daily earning limit only for "Watch Ad Now" (rewarded).
+  // Unlock / adult unlock / Daily Tasks use their own limits — not blocked by ads_today.
+  if(mode!=="unlock" && mode!=="adult" && mode!=="task"){
     const watched=Number((userData&&userData.ads_today)||0);
     const limit=Number(cfg.dailyAdLimit||20);
     if(watched>=limit){toast(t("Daily ad limit reached"));return}
