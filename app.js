@@ -4075,6 +4075,47 @@ function showWelcomePopup(force){
 window.showWelcomePopup=showWelcomePopup;
 window.closeWelcomePopup=closeWelcomePopup;
 
+
+function isNavigationReload_(){
+  try{
+    var list=performance.getEntriesByType&&performance.getEntriesByType("navigation");
+    if(list&&list[0]&&list[0].type==="reload") return true;
+  }catch(e){}
+  try{
+    if(performance.navigation&&performance.navigation.type===1) return true;
+  }catch(e){}
+  return false;
+}
+function forceHomeFromEntryLink_(){
+  try{
+    state.page="movies";
+    state.detailId=null;
+    state.pendingAdultDetail=null;
+    try{
+      sessionStorage.setItem("cinehub4_page","movies");
+      localStorage.setItem("cinehub4_page","movies");
+      sessionStorage.setItem("cinehub4_page_fallback","movies");
+      localStorage.setItem("cinehub4_page_fallback","movies");
+      sessionStorage.removeItem("cinehub4_detail");
+      localStorage.removeItem("cinehub4_detail");
+      sessionStorage.removeItem("cinehub4_share_pending");
+      sessionStorage.removeItem("cinehub4_last_start");
+      sessionStorage.removeItem("cinehub4_start_consumed");
+    }catch(e){}
+  }catch(e){}
+}
+function isMovieLikeStart_(spCore){
+  spCore=String(spCore||"").trim();
+  if(!spCore) return false;
+  if(/^movie_/i.test(spCore)) return true;
+  if(/^ref_/i.test(spCore) || /^r_/i.test(spCore)) return false;
+  if(/^[\w\-]+$/.test(spCore)){
+    if(/^\d+$/.test(spCore) || /^m_/.test(spCore) || /^manual_/.test(spCore) || /^tmdb_/i.test(spCore)) return true;
+    try{ if(typeof resolveMovieByParam==="function" && resolveMovieByParam(spCore)) return true; }catch(e){}
+  }
+  return false;
+}
+
 function handleStartParam(){
   try{
     if(window.__deeplinkUserNav) return false;
@@ -4109,22 +4150,31 @@ function handleStartParam(){
         window.__deeplinkUserNav=false;
       }
     }catch(e){}
-    // Recover pending share only if user has NOT dismissed it
+    // Recover sticky share ONLY on reload (not on fresh mini-app / website / refer open)
     if(!sp){
       try{
-        if(sessionStorage.getItem("cinehub4_share_dismissed")!=="1"){
+        if(isNavigationReload_() && sessionStorage.getItem("cinehub4_share_dismissed")!=="1"){
           sp = sessionStorage.getItem("cinehub4_last_start") || "";
         }
       }catch(e){}
     }
     if(!sp){
       try{
-        var pendingOnly = sessionStorage.getItem("cinehub4_share_pending") || "";
-        if(pendingOnly){
-          return openSharedMovie(pendingOnly);
+        // Reload: keep sticky share recovery / page restore
+        if(isNavigationReload_()){
+          var pendingOnly = sessionStorage.getItem("cinehub4_share_pending") || "";
+          if(pendingOnly && sessionStorage.getItem("cinehub4_share_dismissed")!=="1"){
+            return openSharedMovie(pendingOnly);
+          }
+          return false;
         }
-      }catch(e){}
-      return false;
+        // Fresh open via mini-app link / website (no startapp) → always HOME
+        forceHomeFromEntryLink_();
+        return true;
+      }catch(e){
+        try{ forceHomeFromEntryLink_(); }catch(e2){}
+        return true;
+      }
     }
     sp=String(sp).trim();
     // Fresh start_param from Telegram link = intentional open → allow share again
@@ -4192,9 +4242,24 @@ function handleStartParam(){
         return ok2;
       }
     }
-    // ref_USERID — store referrer for bonus (server applies once)
-    if(/^ref_/i.test(spCore)){
-      try{localStorage.setItem("cinehub4_ref_from",spCore.replace(/^ref_/i,""))}catch(e){}
+    // ref_USERID — store referrer, open HOME (not last page / not detail)
+    if(/^ref_/i.test(spCore) || /^r_/i.test(spCore)){
+      try{
+        var rid=spCore.replace(/^ref_/i,"").replace(/^r_/i,"");
+        if(rid) localStorage.setItem("cinehub4_ref_from", rid);
+      }catch(e){}
+      if(!isNavigationReload_()){
+        forceHomeFromEntryLink_();
+        return true; // signal caller to render home
+      }
+      return false;
+    }
+    // Non-movie start param (unknown) → home on fresh open
+    if(spCore && !isMovieLikeStart_(spCore)){
+      if(!isNavigationReload_()){
+        forceHomeFromEntryLink_();
+        return true;
+      }
     }
   }catch(e){}
   return false;
