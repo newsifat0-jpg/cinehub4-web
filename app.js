@@ -3719,6 +3719,28 @@ function bindLangSwitch(){
   }, {passive:true});
 })();
 
+
+function markDrawerActive(){
+  try{
+    const page=state.page==="detail"?"movies":(state.page==="adultSearch"?"adult":state.page);
+    document.querySelectorAll("#drawer button[data-page]").forEach(function(b){
+      const p=b.getAttribute("data-page");
+      if(p===page){ b.classList.add("active"); b.classList.add("is-active"); }
+      else { b.classList.remove("active"); b.classList.remove("is-active"); }
+    });
+    // bottom nav too
+    document.querySelectorAll("#bottomNav button[data-page], #bottomNav .nav-item").forEach(function(b){
+      const p=b.getAttribute("data-page");
+      if(!p) return;
+      if(p===page || (page==="home" && p==="movies") || (page==="detail" && p==="movies") || (page==="adultSearch" && p==="adult")){
+        b.classList.add("active"); b.classList.add("is-active");
+      } else {
+        b.classList.remove("active"); b.classList.remove("is-active");
+      }
+    });
+  }catch(e){}
+}
+
 function bindDrawer(){
   bindLangSwitch();
   const ham=document.getElementById("hamBtn");
@@ -3935,7 +3957,7 @@ try{const views={movies:moviesPage,search:searchPage,series,adult,adultSearch:ad
     if(bn) bn.classList.toggle("adult-off", !!off);
     if(off && state.page==="adult"){ state.page="movies"; }
   }
-});bindPageBack();bindDrawer();markDrawerActive();setupAdminButton();window.CINEHUB4_LANG?.translateDOM();
+});bindPageBack();bindDrawer();try{markDrawerActive();}catch(e){}setupAdminButton();window.CINEHUB4_LANG?.translateDOM();
 try{bindHomeStickyScroll()}catch(e){}
 const mic=$("#micBtn");if(mic)mic.onclick=startVoiceSearch;
 const qel=$("#q");if(qel){qel.addEventListener("input",()=>{/* live optional */});}
