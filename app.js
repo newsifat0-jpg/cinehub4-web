@@ -3063,15 +3063,51 @@ function isValidAdsgramBlockId(id){
 // Monetag/Adsgram/TADS often resolve their Promise late (backend poll / focus restore).
 // When user returns after watching long enough → fire success immediately (same UX for every network + multi-ad sequences).
 function createAdReturnGuard(onSuccess, minMs){
-  minMs = (typeof minMs==="number" && minMs>0) ? minMs : 8000;
+  // Monetag backend poll adds ~1.5–4.5s AFTER Continue — detect close ourselves
+  minMs = (typeof minMs==="number" && minMs>0) ? minMs : 5500;
   var adShownAt = 0;
   var armed = false;
   var sawHidden = false;
+  var sawOverlay = false;
+  var peakLayers = 0;
   var pollTimer = null;
   var mo = null;
-  var stopMoTimer = null;
   function watchedLongEnough(){
     return adShownAt > 0 && (Date.now() - adShownAt) >= minMs;
+  }
+  function countAdLayers(){
+    var n = 0;
+    try{
+      n += document.querySelectorAll(
+        '[id*="monetag" i],[class*="monetag" i],[id*="adsgram" i],[class*="adsgram" i],'+
+        '[id*="spot-" i],iframe[src*="libtl"],iframe[src*="monetag"],iframe[src*="otieu"],'+
+        'iframe[src*="adsgram"],iframe[src*="vignette"],[class*="tgads" i],[id*="tads" i]'
+      ).length;
+    }catch(e){
+      try{
+        n += document.querySelectorAll(
+          '[id*="monetag"],[class*="monetag"],[id*="adsgram"],[class*="adsgram"],'+
+          'iframe[src*="libtl"],iframe[src*="monetag"],iframe[src*="otieu"],iframe[src*="adsgram"]'
+        ).length;
+      }catch(e2){}
+    }
+    try{
+      var all = document.body ? document.body.children : [];
+      for(var i=0;i<all.length;i++){
+        var el = all[i];
+        try{
+          var st = window.getComputedStyle(el);
+          if(!st) continue;
+          var z = parseInt(st.zIndex,10);
+          if((st.position==="fixed"||st.position==="absolute") && !isNaN(z) && z>=999){
+            var r = el.getBoundingClientRect();
+            if(r.width > window.innerWidth*0.6 && r.height > window.innerHeight*0.4) n++;
+          }
+        }catch(e3){}
+      }
+    }catch(e){}
+    try{ n += document.querySelectorAll("iframe").length; }catch(e){}
+    return n;
   }
   function disarm(){
     if(!armed) return;
@@ -3079,8 +3115,9 @@ function createAdReturnGuard(onSuccess, minMs){
     try{ document.removeEventListener("visibilitychange", onVis); }catch(e){}
     try{ window.removeEventListener("focus", onFocus); }catch(e){}
     try{ window.removeEventListener("pageshow", onFocus); }catch(e){}
+    try{ window.removeEventListener("blur", onBlur); }catch(e){}
+    try{ document.removeEventListener("pointerdown", onPointer, true); }catch(e){}
     if(pollTimer){ try{ clearInterval(pollTimer); }catch(e){} pollTimer=null; }
-    if(stopMoTimer){ try{ clearInterval(stopMoTimer); }catch(e){} stopMoTimer=null; }
     if(mo){ try{ mo.disconnect(); }catch(e){} mo=null; }
   }
   function fire(){
@@ -3088,54 +3125,62 @@ function createAdReturnGuard(onSuccess, minMs){
     disarm();
     try{ if(onSuccess) onSuccess(); }catch(e){}
   }
+  function onBlur(){ if(armed) sawHidden = true; }
   function onVis(){
     if(!armed) return;
     try{
       if(document.visibilityState === "hidden"){ sawHidden = true; return; }
-      if(document.visibilityState === "visible" && sawHidden && watchedLongEnough()) fire();
+      if(document.visibilityState === "visible" && watchedLongEnough() && (sawHidden || sawOverlay)) fire();
     }catch(e){}
   }
   function onFocus(){
     if(!armed) return;
-    if(sawHidden && watchedLongEnough()) fire();
+    if(watchedLongEnough() && (sawHidden || sawOverlay)) fire();
+  }
+  function onPointer(){
+    if(!armed || !watchedLongEnough()) return;
+    // Continue / close tap — overlay starts closing; check in ~100ms
+    setTimeout(function(){
+      if(!armed) return;
+      var now = countAdLayers();
+      if(sawOverlay && now < peakLayers) fire();
+      else if(sawHidden) fire();
+    }, 100);
   }
   function arm(){
     if(armed) return;
     armed = true;
     adShownAt = Date.now();
     sawHidden = false;
+    sawOverlay = false;
+    peakLayers = 0;
     try{ document.addEventListener("visibilitychange", onVis); }catch(e){}
     try{ window.addEventListener("focus", onFocus); }catch(e){}
     try{ window.addEventListener("pageshow", onFocus); }catch(e){}
-    // Overlay removal (Monetag / Adsgram / generic fullscreen layers)
+    try{ window.addEventListener("blur", onBlur); }catch(e){}
+    try{ document.addEventListener("pointerdown", onPointer, true); }catch(e){}
     try{
-      var sawOverlay = false;
       mo = new MutationObserver(function(){
-        if(!armed || !watchedLongEnough()) return;
-        var overlays = document.querySelectorAll(
-          '[id*="monetag"],[class*="monetag"],[id*="adsgram"],[class*="adsgram"],'+
-          '[id*="spot-"],iframe[src*="libtl"],iframe[src*="monetag"],iframe[src*="otieu"],'+
-          'iframe[src*="adsgram"],[class*="tgads"],[id*="tads"]'
-        );
-        if(overlays.length > 0) sawOverlay = true;
-        else if(sawOverlay) fire();
+        if(!armed) return;
+        var n = countAdLayers();
+        if(n > peakLayers){ peakLayers = n; if(n > 0) sawOverlay = true; }
+        if(watchedLongEnough() && sawOverlay && n < Math.max(1, peakLayers)) fire();
       });
       mo.observe(document.documentElement, { childList:true, subtree:true });
-      stopMoTimer = setInterval(function(){
-        if(!armed || (adShownAt && Date.now()-adShownAt > 45000)){
-          try{ if(mo) mo.disconnect(); }catch(e){}
-          mo=null;
-          if(stopMoTimer){ clearInterval(stopMoTimer); stopMoTimer=null; }
-        }
-      }, 500);
     }catch(e){}
+    // 100ms poll — critical for TG WebView where events often don't fire
     var polls = 0;
     pollTimer = setInterval(function(){
       polls++;
-      if(!armed || polls > 60){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } return; }
-      if(!sawHidden || !watchedLongEnough()) return;
-      try{ if(document.visibilityState === "visible") fire(); }catch(e){}
-    }, 200);
+      if(!armed || polls > 250){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } return; }
+      var n = countAdLayers();
+      if(n > peakLayers){ peakLayers = n; if(n > 0) sawOverlay = true; }
+      if(!watchedLongEnough()) return;
+      if(sawOverlay && n < Math.max(1, peakLayers)){ fire(); return; }
+      if(sawHidden){
+        try{ if(document.visibilityState === "visible"){ fire(); return; } }catch(e){}
+      }
+    }, 100);
   }
   return {
     arm: arm,
@@ -3154,7 +3199,7 @@ function playAdsgram(blockId, onDone, onFail){
   }
   var loadToastTimer = null;
   var finished = false;
-  var guard = createAdReturnGuard(function(){ finish(true); }, 8000);
+  var guard = createAdReturnGuard(function(){ finish(true); }, 5500);
   function clearLoadToast(){
     if(loadToastTimer){ clearTimeout(loadToastTimer); loadToastTimer=null; }
   }
@@ -3212,7 +3257,7 @@ function playMonetag(zoneId, onDone, onFail){
   var fnName = "show_"+id;
   var loadToastTimer = null;
   var finished = false;
-  var guard = createAdReturnGuard(function(){ finish(true); }, 8000);
+  var guard = createAdReturnGuard(function(){ finish(true); }, 5500);
   function clearLoadToast(){ if(loadToastTimer){ clearTimeout(loadToastTimer); loadToastTimer=null; } }
   function finish(ok){
     if(finished) return;
@@ -3267,7 +3312,7 @@ function playTads(widgetId, onDone, onFail){
   var id = String(widgetId||"").trim();
   if(!id){ toast(t("Admin has not configured this Ad Block ID")); if(onFail) onFail(); return; }
   var finished = false;
-  var guard = createAdReturnGuard(function(){ finish(true); }, 8000);
+  var guard = createAdReturnGuard(function(){ finish(true); }, 5500);
   function finish(ok){
     if(finished) return;
     finished = true;
