@@ -1888,18 +1888,18 @@ function tasks(){
     </div>
   </div>
   <div class="pf-stats">
-    <div class="pf-stat"><div><b>${state.points}</b><span>${t("Current Balance")}</span></div><div class="ico coin">${ico("coin",22)}</div></div>
+    <div class="pf-stat"><div><b data-live-points class="live-points">${state.points}</b><span>${t("Current Balance")}</span></div><div class="ico coin">${ico("coin",22)}</div></div>
     <div class="pf-stat"><div><b>${cfg.adReward||2}</b><span>${t("Points Per Ad")}</span></div><div class="ico gift">${ico("gem",22)}</div></div>
-    <div class="pf-stat"><div><b>${watched}</b><span>${t("Ads Watched")}</span></div><div class="ico eye">${ico("eye",22)}</div></div>
+    <div class="pf-stat"><div><b data-live-watched>${watched}</b><span>${t("Ads Watched")}</span></div><div class="ico eye">${ico("eye",22)}</div></div>
     <div class="pf-stat"><div><b>${limit}</b><span>${t("Daily Limit")}</span></div><div class="ico shield">${ico("shield",22)}</div></div>
   </div>
   <div class="pf-section">${icoWrap("settings","sec")} ${t("EARNING SETTINGS")}</div>
   <div class="pf-panel earn-settings">
     <div class="pf-row"><span>${t("Reward Per Ad")}</span><b>${cfg.adReward||2} ${t("Points")}</b></div>
     <div class="pf-row"><span>${t("Maximum Daily Ads")}</span><b>${limit}</b></div>
-    <div class="pf-row"><span>${t("Remaining Today")}</span><b>${rem}</b></div>
-    <div class="progress-bar"><i style="width:${Math.min(100,(watched/Math.max(1,limit))*100)}%"></i></div>
-    <div class="muted" style="font-size:11px;margin-top:6px;text-align:center">${watched} / ${limit} ${t("completed today")}</div>
+    <div class="pf-row"><span>${t("Remaining Today")}</span><b data-live-remaining>${rem}</b></div>
+    <div class="progress-bar"><i data-live-earn-bar style="width:${Math.min(100,(watched/Math.max(1,limit))*100)}%"></i></div>
+    <div class="muted" style="font-size:11px;margin-top:6px;text-align:center" data-live-earn-txt>${watched} / ${limit} ${t("completed today")}</div>
   </div>
   <button type="button" class="watch-ad-now" onclick="watchAd('rewarded')">${ico("play",16)} ${t("Watch Ad Now")}</button>
   <div class="pf-section">${icoWrap("gem","sec")} ${t("MORE EARNING BUTTONS")}</div>
@@ -1907,10 +1907,10 @@ function tasks(){
     const st=taskResetInfo(i,tk);
     const prog=st.limit>1?(` · ${st.count}/${st.limit}`):"";
     const statusLabel=st.done?(tk.permanent?t("Completed"):t("Done")):(tk.permanent?t("One-time task"):t("Daily task"))+prog;
-    return `<div class="task-row ${st.done?"done":""}">
+    return `<div class="task-row ${st.done?"done":""}" data-task-row="${i}">
       <div class="task-ico">${ico("gem",20)}</div>
-      <div class="task-meta"><b>${langIsBn()&&tk.nameBn?tk.nameBn:t(tk.name||"")}</b><span>${t("Reward")}: ${tk.reward} pt · ${statusLabel}</span></div>
-      ${st.done?`<button type="button" class="task-done" disabled>${t("Done")}</button>`:`<button type="button" class="task-start" onclick="runTask(${i})">${t("Start")}</button>`}
+      <div class="task-meta"><b>${langIsBn()&&tk.nameBn?tk.nameBn:t(tk.name||"")}</b><span data-live-task-status="${i}">${t("Reward")}: ${tk.reward} pt · ${statusLabel}</span></div>
+      ${st.done?`<button type="button" class="task-done" disabled data-live-task-btn="${i}">${t("Done")}</button>`:`<button type="button" class="task-start" onclick="runTask(${i})" data-live-task-btn="${i}">${t("Start")}</button>`}
     </div>`;
   }).join("")}`;
 }
@@ -3339,6 +3339,71 @@ function formatCooldownRemain(ms){
   if(totalSec<60) return totalSec+t(" second(s)");
   return Math.ceil(totalSec/60)+t(" minute(s)");
 }
+// Instant DOM paint after ad reward — no full page rebuild
+function paintProgressInstant(opts){
+  try{
+    opts=opts||{};
+    if(opts.points!=null){
+      document.querySelectorAll("[data-live-points], .live-points, .my-points-val").forEach(function(el){
+        el.textContent=String(opts.points);
+      });
+    }
+    if(opts.watched!=null){
+      document.querySelectorAll("[data-live-watched]").forEach(function(el){
+        el.textContent=String(opts.watched);
+      });
+    }
+    if(opts.remaining!=null){
+      document.querySelectorAll("[data-live-remaining]").forEach(function(el){
+        el.textContent=String(opts.remaining);
+      });
+    }
+    if(opts.limit!=null && opts.watched!=null){
+      var pctE = opts.limit>0 ? Math.min(100,(opts.watched/opts.limit)*100) : 0;
+      document.querySelectorAll("[data-live-earn-bar]").forEach(function(el){
+        el.style.width=pctE+"%";
+        el.style.transition="width .2s ease";
+      });
+      document.querySelectorAll("[data-live-earn-txt]").forEach(function(el){
+        el.textContent=opts.watched+" / "+opts.limit+" "+t("completed today");
+      });
+    }
+    if(opts.adProg!=null && opts.needAds!=null){
+      document.querySelectorAll("[data-live-ads]").forEach(function(el){
+        el.textContent=opts.adProg+"/"+opts.needAds;
+      });
+      var pct = opts.needAds>0 ? Math.min(100, (opts.adProg/opts.needAds)*100) : 0;
+      document.querySelectorAll("[data-live-ads-bar]").forEach(function(el){
+        el.style.width=pct+"%";
+        el.style.transition="width .15s ease";
+      });
+    }
+    // Task row: status text + swap Start → Done
+    if(opts.taskIndex!=null){
+      var ti=String(opts.taskIndex);
+      var finished=!!opts.taskFinished;
+      var stLabel="";
+      if(opts.taskStatusText) stLabel=opts.taskStatusText;
+      else if(finished) stLabel=t("Done");
+      document.querySelectorAll('[data-live-task-status="'+ti+'"]').forEach(function(el){
+        if(opts.taskReward!=null) el.textContent=t("Reward")+": "+opts.taskReward+" pt · "+(finished?t("Done"):(opts.taskCount!=null&&opts.taskLimit!=null?(opts.taskCount+"/"+opts.taskLimit):stLabel));
+        else if(stLabel) el.textContent=el.textContent.replace(/·.*$/," · "+stLabel);
+      });
+      document.querySelectorAll('[data-live-task-btn="'+ti+'"]').forEach(function(btn){
+        if(finished){
+          btn.className="task-done";
+          btn.disabled=true;
+          btn.textContent=t("Done");
+          btn.removeAttribute("onclick");
+        }
+      });
+      document.querySelectorAll('[data-task-row="'+ti+'"]').forEach(function(row){
+        if(finished) row.classList.add("done");
+      });
+    }
+  }catch(e){}
+}
+
 function watchAd(mode){
   resetDailyAdsIfNeeded();
 
@@ -3380,35 +3445,8 @@ function watchAd(mode){
     if(watched>=limit){toast(t("Daily ad limit reached"));return}
   }
 
-  
-function paintProgressInstant(opts){
-  try{
-    opts=opts||{};
-    if(opts.points!=null){
-      document.querySelectorAll("[data-live-points], .live-points, .my-points-val").forEach(function(el){
-        el.textContent=String(opts.points);
-      });
-    }
-    if(opts.adProg!=null && opts.needAds!=null){
-      document.querySelectorAll("[data-live-ads]").forEach(function(el){
-        el.textContent=opts.adProg+"/"+opts.needAds;
-      });
-      var pct = opts.needAds>0 ? Math.min(100, (opts.adProg/opts.needAds)*100) : 0;
-      document.querySelectorAll("[data-live-ads-bar]").forEach(function(el){
-        el.style.width=pct+"%";
-        el.style.transition="width .15s ease";
-      });
-    }
-    if(opts.taskCount!=null && opts.taskLimit!=null){
-      var sel='[data-live-task="'+String(opts.taskIndex)+'"]';
-      document.querySelectorAll(sel).forEach(function(el){
-        el.textContent=opts.taskCount+"/"+opts.taskLimit;
-      });
-    }
-  }catch(e){}
-}
-function onAdDone(){
-    // Update progress FIRST (instant UI), cooldown after
+  function onAdDone(){
+    // Update progress FIRST (instant UI), heavy save/render deferred
     if(mode==="unlock" || mode==="adult"){
       const mid=state.detailId;
       if(!mid){toast(t("Open a movie first"));return;}
@@ -3416,15 +3454,13 @@ function onAdDone(){
       const needAds=getUnlockRules(mid).adsNeed;
       let adProg=getAdUnlockProgress(mid)+1;
       adProg=setAdUnlockProgress(mid, adProg);
-      // Instant UI before any heavy work
       try{ paintProgressInstant({adProg:adProg, needAds:needAds, points:state.points}); }catch(e){}
       markAdCooldown(cdKey);
-      try{ render(false); }catch(e){}
       toast("+1 "+t("ad progress")+" ("+adProg+"/"+needAds+")");
-      if(tryCompleteUnlock(mid)){
-        try{ render(false); }catch(e){}
-        return;
-      }
+      var unlocked=false;
+      try{ unlocked=tryCompleteUnlock(mid); }catch(e){}
+      // Defer full render so Continue → numbers feel instant
+      setTimeout(function(){ try{ render(false); }catch(e){} }, unlocked?50:120);
       return;
     }
     markAdCooldown(cdKey);
@@ -3447,29 +3483,55 @@ function onAdDone(){
           if(userData) userData.points=state.points;
         }
         const finished=markTaskProgress(ti,tk);
-        try{ paintProgressInstant({points:state.points, taskCount:next, taskLimit:st2.limit, taskIndex:ti}); }catch(e){}
-        try{ render(false); }catch(e){}
+        try{
+          paintProgressInstant({
+            points:state.points,
+            taskIndex:ti,
+            taskCount:next,
+            taskLimit:st2.limit,
+            taskFinished:finished,
+            taskReward:tk.reward
+          });
+        }catch(e){}
         if(tk.rewardOnce){
           if(finished) toast("+"+(tk.reward||0)+" points · "+t("Done"));
           else toast(t("Ad progress")+" "+next+"/"+st2.limit);
         }else{
           toast("+"+(tk.reward||0)+" points"+(finished?" · "+t("Done"):" · "+t("Progress")));
         }
-        // Network save after UI (non-blocking)
-        try{ setTimeout(function(){ try{ save(); }catch(e){} }, 0); }catch(e){}
+        setTimeout(function(){
+          try{ save(); }catch(e){}
+          try{ render(false); }catch(e){}
+        }, 80);
         return;
       }
     }
-    // Generic rewarded ad (points page)
+    // Generic rewarded ad (Watch Ad Now)
     const reward=Number(cfg.adReward||2);
     state.points+=reward;
     const watched=Number((userData&&userData.ads_today)||0)+1;
     const totalAds=Number((userData&&userData.ads_total)||0)+1;
-    if(userData){userData.ads_today=watched;userData.ads_day=new Date().toDateString();userData.ads_total=totalAds;}
-    if(window.CineHubFB) window.CineHubFB.updateUserField(null,{ads_today:watched,ads_day:new Date().toDateString(),ads_total:totalAds,points:state.points});
-    save();
+    const limit=Number(cfg.dailyAdLimit||20);
+    const rem=Math.max(0,limit-watched);
+    if(userData){userData.ads_today=watched;userData.ads_day=new Date().toDateString();userData.ads_total=totalAds;userData.points=state.points;}
+    // INSTANT paint — points / watched / remaining / bar
+    try{
+      paintProgressInstant({
+        points:state.points,
+        watched:watched,
+        remaining:rem,
+        limit:limit
+      });
+    }catch(e){}
     toast("+"+reward+" "+t("points added"));
-    render(false);
+    // Network + full render after paint so UI never waits
+    setTimeout(function(){
+      try{
+        if(window.CineHubFB) window.CineHubFB.updateUserField(null,{ads_today:watched,ads_day:new Date().toDateString(),ads_total:totalAds,points:state.points});
+      }catch(e){}
+      try{ save(); }catch(e){}
+      try{ render(false); }catch(e){}
+    }, 60);
   }
 
   playAdNetwork(slot, onAdDone);
