@@ -3058,6 +3058,93 @@ function isValidAdsgramBlockId(id){
   if(/^[A-Za-z0-9_-]{3,40}$/.test(id) && !/^task[_-]/i.test(id)) return true;
   return false;
 }
+
+// Shared early-complete for ALL ad networks in Telegram Mini App WebView.
+// Monetag/Adsgram/TADS often resolve their Promise late (backend poll / focus restore).
+// When user returns after watching long enough → fire success immediately (same UX for every network + multi-ad sequences).
+function createAdReturnGuard(onSuccess, minMs){
+  minMs = (typeof minMs==="number" && minMs>0) ? minMs : 8000;
+  var adShownAt = 0;
+  var armed = false;
+  var sawHidden = false;
+  var pollTimer = null;
+  var mo = null;
+  var stopMoTimer = null;
+  function watchedLongEnough(){
+    return adShownAt > 0 && (Date.now() - adShownAt) >= minMs;
+  }
+  function disarm(){
+    if(!armed) return;
+    armed = false;
+    try{ document.removeEventListener("visibilitychange", onVis); }catch(e){}
+    try{ window.removeEventListener("focus", onFocus); }catch(e){}
+    try{ window.removeEventListener("pageshow", onFocus); }catch(e){}
+    if(pollTimer){ try{ clearInterval(pollTimer); }catch(e){} pollTimer=null; }
+    if(stopMoTimer){ try{ clearInterval(stopMoTimer); }catch(e){} stopMoTimer=null; }
+    if(mo){ try{ mo.disconnect(); }catch(e){} mo=null; }
+  }
+  function fire(){
+    if(!armed) return;
+    disarm();
+    try{ if(onSuccess) onSuccess(); }catch(e){}
+  }
+  function onVis(){
+    if(!armed) return;
+    try{
+      if(document.visibilityState === "hidden"){ sawHidden = true; return; }
+      if(document.visibilityState === "visible" && sawHidden && watchedLongEnough()) fire();
+    }catch(e){}
+  }
+  function onFocus(){
+    if(!armed) return;
+    if(sawHidden && watchedLongEnough()) fire();
+  }
+  function arm(){
+    if(armed) return;
+    armed = true;
+    adShownAt = Date.now();
+    sawHidden = false;
+    try{ document.addEventListener("visibilitychange", onVis); }catch(e){}
+    try{ window.addEventListener("focus", onFocus); }catch(e){}
+    try{ window.addEventListener("pageshow", onFocus); }catch(e){}
+    // Overlay removal (Monetag / Adsgram / generic fullscreen layers)
+    try{
+      var sawOverlay = false;
+      mo = new MutationObserver(function(){
+        if(!armed || !watchedLongEnough()) return;
+        var overlays = document.querySelectorAll(
+          '[id*="monetag"],[class*="monetag"],[id*="adsgram"],[class*="adsgram"],'+
+          '[id*="spot-"],iframe[src*="libtl"],iframe[src*="monetag"],iframe[src*="otieu"],'+
+          'iframe[src*="adsgram"],[class*="tgads"],[id*="tads"]'
+        );
+        if(overlays.length > 0) sawOverlay = true;
+        else if(sawOverlay) fire();
+      });
+      mo.observe(document.documentElement, { childList:true, subtree:true });
+      stopMoTimer = setInterval(function(){
+        if(!armed || (adShownAt && Date.now()-adShownAt > 45000)){
+          try{ if(mo) mo.disconnect(); }catch(e){}
+          mo=null;
+          if(stopMoTimer){ clearInterval(stopMoTimer); stopMoTimer=null; }
+        }
+      }, 500);
+    }catch(e){}
+    var polls = 0;
+    pollTimer = setInterval(function(){
+      polls++;
+      if(!armed || polls > 60){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } return; }
+      if(!sawHidden || !watchedLongEnough()) return;
+      try{ if(document.visibilityState === "visible") fire(); }catch(e){}
+    }, 200);
+  }
+  return {
+    arm: arm,
+    disarm: disarm,
+    watchedLongEnough: watchedLongEnough,
+    getShownAt: function(){ return adShownAt; }
+  };
+}
+
 function playAdsgram(blockId, onDone, onFail){
   blockId = String(blockId||"").trim();
   if(!blockId || !isValidAdsgramBlockId(blockId)){
@@ -3067,6 +3154,7 @@ function playAdsgram(blockId, onDone, onFail){
   }
   var loadToastTimer = null;
   var finished = false;
+  var guard = createAdReturnGuard(function(){ finish(true); }, 8000);
   function clearLoadToast(){
     if(loadToastTimer){ clearTimeout(loadToastTimer); loadToastTimer=null; }
   }
@@ -3074,6 +3162,7 @@ function playAdsgram(blockId, onDone, onFail){
     if(finished) return;
     finished = true;
     clearLoadToast();
+    try{ guard.disarm(); }catch(e){}
     if(ok){
       try{ if(onDone) onDone(); }catch(e){ console.warn(e); }
     } else {
@@ -3088,9 +3177,12 @@ function playAdsgram(blockId, onDone, onFail){
         loadToastTimer = setTimeout(function(){
           if(!finished) toast(t("Ad loading…"));
         }, 800);
-        // Only reward when the ad actually finished (promise resolves).
-        // A rejection means the ad was skipped/closed early/failed to fill — no reward.
-        ad.show().then(function(){ finish(true); }).catch(function(){ finish(false); });
+        guard.arm();
+        ad.show().then(function(){ finish(true); }).catch(function(){
+          // Early close / no-fill — only reward if user watched long enough (TG WebView quirk)
+          if(guard.watchedLongEnough()) finish(true);
+          else finish(false);
+        });
         return true;
       }catch(e){ console.warn(e); }
     }
@@ -3104,8 +3196,7 @@ function playAdsgram(blockId, onDone, onFail){
     .then(function(ok){
       if(ok && tryShow()) return;
       clearLoadToast();
-      // Script never loaded — soft fail so multi-net waterfall can try the next network.
-      // Never reward on total failure.
+      try{ guard.disarm(); }catch(e){}
       if(!finished){
         finished = true;
         toast(t("Ad failed to load. Try again."));
@@ -3121,15 +3212,13 @@ function playMonetag(zoneId, onDone, onFail){
   var fnName = "show_"+id;
   var loadToastTimer = null;
   var finished = false;
-  var adShownAt = 0;
-  // Monetag in Telegram WebView often rejects the promise after a full view (focus/close quirks).
-  // If the ad UI was open long enough, treat as completed.
-  var MIN_WATCH_MS = 10000;
+  var guard = createAdReturnGuard(function(){ finish(true); }, 8000);
   function clearLoadToast(){ if(loadToastTimer){ clearTimeout(loadToastTimer); loadToastTimer=null; } }
   function finish(ok){
     if(finished) return;
     finished = true;
     clearLoadToast();
+    try{ guard.disarm(); }catch(e){}
     if(ok){
       try{ if(onDone) onDone(); }catch(e){}
     } else {
@@ -3137,25 +3226,17 @@ function playMonetag(zoneId, onDone, onFail){
       try{ if(onFail) onFail(); }catch(e){}
     }
   }
-  function watchedLongEnough(){
-    return adShownAt > 0 && (Date.now() - adShownAt) >= MIN_WATCH_MS;
-  }
   function tryShow(){
     if(typeof window[fnName]==="function"){
       try{
-        adShownAt = Date.now();
+        guard.arm();
         var p = window[fnName]();
         if(p && typeof p.then==="function"){
-          p.then(function(){
-            // Resolve (any value) = success
-            finish(true);
-          }).catch(function(){
-            // Reject: still reward if user kept ad open long enough (full countdown ~14s in video)
-            if(watchedLongEnough()) finish(true);
+          p.then(function(){ finish(true); }).catch(function(){
+            if(guard.watchedLongEnough()) finish(true);
             else finish(false);
           });
         } else {
-          // No promise API — assume shown; reward after short delay if no crash
           setTimeout(function(){ finish(true); }, 300);
         }
         return true;
@@ -3177,6 +3258,7 @@ function playMonetag(zoneId, onDone, onFail){
   setTimeout(function(){
     if(tryShow()) return;
     clearLoadToast();
+    try{ guard.disarm(); }catch(e){}
     playLinkAd({network:"monetag", id:id}, onDone, onFail);
   }, 1500);
 }
@@ -3184,12 +3266,30 @@ function playMonetag(zoneId, onDone, onFail){
 function playTads(widgetId, onDone, onFail){
   var id = String(widgetId||"").trim();
   if(!id){ toast(t("Admin has not configured this Ad Block ID")); if(onFail) onFail(); return; }
+  var finished = false;
+  var guard = createAdReturnGuard(function(){ finish(true); }, 8000);
+  function finish(ok){
+    if(finished) return;
+    finished = true;
+    try{ guard.disarm(); }catch(e){}
+    if(ok){
+      try{ if(onDone) onDone(); }catch(e){}
+    } else {
+      toast(t("Ad was not completed. Try again."));
+      try{ if(onFail) onFail(); }catch(e){}
+    }
+  }
   if(window.TADS && typeof window.TADS.show==="function"){
     try{
-      window.TADS.show(id).then(function(){ if(onDone) onDone(); }).catch(function(){ if(onFail) onFail(); });
+      guard.arm();
+      window.TADS.show(id).then(function(){ finish(true); }).catch(function(){
+        if(guard.watchedLongEnough()) finish(true);
+        else finish(false);
+      });
       return;
     }catch(e){}
   }
+  try{ guard.disarm(); }catch(e){}
   playLinkAd({network:"tads", id:id}, onDone, onFail);
 }
 
@@ -3401,6 +3501,9 @@ function paintProgressInstant(opts){
         if(finished) row.classList.add("done");
       });
     }
+    // Force Telegram WebView to paint immediately (otherwise numbers lag until next frame)
+    try{ void document.body.offsetHeight; }catch(e){}
+    try{ window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.notificationOccurred("success"); }catch(e){}
   }catch(e){}
 }
 
