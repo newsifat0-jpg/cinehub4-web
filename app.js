@@ -777,6 +777,8 @@ function paginateList(list, page){
 }
 function buildUserProgressPatch_(){
   if(userData) userData.points = state.points;
+  // Do NOT send refs / referred_users — server-authoritative via processReferral.
+  // Client was overwriting them with 0 and admin showed empty referred lists.
   var patch = {
     points: Number(state.points) || 0,
     unlocks: (userData && userData.unlocks) || {},
@@ -784,14 +786,14 @@ function buildUserProgressPatch_(){
     ads_day: (userData && userData.ads_day) || "",
     ads_total: Number((userData && userData.ads_total) || 0),
     language: (userData && userData.language) || "en",
-    refs: Number((userData && userData.refs) || 0),
-    referred_by: (userData && userData.referred_by) || null,
     task_progress: (userData && userData.task_progress) || {},
     unlock_prog: (userData && userData.unlock_prog) || {},
     unlock_ad_prog: (userData && userData.unlock_ad_prog) || {},
     updated_at: Date.now()
   };
   if(userData && userData.ref_task_count!=null) patch.ref_task_count = Number(userData.ref_task_count)||0;
+  // Only send referred_by when known — never send null (would clear server)
+  if(userData && userData.referred_by) patch.referred_by = String(userData.referred_by);
   return patch;
 }
 function cacheUserProgressLocal_(){
@@ -3416,6 +3418,23 @@ function playAdNetwork(slot, onDone){
   tryNext();
 }
 
+// Count EVERY successful ad (rewarded / unlock / adult / task) so admin sees real activity.
+// Daily earning limit still only blocks mode==="rewarded" in watchAd().
+function bumpAdCounters(){
+  try{ resetDailyAdsIfNeeded(); }catch(e){}
+  if(!userData) userData={};
+  var today=new Date().toDateString();
+  if(!userData.ads_day) userData.ads_day=today;
+  userData.ads_today=Number(userData.ads_today||0)+1;
+  userData.ads_total=Number(userData.ads_total||0)+1;
+  userData.ads_day=today;
+  return {
+    ads_today:userData.ads_today,
+    ads_total:userData.ads_total,
+    ads_day:userData.ads_day
+  };
+}
+
 function resetDailyAdsIfNeeded(){
   const mode=String(cfg.dailyAdResetMode||"midnight");
   const today=new Date().toDateString();
@@ -3594,6 +3613,8 @@ function watchAd(mode){
   }
 
   function onAdDone(){
+    // Every completed ad counts for admin (Ads today / Ads total)
+    try{ bumpAdCounters(); }catch(e){}
     // Update progress FIRST (instant UI), heavy save/render deferred
     if(mode==="unlock" || mode==="adult"){
       const mid=state.detailId;
@@ -3607,8 +3628,11 @@ function watchAd(mode){
       toast("+1 "+t("ad progress")+" ("+adProg+"/"+needAds+")");
       var unlocked=false;
       try{ unlocked=tryCompleteUnlock(mid); }catch(e){}
-      // Defer full render so Continue → numbers feel instant
-      setTimeout(function(){ try{ render(false); }catch(e){} }, unlocked?50:120);
+      // Persist ads_today + unlock maps (was missing before → admin showed 0)
+      setTimeout(function(){
+        try{ save(); }catch(e){}
+        try{ render(false); }catch(e){}
+      }, unlocked?50:100);
       return;
     }
     markAdCooldown(cdKey);
@@ -3654,15 +3678,13 @@ function watchAd(mode){
         return;
       }
     }
-    // Generic rewarded ad (Watch Ad Now)
+    // Generic rewarded ad (Watch Ad Now) — counters already bumped above
     const reward=Number(cfg.adReward||2);
     state.points+=reward;
-    const watched=Number((userData&&userData.ads_today)||0)+1;
-    const totalAds=Number((userData&&userData.ads_total)||0)+1;
+    if(userData) userData.points=state.points;
+    const watched=Number((userData&&userData.ads_today)||0);
     const limit=Number(cfg.dailyAdLimit||20);
     const rem=Math.max(0,limit-watched);
-    if(userData){userData.ads_today=watched;userData.ads_day=new Date().toDateString();userData.ads_total=totalAds;userData.points=state.points;}
-    // INSTANT paint — points / watched / remaining / bar
     try{
       paintProgressInstant({
         points:state.points,
@@ -3672,11 +3694,7 @@ function watchAd(mode){
       });
     }catch(e){}
     toast("+"+reward+" "+t("points added"));
-    // Network + full render after paint so UI never waits
     setTimeout(function(){
-      try{
-        if(window.CineHubFB) window.CineHubFB.updateUserField(null,{ads_today:watched,ads_day:new Date().toDateString(),ads_total:totalAds,points:state.points});
-      }catch(e){}
       try{ save(); }catch(e){}
       try{ render(false); }catch(e){}
     }, 60);

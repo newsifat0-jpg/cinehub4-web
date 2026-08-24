@@ -903,15 +903,15 @@ function openUserDetail(uid){
   var uname = u.username ? ("@"+String(u.username).replace(/^@/,"")) : "—";
   var joinAt = fmtDate_(u.created_at || u.created || u.join_date);
   var refBy = u.referred_by || u.ref_from || "—";
-  // Who this user referred
-  var referred = [];
+  // Who this user referred — merge stored list + scan all loaded users by referred_by
+  var referredMap = {};
   if(Array.isArray(u.referred_users) && u.referred_users.length){
-    referred = u.referred_users.map(String);
-  } else {
-    (A.userList||[]).forEach(function(x){
-      if(String(x.referred_by||"")===String(uid)) referred.push(String(x.id));
-    });
+    u.referred_users.forEach(function(id){ if(id) referredMap[String(id)] = true; });
   }
+  (A.userList||[]).forEach(function(x){
+    if(String(x.referred_by||"")===String(uid) && x.id) referredMap[String(x.id)] = true;
+  });
+  var referred = Object.keys(referredMap);
   // Approved purchases only (reject not shown)
   var buys = (A.payments||[]).filter(function(p){
     var puid = String(p.userId||p.uid||p.user_id||"");
