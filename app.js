@@ -3418,19 +3418,26 @@ function playAdNetwork(slot, onDone){
   tryNext();
 }
 
-// Count EVERY successful ad (rewarded / unlock / adult / task) so admin sees real activity.
-// Daily earning limit still only blocks mode==="rewarded" in watchAd().
-function bumpAdCounters(){
+// Ad counters (kept separate on purpose):
+// • ads_today  = ONLY "Watch Ad Now" → Daily Limit / Ads Watched / Remaining
+// • ads_total  = all ads (rewarded + unlock + task) for admin lifetime stats
+// Task / unlock must NOT bump ads_today.
+function bumpAdCounters(opts){
+  opts = opts || {};
   try{ resetDailyAdsIfNeeded(); }catch(e){}
   if(!userData) userData={};
   var today=new Date().toDateString();
   if(!userData.ads_day) userData.ads_day=today;
-  userData.ads_today=Number(userData.ads_today||0)+1;
-  userData.ads_total=Number(userData.ads_total||0)+1;
-  userData.ads_day=today;
+  if(opts.countDaily){
+    userData.ads_today=Number(userData.ads_today||0)+1;
+    userData.ads_day=today;
+  }
+  if(opts.countTotal !== false){
+    userData.ads_total=Number(userData.ads_total||0)+1;
+  }
   return {
-    ads_today:userData.ads_today,
-    ads_total:userData.ads_total,
+    ads_today:Number(userData.ads_today||0),
+    ads_total:Number(userData.ads_total||0),
     ads_day:userData.ads_day
   };
 }
@@ -3613,10 +3620,10 @@ function watchAd(mode){
   }
 
   function onAdDone(){
-    // Every completed ad counts for admin (Ads today / Ads total)
-    try{ bumpAdCounters(); }catch(e){}
     // Update progress FIRST (instant UI), heavy save/render deferred
     if(mode==="unlock" || mode==="adult"){
+      // Lifetime total only — does NOT touch Daily Limit / Ads Watched (earning UI)
+      try{ bumpAdCounters({ countDaily:false, countTotal:true }); }catch(e){}
       const mid=state.detailId;
       if(!mid){toast(t("Open a movie first"));return;}
       loadSharedSettings();
@@ -3628,7 +3635,6 @@ function watchAd(mode){
       toast("+1 "+t("ad progress")+" ("+adProg+"/"+needAds+")");
       var unlocked=false;
       try{ unlocked=tryCompleteUnlock(mid); }catch(e){}
-      // Persist ads_today + unlock maps (was missing before → admin showed 0)
       setTimeout(function(){
         try{ save(); }catch(e){}
         try{ render(false); }catch(e){}
@@ -3638,6 +3644,8 @@ function watchAd(mode){
     markAdCooldown(cdKey);
     // Task ad → complete that task (reward from task, not generic ad reward)
     if(mode==="task" && window.__cinehub_pendingTask!=null){
+      // Lifetime total only — task Done must not raise "X / Y completed today"
+      try{ bumpAdCounters({ countDaily:false, countTotal:true }); }catch(e){}
       const ti=window.__cinehub_pendingTask;
       window.__cinehub_pendingTask=null;
       const tk=getTasks()[ti];
@@ -3678,7 +3686,8 @@ function watchAd(mode){
         return;
       }
     }
-    // Generic rewarded ad (Watch Ad Now) — counters already bumped above
+    // Watch Ad Now (rewarded) — ONLY this bumps Daily Limit / Ads Watched / Remaining
+    try{ bumpAdCounters({ countDaily:true, countTotal:true }); }catch(e){}
     const reward=Number(cfg.adReward||2);
     state.points+=reward;
     if(userData) userData.points=state.points;
