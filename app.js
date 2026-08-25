@@ -690,11 +690,15 @@ function shareRefLink(){
   const el=document.getElementById("refLinkText");
   const shown=(el&&el.textContent?el.textContent.trim():"");
   if(shown && /t\.me\/.+\/.+[?&]startapp=/i.test(shown)) link=shown;
+  // text only + single url (no link inside text — Telegram would show it twice)
   var refMsg = langIsBn()
-    ? "Cine Hub4-এ যোগ দিন — মুভি ও সিরিজ দেখুন, সহজে ডাউনলোড করুন, একদম ফ্রি!"
-    : "Join Cine Hub4 — stream movies & series, download easily, completely free!";
-  var shareBody = refMsg + "\n" + link;
-  nativeShare({title: langIsBn() ? "Cine Hub4 আমন্ত্রণ" : "Cine Hub4 Invite", text: shareBody, url: link});
+    ? "🎬 Cine Hub4-এ জয়েন করুন!\n✨ সকল প্রকার মুভি ও সিরিজ একদম ফ্রিতে দেখুন\n📥 সহজে ডাউনলোড করুন — সীমাহীন বিনোদন অপেক্ষা করছে 🍿🔥"
+    : "🎬 Join Cine Hub4!\n✨ Watch all kinds of movies & series — completely free\n📥 Download easily and enjoy unlimited entertainment 🍿🔥";
+  nativeShare({
+    title: langIsBn() ? "🎬 Cine Hub4 আমন্ত্রণ" : "🎬 Cine Hub4 Invite",
+    text: refMsg,
+    url: link
+  });
 }
 function openLink(u){if(!u)return;try{window.Telegram?.WebApp?.openTelegramLink?.(u)||window.Telegram?.WebApp?.openLink?.(u)||window.open(u,"_blank")}catch(e){window.open(u,"_blank")}}
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
@@ -1792,6 +1796,7 @@ function getTaskProgMap(){
   return userData.task_progress;
 }
 function taskResetInfo(i,tk){
+  // Each task uses its own sid + own resetMode / resetHours / resetMinutes — never shared
   const sid=taskStableId(tk,i);
   const limit=Math.max(1, Number(tk&&tk.limit)||1);
   const map=getTaskProgMap();
@@ -1800,7 +1805,7 @@ function taskResetInfo(i,tk){
   try{
     const legacy="t"+String(i)+"_"+String((tk&&tk.name)||"task").toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,28)+"_"+String((tk&&tk.type)||"x").toLowerCase().slice(0,12);
     const leg=map[legacy];
-    if(leg && (Number(leg.count)||0) > (Number(entry.count)||0)) entry=leg;
+    if(leg && (Number(leg.count)||0) > (Number(entry.count)||0)) entry=Object.assign({}, leg);
   }catch(e){}
   let count=Number(entry.count)||0;
   if(tk && (tk.type==="share"||tk.type==="refer") && userData && userData.ref_task_count!=null){
@@ -1809,51 +1814,76 @@ function taskResetInfo(i,tk){
   if(tk && tk.permanent){
     return {done: count>=limit, count:count, limit:limit, sid:sid};
   }
-  const mode=String((tk&&tk.resetMode)||"hours");
+
+  const mode=String((tk&&tk.resetMode)||"hours").toLowerCase();
   const today=new Date().toDateString();
+  // Anchor: when task was last completed or last progressed
+  const anchor=Number(entry.done_at)||Number(entry.updated_at)||0;
+  let needReset=false;
+
   if(mode==="midnight"){
-    if(entry.day && entry.day!==today){
-      count=0;
-      entry={count:0, day:today};
-      map[sid]=entry;
-    } else if(!entry.day){
-      entry.day=today;
+    // Reset every calendar day at local midnight
+    if(entry.day && entry.day!==today) needReset=true;
+    else if(!entry.day && count>0){
+      // Legacy entry without day — attach today so it resets tomorrow, not stuck forever
+      entry=Object.assign({}, entry, { day: today, count: count });
       map[sid]=entry;
     }
   } else if(mode==="minutes"){
-    const doneAt=Number(entry.done_at)||0;
-    if(doneAt){
-      const mins=Number(tk&&tk.resetMinutes);
-      const m=(isFinite(mins)&&mins>0)?mins:60;
-      if((Date.now()-doneAt)/60000 >= m){
-        count=0;
-        entry={count:0};
-        map[sid]=entry;
+    const mins=Number(tk&&tk.resetMinutes);
+    const m=(isFinite(mins)&&mins>0)?mins:60;
+    if(count>0){
+      if(anchor>0){
+        if((Date.now()-anchor)/60000 >= m) needReset=true;
+      } else {
+        // Completed/progressed but no timestamp (old data) → reset so Done is not stuck
+        needReset=true;
       }
     }
   } else {
-    const doneAt=Number(entry.done_at)||0;
-    if(doneAt){
-      const hours=Number(tk&&tk.resetHours);
-      const h=(isFinite(hours)&&hours>0)?hours:24;
-      if((Date.now()-doneAt)/3600000 >= h){
-        count=0;
-        entry={count:0};
-        map[sid]=entry;
+    // hours (default) — per-task resetHours
+    const hours=Number(tk&&tk.resetHours);
+    const h=(isFinite(hours)&&hours>0)?hours:24;
+    if(count>0){
+      if(anchor>0){
+        if((Date.now()-anchor)/3600000 >= h) needReset=true;
+      } else {
+        needReset=true;
       }
     }
   }
+
+  if(needReset){
+    count=0;
+    entry = mode==="midnight"
+      ? { count:0, day:today, updated_at:Date.now() }
+      : { count:0, updated_at:Date.now() };
+    map[sid]=entry;
+    // Clear matching legacy key for this task only
+    try{
+      const legacy="t"+String(i)+"_"+String((tk&&tk.name)||"task").toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,28)+"_"+String((tk&&tk.type)||"x").toLowerCase().slice(0,12);
+      if(map[legacy]) map[legacy]=Object.assign({}, entry);
+    }catch(e){}
+    if(!userData) userData={};
+    userData.task_progress=map;
+    // Must persist — otherwise Firebase reloads old "Done" state
+    try{ setTimeout(function(){ try{ save(); }catch(e){} }, 0); }catch(e){}
+  }
+
   return {done: count>=limit, count:count, limit:limit, sid:sid};
 }
 function markTaskProgress(i,tk){
   const st=taskResetInfo(i,tk);
   const next=st.count+1;
   const map=getTaskProgMap();
+  const now=Date.now();
   const entry={
     count: next,
-    day: new Date().toDateString()
+    day: new Date().toDateString(),
+    updated_at: now
   };
-  if(next>=st.limit) entry.done_at=Date.now();
+  // done_at when limit reached — used by hours/minutes reset for THIS task only
+  if(next>=st.limit) entry.done_at=now;
   map[st.sid]=entry;
   // also keep legacy index key so old clients still see progress
   try{
@@ -2288,8 +2318,44 @@ function buy(){
 }
 
 /* —— Unlock helpers — progress in Firebase (multi-device) —— */
+// Clear points/ads unlock progress for one movie (Firebase maps only)
+function clearUnlockProgressFor_(id){
+  id=String(id||"");
+  if(!id) return false;
+  var changed=false;
+  try{
+    if(!userData) userData={};
+    if(userData.unlock_prog && userData.unlock_prog[id]!=null){
+      delete userData.unlock_prog[id];
+      changed=true;
+    }
+    if(userData.unlock_ad_prog && userData.unlock_ad_prog[id]!=null){
+      delete userData.unlock_ad_prog[id];
+      changed=true;
+    }
+  }catch(e){}
+  // Drop any legacy local keys so they cannot override Firebase again
+  try{ localStorage.removeItem("cinehub4_uad_"+id); }catch(e){}
+  try{ localStorage.removeItem("cinehub4_up_"+id); }catch(e){}
+  return changed;
+}
+// If unlock timer expired, wipe leftover Ads 2/2 · Points x/y so UI resets to 0
+function resetExpiredUnlockProgress_(id){
+  id=String(id||"");
+  if(!id||!userData) return;
+  try{
+    var exp=Number((userData.unlocks&&userData.unlocks[id])||0);
+    if(!(exp>0) || exp>Date.now()) return;
+    var changed=clearUnlockProgressFor_(id);
+    try{ delete userData.unlocks[id]; changed=true; }catch(e){}
+    if(changed){
+      try{ setTimeout(function(){ try{ persistUnlockMaps_(); }catch(e){} }, 0); }catch(e){}
+    }
+  }catch(e){}
+}
 function isMovieUnlocked(id){
   try{
+    resetExpiredUnlockProgress_(id);
     if(userData && userData.unlocks){
       const exp=Number(userData.unlocks[String(id)]||0);
       if(exp>Date.now()) return true;
@@ -2319,11 +2385,8 @@ function markMovieUnlocked(id){
   if(!userData) userData={};
   if(!userData.unlocks) userData.unlocks={};
   userData.unlocks[String(id)]=exp;
-  // Clear in-progress counters after unlock
-  if(!userData.unlock_prog) userData.unlock_prog={};
-  if(!userData.unlock_ad_prog) userData.unlock_ad_prog={};
-  delete userData.unlock_prog[String(id)];
-  delete userData.unlock_ad_prog[String(id)];
+  // Clear in-progress counters after unlock (incl. localStorage fallback)
+  clearUnlockProgressFor_(id);
   if(window.CineHubFB){
     try{window.CineHubFB.setUnlock(null, id, hours)}catch(e){}
     persistUnlockMaps_();
@@ -2366,6 +2429,7 @@ function isAdultMovie(m){
 }
 /** Unlock rules: per-movie override → else adult/normal admin defaults */
 function getUnlockRules(movieOrAdult){
+  // Adult + non-adult: same logic — admin panel defaults, then optional per-movie override if > 0
   loadSharedSettings();
   var isAdult = false;
   var movie = null;
@@ -2387,17 +2451,26 @@ function getUnlockRules(movieOrAdult){
     adsNeed = Math.max(1, Number(cfg.adsForUnlock != null ? cfg.adsForUnlock : 5) || 5);
     hours = Math.max(1, Number(cfg.unlockHours != null ? cfg.unlockHours : 15) || 15);
   }
-  // Per-movie overrides (only when explicitly set > 0)
+  // Per-movie override only when admin set a positive value on the movie; empty/null = keep defaults above
   if(movie){
-    var up = Number(movie.unlock_points);
-    var ua = Number(movie.unlock_ads);
-    if(isFinite(up) && up > 0) cost = Math.max(1, Math.floor(up));
-    if(isFinite(ua) && ua > 0) adsNeed = Math.max(1, Math.floor(ua));
+    var up = movie.unlock_points;
+    var ua = movie.unlock_ads;
+    var uh = movie.unlock_hours;
+    if(up != null && String(up).trim() !== "" && isFinite(Number(up)) && Number(up) > 0){
+      cost = Math.max(1, Math.floor(Number(up)));
+    }
+    if(ua != null && String(ua).trim() !== "" && isFinite(Number(ua)) && Number(ua) > 0){
+      adsNeed = Math.max(1, Math.floor(Number(ua)));
+    }
+    if(uh != null && String(uh).trim() !== "" && isFinite(Number(uh)) && Number(uh) > 0){
+      hours = Math.max(1, Math.floor(Number(uh)));
+    }
   }
   return { cost: cost, adsNeed: adsNeed, hours: hours };
 }
-/** Points contributed toward unlockCost — Firebase */
+/** Points toward unlock — Firebase users/{uid}.unlock_prog only */
 function getUnlockProgress(id){
+  try{ resetExpiredUnlockProgress_(id); }catch(e){}
   try{
     if(userData && userData.unlock_prog){
       return Number(userData.unlock_prog[String(id)]||0);
@@ -2413,18 +2486,19 @@ function setUnlockProgress(id,n){
   if(!userData.unlock_prog) userData.unlock_prog={};
   userData.unlock_prog[String(id)]=v;
   state.unlockProgress=v;
-  persistUnlockMaps_();
+  // Firebase primary
+  try{ persistUnlockMaps_(); }catch(e){}
+  try{ setTimeout(function(){ try{ save(); }catch(e2){} }, 0); }catch(e){}
   return v;
 }
-/** Ads watched toward adsForUnlock — Firebase */
+/** Ads toward unlock — Firebase users/{uid}.unlock_ad_prog only (no localStorage) */
 function getAdUnlockProgress(id){
+  try{ resetExpiredUnlockProgress_(id); }catch(e){}
   try{
     if(userData && userData.unlock_ad_prog){
-      var v=Number(userData.unlock_ad_prog[String(id)]||0);
-      if(v) return v;
+      return Number(userData.unlock_ad_prog[String(id)]||0);
     }
   }catch(e){}
-  try{ return Number(localStorage.getItem("cinehub4_uad_"+String(id))||0); }catch(e){}
   return 0;
 }
 function setAdUnlockProgress(id,n){
@@ -2434,9 +2508,10 @@ function setAdUnlockProgress(id,n){
   if(!userData) userData={};
   if(!userData.unlock_ad_prog) userData.unlock_ad_prog={};
   userData.unlock_ad_prog[String(id)]=v;
-  try{ localStorage.setItem("cinehub4_uad_"+String(id), String(v)); }catch(e){}
-  // Network save deferred — UI must update first
-  try{ setTimeout(function(){ try{ persistUnlockMaps_(); }catch(e){} }, 0); }catch(e){}
+  // Strip legacy local key so it cannot fight Firebase
+  try{ localStorage.removeItem("cinehub4_uad_"+String(id)); }catch(e){}
+  try{ persistUnlockMaps_(); }catch(e){}
+  try{ setTimeout(function(){ try{ save(); }catch(e2){} }, 0); }catch(e){}
   return v;
 }
 function tryCompleteUnlock(id){
