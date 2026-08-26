@@ -1902,6 +1902,7 @@ function markTaskProgress(i,tk){
 }
 function tasks(){
   loadSharedSettings();
+  try{ resetDailyAdsIfNeeded(); }catch(e){}
   const watched=Number((userData&&userData.ads_today)||0);
   const limit=Number(cfg.dailyAdLimit||20);
   const rem=Math.max(0,limit-watched);
@@ -3548,6 +3549,26 @@ function resetDailyAdsIfNeeded(){
       if(window.CineHubFB) try{window.CineHubFB.updateUserField(null,{ads_today:0,ads_cycle_start:Date.now()});}catch(e){}
     }
   }
+}
+// While the "Cine Hub" earning page is open, keep checking the admin-configured
+// reset window (minutes/hours/midnight) and auto-flip Ads Watched/Remaining back
+// to 0/full the moment it elapses — without requiring the user to leave and
+// reopen the page or tap Watch Ad Now first.
+function tasksLiveResetTick_(){
+  try{
+    if(state.page!=="tasks") return;
+    const before=Number((userData&&userData.ads_today)||0);
+    resetDailyAdsIfNeeded();
+    const watched=Number((userData&&userData.ads_today)||0);
+    const limit=Number(cfg.dailyAdLimit||20);
+    const rem=Math.max(0,limit-watched);
+    if(watched!==before){
+      paintProgressInstant({watched:watched, remaining:rem, limit:limit});
+    }
+  }catch(e){}
+}
+if(!window.__tasksLiveResetPoll){
+  window.__tasksLiveResetPoll=setInterval(tasksLiveResetTick_, 3000);
 }
 function adCooldownKeyForMode(mode){
   if(mode==="adult") return "adult";
