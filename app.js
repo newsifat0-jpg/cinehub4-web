@@ -4308,6 +4308,10 @@ try{
     tg.ready();
     tg.expand();
     try{tg.setHeaderColor&&tg.setHeaderColor("#07090f")}catch(e){}
+    // Ask Telegram for permission to DM the user (join-bonus / task messages).
+    // On first grant, Telegram itself inserts "You allowed this bot to message
+    // you when you logged in on <app> app." into the chat — same as PRIME nCENE.
+    try{ if(tg.requestWriteAccess) tg.requestWriteAccess(function(){}); }catch(e){}
     try{tg.setBackgroundColor&&tg.setBackgroundColor("#07090f")}catch(e){}
     try{tg.setBottomBarColor&&tg.setBottomBarColor("#0c101c")}catch(e){}
     try{if(tg.disableVerticalSwipes)tg.disableVerticalSwipes()}catch(e){}
