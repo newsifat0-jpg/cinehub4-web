@@ -2187,10 +2187,44 @@ function compressProofImage_(dataUrl, maxSide, quality){
 }
 function submitPayment(){
   const order=state.buyOrder;if(!order)return;
-  const txid=(document.getElementById("payTxid")||{}).value||"";
+  // Sync wallet from dropdown without re-render (avoids wiping form mid-submit)
+  try{
+    var wp=document.getElementById("walletPick");
+    if(wp && wp.value!=="" && wp.value!=null){
+      var wi=Number(wp.value);
+      var wl=getWallets()[wi];
+      if(wl) state.selectedWallet=wl;
+    }
+  }catch(e){}
+  if(!state.selectedWallet || !String(state.selectedWallet.address||"").trim() || String(state.selectedWallet.address).indexOf("(Set wallet")===0){
+    toast(t("Select Wallet") || "Please select a payment method / wallet");
+    return;
+  }
+  const txid=String((document.getElementById("payTxid")||{}).value||"").trim();
+  if(!txid){
+    toast("Please enter Transaction ID / TxID");
+    return;
+  }
+  // Block double-click spam
+  if(window.__paySubmitting){
+    toast("Please wait…");
+    return;
+  }
+  window.__paySubmitting = true;
+  try{
+    var btn = document.querySelector('button[onclick="submitPayment()"]');
+    if(btn){ btn.disabled=true; btn.style.opacity="0.6"; btn.textContent="Submitting…"; }
+  }catch(e){}
   const fileInput=document.getElementById("payShot");
   let proofName="";
   let proofData="";
+  const unlockSubmit=function(){
+    window.__paySubmitting = false;
+    try{
+      var b = document.querySelector('button[onclick="submitPayment()"]');
+      if(b){ b.disabled=false; b.style.opacity=""; }
+    }catch(e){}
+  };
   const finish=function(){
     const tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
     const user=tg?((tg.first_name||"")+(tg.last_name?" "+tg.last_name:"")):("User "+(localStorage.getItem("cinehub4_uid")||""));
@@ -2211,7 +2245,7 @@ function submitPayment(){
       proofData:proofData,
       wallet:(state.selectedWallet&&state.selectedWallet.name)||"",
       network:(state.selectedWallet&&state.selectedWallet.network)||"",
-      method:"USDT",
+      method:(state.selectedWallet&&(state.selectedWallet.network||state.selectedWallet.name))||"USDT",
       status:"pending",
       ts:now.getTime(),
       created_at:now.getTime(),
@@ -2221,15 +2255,18 @@ function submitPayment(){
     if(window.CineHubFB){
       window.CineHubFB.addPayment(paymentObj).then(function(){
         toast(t("Payment request submitted"));
+        window.__paySubmitting = false;
         state.buyStep=null;state.buyOrder=null;state.selectedWallet=null;
         nav("profile");
       }).catch(function(e){
         console.error(e);
+        unlockSubmit();
         var msg=String(e&&e.message?e.message:e);
         if(/limit|daily/i.test(msg)) toast(msg);
         else toast("Payment save failed: "+msg);
       });
     } else {
+      unlockSubmit();
       toast("Payment save failed: Firebase API missing");
     }
   };
@@ -2293,7 +2330,10 @@ function buy(){
     const o=state.buyOrder;
     const wallets=getWallets();
     const sw=state.selectedWallet;
-    const walletOpts=wallets.map((w,i)=>`<option value="${i}">${w.name||("Wallet "+(i+1))}</option>`).join("");
+    const walletOpts=wallets.map(function(w,i){
+      var sel = sw && sw.address===w.address && sw.name===w.name ? " selected" : "";
+      return '<option value="'+i+'"'+sel+'>'+(w.name||("Wallet "+(i+1)))+'</option>';
+    }).join("");
     return pageBackBar(t("Buy Points"))+`
     <button type="button" class="pf-btn wide" style="margin-bottom:12px" onclick="cancelBuy()">${ico("crown",16)} ${t("Purchase Custom Coins")}</button>
     <div class="pf-section">💳 ${t("PAYMENT STEP")}</div>
