@@ -1590,12 +1590,22 @@ function adultHeaderWithSearch(){
   loadSharedSettings();
   var title = cfgText("adultHeaderTitle","adultHeaderTitleBn","")
     || cfgText("adultPageTitle","adultPageTitleBn","")
-    || t("Adult");
+    || "";
+  // BN: avoid leftover English "Cine Hub4 Adult" when no BN title set
+  if(langIsBn()){
+    var raw = String(title||"");
+    if(!raw || /adult/i.test(raw) && !/[ঀ-৿]/.test(raw)){
+      var appN = cfgText("appName","appNameBn","Cine Hub4") || "Cine Hub4";
+      title = appN + " " + t("Adult");
+    }
+  } else if(!title){
+    title = t("Adult");
+  }
   title=String(title).replace(/</g,"&lt;");
   return '<div class="page-back-bar adult-head-bar">'+
     '<button type="button" class="menu-ham" id="hamBtn">☰</button>'+
     '<span class="page-back-title">'+title+'</span>'+
-    '<button type="button" class="adult-search-btn" onclick="openAdultSearch()" aria-label="${t("Search")}">'+
+    '<button type="button" class="adult-search-btn" onclick="openAdultSearch()" aria-label="'+t("Search")+'">'+
       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>'+
     '</button>'+
     headerAvatarBtn()+
@@ -2379,7 +2389,11 @@ function buy(){
       <label style="font-size:12px;color:#9aa3b8">${t("Transaction ID / TxID")}</label>
       <input id="payTxid" type="text" placeholder="${t("Paste your transaction hash / TxID here")}" style="width:100%;margin:8px 0;padding:12px;border-radius:12px;border:1px solid #2a334d;background:#0c101c;color:#eef1ff">
       <label style="font-size:12px;color:#9aa3b8">${t("Payment Screenshot")}</label>
-      <input id="payShot" type="file" accept="image/*" style="width:100%;margin:8px 0;color:#9aa3b8">
+      <div style="display:flex;align-items:center;gap:10px;margin:8px 0;flex-wrap:wrap">
+        <input id="payShot" type="file" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="var n=this.files&&this.files[0]?this.files[0].name:'';var e=document.getElementById('payShotName');if(e)e.textContent=n||t('No file chosen')">
+        <button type="button" class="btn" style="padding:10px 14px;border-radius:10px" onclick="document.getElementById('payShot').click()">${t("Choose File")}</button>
+        <span id="payShotName" class="muted" style="font-size:12px">${t("No file chosen")}</span>
+      </div>
       <button type="button" class="pf-btn wide copy" style="margin-top:10px" onclick="submitPayment()">${ico("send",16)} ${t("Submit Payment Request")}</button>
     </div>`;
   }
