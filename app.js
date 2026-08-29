@@ -177,12 +177,12 @@ function showLinkSheet(link, title){
   sheet.className = "share-sheet";
   sheet.innerHTML =
     '<div class="share-sheet-card">'+
-      '<div class="share-sheet-title">'+(title||"Link")+'</div>'+
+      '<div class="share-sheet-title">'+(title||t("Link"))+'</div>'+
       '<input class="share-sheet-input" id="shareSheetInput" type="text" readonly value="">'+
       '<div class="share-sheet-actions">'+
-        '<button type="button" class="share-sheet-btn" id="shareSheetCopy">Copy</button>'+
-        '<button type="button" class="share-sheet-btn primary" id="shareSheetShare">Share</button>'+
-        '<button type="button" class="share-sheet-btn ghost" id="shareSheetClose">Close</button>'+
+        '<button type="button" class="share-sheet-btn" id="shareSheetCopy">'+t("Copy")+'</button>'+
+        '<button type="button" class="share-sheet-btn primary" id="shareSheetShare">'+t("Share")+'</button>'+
+        '<button type="button" class="share-sheet-btn ghost" id="shareSheetClose">'+t("Close")+'</button>'+
       '</div>'+
     '</div>';
   document.body.appendChild(sheet);
@@ -279,17 +279,17 @@ function nativeShare(opts){
 function copyMovieLink(id){
   try{
     var mid = String(id||"").trim();
-    if(!mid){ toast("ID missing"); return; }
+    if(!mid){ toast(t("ID missing")); return; }
     var m = (typeof movies!=="undefined" && movies) ? movies.find(function(x){ return String(x.id)===mid; }) : null;
     var title = m ? String(m.title||"").split("|")[0].trim() : "Movie";
     var link = movieShareLink(mid);
-    if(!link){ toast("Link empty — set Mini App link in Admin → Settings"); return; }
+    if(!link){ toast(t("Link empty — set Mini App link in Admin → Settings")); return; }
     // Always show sheet so user can see + copy (Telegram WebView clipboard often blocked)
     showLinkSheet(link, title);
     hardCopy(link, function(){ toast(t("Link copied")); });
   }catch(e){
     console.error(e);
-    toast("Copy error: "+(e&&e.message?e.message:e));
+    toast(t("Copy error")+": "+(e&&e.message?e.message:e));
   }
 }
 
@@ -481,7 +481,7 @@ function showSharedLanding(m){
       '<div class="sl-card">'+
         '<div class="sl-banner">'+
           '<span class="sl-banner-ico">↗</span> '+sharedLbl+
-          '<button type="button" class="sl-x" id="slClose" aria-label="Close">×</button>'+
+          '<button type="button" class="sl-x" id="slClose" aria-label="'+t("Close")+'">×</button>'+
         '</div>'+
         '<div class="sl-poster'+(poster?"":" no-img")+'">'+posterHtml+
           (dur?'<span class="sl-dur">'+dur+'</span>':'')+
@@ -533,18 +533,18 @@ function applyAdultGateIfNeeded(){
 function shareMovie(id){
   try{
     var mid = String(id||"").trim();
-    if(!mid){ toast("ID missing"); return; }
+    if(!mid){ toast(t("ID missing")); return; }
     var m = (typeof movies!=="undefined" && movies) ? movies.find(function(x){ return String(x.id)===mid; }) : null;
     var title = m ? String(m.title||"").split("|")[0].trim() : "Movie";
     var poster = m ? String(m.poster||m.poster_path||"") : "";
     var link = movieShareLink(mid);
-    if(!link){ toast("Link empty — set Mini App link in Admin → Settings"); return; }
+    if(!link){ toast(t("Link empty — set Mini App link in Admin → Settings")); return; }
     // Chat message style like Prime Scene: URL then full title
     var text = link + "\n" + (m ? String(m.title||title) : title);
     showSocialShareSheet({ title: title, link: link, text: text, poster: poster, adult: !!(m&&m.adult) });
   }catch(e){
     console.error(e);
-    toast("Share error: "+(e&&e.message?e.message:e));
+    toast(t("Share error")+": "+(e&&e.message?e.message:e));
   }
 }
 function showSocialShareSheet(opts){
@@ -590,12 +590,12 @@ function showSocialShareSheet(opts){
         posterHtml+
         '<div class="ss-meta"><div class="ss-title">'+String(title).replace(/</g,"&lt;")+'</div>'+
         '<div class="ss-sub">'+(opts.adult?"18+ · ":"")+'Cine Hub4</div></div>'+
-        '<button type="button" class="ss-x" id="shareSheetClose" aria-label="Close">✕</button>'+
+        '<button type="button" class="ss-x" id="shareSheetClose" aria-label="'+t("Close")+'">✕</button>'+
       '</div>'+
       '<div class="ss-grid">'+grid+'</div>'+
       '<div class="ss-link-row">'+
         '<input class="share-sheet-input" id="shareSheetInput" type="text" readonly value="">'+
-        '<button type="button" class="share-sheet-btn primary" id="shareSheetCopy">Copy</button>'+
+        '<button type="button" class="share-sheet-btn primary" id="shareSheetCopy">'+t("Copy")+'</button>'+
       '</div>'+
     '</div>';
   document.body.appendChild(sheet);
@@ -757,12 +757,12 @@ function renderPager(page, totalPages){
   var start=Math.max(1, page-Math.floor(windowSize/2));
   var end=Math.min(totalPages, start+windowSize-1);
   if(end-start+1<windowSize) start=Math.max(1, end-windowSize+1);
-  var html='<div class="cine-pager" role="navigation" aria-label="Pages">';
-  html+='<button type="button" class="cine-page-btn'+(page<=1?" disabled":"")+'" '+(page<=1?"disabled":'onclick="goMoviePage('+(page-1)+')"')+' aria-label="Previous">&lt;</button>';
+  var html='<div class="cine-pager" role="navigation" aria-label="'+t("Pages")+'">';
+  html+='<button type="button" class="cine-page-btn'+(page<=1?" disabled":"")+'" '+(page<=1?"disabled":'onclick="goMoviePage('+(page-1)+')"')+' aria-label="'+t("Previous")+'">&lt;</button>';
   for(var i=start;i<=end;i++){
     html+='<button type="button" class="cine-page-btn'+(i===page?" active":"")+'" onclick="goMoviePage('+i+')">'+i+"</button>";
   }
-  html+='<button type="button" class="cine-page-btn'+(page>=totalPages?" disabled":"")+'" '+(page>=totalPages?"disabled":'onclick="goMoviePage('+(page+1)+')"')+' aria-label="Next">&gt;</button>';
+  html+='<button type="button" class="cine-page-btn'+(page>=totalPages?" disabled":"")+'" '+(page>=totalPages?"disabled":'onclick="goMoviePage('+(page+1)+')"')+' aria-label="'+t("Next")+'">&gt;</button>';
   html+="</div>";
   return html;
 }
@@ -997,7 +997,7 @@ function showMaintenanceScreen(){
   var btnText = (cfg && cfg.maintenanceButtonText) || "Join Telegram Channel";
   var linkText = (cfg && cfg.maintenanceLinkText) || "";
   var title = (cfg && cfg.maintenanceTitle) || "🛠 Under Maintenance";
-  var msg = (cfg && cfg.maintenanceMessage) || "We're updating the app right now. Please check back soon.";
+  var msg = (cfg && cfg.maintenanceMessage) || t("We're updating the app right now. Please check back soon.");
   var btnHtml = btnUrl ? '<a class="primary" href="'+escMaintText_(btnUrl)+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:14px;padding:12px 22px;text-decoration:none">'+escMaintText_(btnText)+'</a>' : '';
   var linkHtml = (linkUrl && linkText) ? '<p class="blocked-sub" style="margin-top:12px"><a href="'+escMaintText_(linkUrl)+'" target="_blank" rel="noopener" style="color:#7c5cff">'+escMaintText_(linkText)+'</a></p>' : '';
   var ov = document.createElement("div");
@@ -1358,7 +1358,7 @@ function card(m,idx){
           <div class="mtitle">${title}</div>
           <div class="myear-row">${year?`<span class="myear">${year}</span>`:""}${uploaded?`<span class="mupload-inline">${uploaded}</span>`:""}</div>
         </div>
-        <button type="button" class="share-btn share-btn-round share-btn-glass" onclick='event.stopPropagation();shareMovie(${sid})' aria-label="Share"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.5 13.4l6.9 3.95M15.5 6.65l-6.9 3.95"/></svg></button>
+        <button type="button" class="share-btn share-btn-round share-btn-glass" onclick='event.stopPropagation();shareMovie(${sid})' aria-label="${t("Share")}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.5 13.4l6.9 3.95M15.5 6.65l-6.9 3.95"/></svg></button>
       </div>
     </div>
   </article>`;
@@ -1382,7 +1382,7 @@ function headerAvatarBtn(){
   var inner=photo
     ? '<img src="'+String(photo).replace(/"/g,"&quot;")+'" alt="" class="hdr-avatar-img" referrerpolicy="no-referrer">'
     : '<span class="hdr-avatar-letter">'+tgUserInitial()+"</span>";
-  return '<button type="button" class="hdr-avatar-btn" onclick="nav(\'profile\')" aria-label="Profile">'+inner+"</button>";
+  return '<button type="button" class="hdr-avatar-btn" onclick="nav(\'profile\')" aria-label="${t("Profile")}">'+inner+"</button>";
 }
 function pageBackBar(title, opts){
   opts = opts || {};
@@ -1595,7 +1595,7 @@ function adultHeaderWithSearch(){
   return '<div class="page-back-bar adult-head-bar">'+
     '<button type="button" class="menu-ham" id="hamBtn">☰</button>'+
     '<span class="page-back-title">'+title+'</span>'+
-    '<button type="button" class="adult-search-btn" onclick="openAdultSearch()" aria-label="Search">'+
+    '<button type="button" class="adult-search-btn" onclick="openAdultSearch()" aria-label="${t("Search")}">'+
       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>'+
     '</button>'+
     headerAvatarBtn()+
@@ -1616,14 +1616,14 @@ function adultSearchPage(){
     return adult(); // force gate first
   }
   return `<div class="search-top">
-    <button type="button" class="page-back-btn" onclick="nav('adult')" aria-label="Back">‹</button>
+    <button type="button" class="page-back-btn" onclick="nav('adult')" aria-label="${t("Back")}">‹</button>
     <div class="search-bar-wrap">
       <input id="q" type="search" placeholder="${t("Search movies...")}" value="${(state.query||"").replace(/"/g,"&quot;")}"
         oninput="liveAdultSearchInput(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();doAdultSearch();}">
-      <button type="button" class="mic-btn" id="micBtn" title="Voice search" aria-label="Voice search">
+      <button type="button" class="mic-btn" id="micBtn" title="${t("Voice search")}" aria-label="${t("Voice search")}">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0" stroke="currentColor" stroke-width="2"/><path d="M12 18v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
-      <button type="button" class="search-go" onclick="doAdultSearch()" aria-label="Search">${ico("search",18)}</button>
+      <button type="button" class="search-go" onclick="doAdultSearch()" aria-label="${t("Search")}">${ico("search",18)}</button>
     </div>
   </div>
   <div id="searchResults" class="search-results">${adultSearchResultsHTML()}</div>`;
@@ -1991,7 +1991,7 @@ function runTask(i){
         if(userData) userData.points=state.points;
       }
       const finished=markTaskProgress(i,tk);
-      if(finished) toast("+"+(tk.reward||0)+" points · "+t("Done"));
+      if(finished) toast("+"+(tk.reward||0)+" "+t("points")+" · "+t("Done"));
       else toast(t("Ad progress")+" "+next+"/"+st2.limit);
       render(false);
       return finished;
@@ -1999,7 +1999,7 @@ function runTask(i){
     state.points+=Number(tk.reward||0);
     if(userData) userData.points=state.points;
     const finished=markTaskProgress(i,tk);
-    toast("+"+(tk.reward||0)+" points"+(finished?" · "+t("Done"):" · "+(st.count+1)+"/"+st.limit));
+    toast("+"+(tk.reward||0)+" "+t("points")+(finished?" · "+t("Done"):" · "+(st.count+1)+"/"+st.limit));
     render(false);
     return finished;
   };
@@ -2185,6 +2185,32 @@ function compressProofImage_(dataUrl, maxSide, quality){
     }catch(e){ resolve(dataUrl||""); }
   });
 }
+
+function translatePaymentError_(msg){
+  msg=String(msg==null?"":msg);
+  var m1=msg.match(/Payment request limit reached \((\d+) per (\d+)h\)/i);
+  if(m1){
+    return t("Payment request limit reached ({n} per {h}h). Try again later.")
+      .replace("{n}",m1[1]).replace("{h}",m1[2]);
+  }
+  var m2=msg.match(/Daily payment request limit reached \((\d+) per day\)/i);
+  if(m2){
+    return t("Daily payment request limit reached ({n} per day). Try again after midnight.")
+      .replace("{n}",m2[1]);
+  }
+  if(/Firebase API missing/i.test(msg)) return t("Payment save failed: Firebase API missing");
+  if(/Payment save failed/i.test(msg)) {
+    var rest=msg.replace(/^Payment save failed:?\s*/i,"");
+    return t("Payment save failed")+": "+rest;
+  }
+  // Generic fallback for known limit wording
+  if(/limit reached/i.test(msg) && /midnight/i.test(msg))
+    return t("Daily payment request limit reached ({n} per day). Try again after midnight.").replace("{n}","?");
+  if(/limit reached/i.test(msg) && /per \d+h/i.test(msg))
+    return t("Payment request limit reached ({n} per {h}h). Try again later.").replace("{n}","?").replace("{h}","?");
+  return msg;
+}
+
 function submitPayment(){
   const order=state.buyOrder;if(!order)return;
   // Sync wallet from dropdown without re-render (avoids wiping form mid-submit)
@@ -2197,23 +2223,23 @@ function submitPayment(){
     }
   }catch(e){}
   if(!state.selectedWallet || !String(state.selectedWallet.address||"").trim() || String(state.selectedWallet.address).indexOf("(Set wallet")===0){
-    toast(t("Select Wallet") || "Please select a payment method / wallet");
+    toast(t("Please select a payment method / wallet"));
     return;
   }
   const txid=String((document.getElementById("payTxid")||{}).value||"").trim();
   if(!txid){
-    toast("Please enter Transaction ID / TxID");
+    toast(t("Please enter Transaction ID / TxID"));
     return;
   }
   // Block double-click spam
   if(window.__paySubmitting){
-    toast("Please wait…");
+    toast(t("Please wait…"));
     return;
   }
   window.__paySubmitting = true;
   try{
     var btn = document.querySelector('button[onclick="submitPayment()"]');
-    if(btn){ btn.disabled=true; btn.style.opacity="0.6"; btn.textContent="Submitting…"; }
+    if(btn){ btn.disabled=true; btn.style.opacity="0.6"; btn.textContent=t("Submitting…"); }
   }catch(e){}
   const fileInput=document.getElementById("payShot");
   let proofName="";
@@ -2261,13 +2287,11 @@ function submitPayment(){
       }).catch(function(e){
         console.error(e);
         unlockSubmit();
-        var msg=String(e&&e.message?e.message:e);
-        if(/limit|daily/i.test(msg)) toast(msg);
-        else toast("Payment save failed: "+msg);
+        toast(translatePaymentError_(e&&e.message?e.message:e));
       });
     } else {
       unlockSubmit();
-      toast("Payment save failed: Firebase API missing");
+      toast(t("Payment save failed: Firebase API missing"));
     }
   };
   try{
@@ -2302,7 +2326,7 @@ function updateCustomUsdt(){
 }
 function buyCustom(){
   const pts=Number((document.getElementById("customPts")||{}).value||0);
-  if(pts<=0){toast("Enter points amount");return}
+  if(pts<=0){toast(t("Enter points amount"));return}
   const rate=Number(cfg.customPointRate||100);
   const price=+(pts/rate).toFixed(2);
   startBuy("Custom "+pts+" Points",price,pts);
@@ -2332,7 +2356,7 @@ function buy(){
     const sw=state.selectedWallet;
     const walletOpts=wallets.map(function(w,i){
       var sel = sw && sw.address===w.address && sw.name===w.name ? " selected" : "";
-      return '<option value="'+i+'"'+sel+'>'+(w.name||("Wallet "+(i+1)))+'</option>';
+      return '<option value="'+i+'"'+sel+'>'+(w.name||(t("Wallet")+" "+(i+1)))+'</option>';
     }).join("");
     return pageBackBar(t("Buy Points"))+`
     <button type="button" class="pf-btn wide" style="margin-bottom:12px" onclick="cancelBuy()">${ico("crown",16)} ${t("Purchase Custom Coins")}</button>
@@ -2344,17 +2368,17 @@ function buy(){
       </div>
       <label style="font-size:12px;color:#9aa3b8">${t("Select Wallet")}</label>
       <select id="walletPick" onchange="selectWallet(this.value)" style="width:100%;margin:8px 0;padding:12px;border-radius:12px;border:1px solid #2a334d;background:#0c101c;color:#eef1ff">
-        <option value="">Choose wallet</option>
+        <option value="">${t("Choose wallet")}</option>
         ${walletOpts}
       </select>
       <div class="pf-linkbox" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <span style="word-break:break-all;font-size:12px">${sw?sw.address:"Wallet address will appear here."}</span>
+        <span style="word-break:break-all;font-size:12px">${sw?sw.address:t("Wallet address will appear here.")}</span>
         <button type="button" class="primary" style="flex-shrink:0" onclick="copyWalletAddr()">${ico("copy",16)}</button>
       </div>
-      <p class="muted" style="font-size:11px;margin:10px 0">Send the exact USDT amount to the selected address. Then submit your TxID and payment screenshot below.</p>
-      <label style="font-size:12px;color:#9aa3b8">Transaction ID / TxID</label>
-      <input id="payTxid" type="text" placeholder="Paste your transaction hash / TxID here" style="width:100%;margin:8px 0;padding:12px;border-radius:12px;border:1px solid #2a334d;background:#0c101c;color:#eef1ff">
-      <label style="font-size:12px;color:#9aa3b8">Payment Screenshot</label>
+      <p class="muted" style="font-size:11px;margin:10px 0">${t("Send the exact USDT amount to the selected address. Then submit your TxID and payment screenshot below.")}</p>
+      <label style="font-size:12px;color:#9aa3b8">${t("Transaction ID / TxID")}</label>
+      <input id="payTxid" type="text" placeholder="${t("Paste your transaction hash / TxID here")}" style="width:100%;margin:8px 0;padding:12px;border-radius:12px;border:1px solid #2a334d;background:#0c101c;color:#eef1ff">
+      <label style="font-size:12px;color:#9aa3b8">${t("Payment Screenshot")}</label>
       <input id="payShot" type="file" accept="image/*" style="width:100%;margin:8px 0;color:#9aa3b8">
       <button type="button" class="pf-btn wide copy" style="margin-top:10px" onclick="submitPayment()">${ico("send",16)} ${t("Submit Payment Request")}</button>
     </div>`;
@@ -2381,9 +2405,9 @@ function buy(){
   </div>`).join("")}
   <div class="pf-section">${icoWrap("wallet","sec")} ${t("CUSTOM AMOUNT")}</div>
   <div class="pf-panel">
-    <label style="font-size:12px;color:#9aa3b8">Enter Points Amount</label>
-    <input id="customPts" type="number" placeholder="Example: 1000" oninput="updateCustomUsdt()" style="width:100%;margin:8px 0;padding:12px;border-radius:12px;border:1px solid #2a334d;background:#0c101c;color:#eef1ff">
-    <div class="pf-row"><span>Required USDT</span><b id="customUsdtShow">0.00 USDT</b></div>
+    <label style="font-size:12px;color:#9aa3b8">${t("Enter Points Amount")}</label>
+    <input id="customPts" type="number" placeholder="${t("Example: 1000")}" oninput="updateCustomUsdt()" style="width:100%;margin:8px 0;padding:12px;border-radius:12px;border:1px solid #2a334d;background:#0c101c;color:#eef1ff">
+    <div class="pf-row"><span>${t("Required USDT")}</span><b id="customUsdtShow">0.00 USDT</b></div>
     <button type="button" class="pf-btn wide copy" style="margin-top:10px" onclick="buyCustom()">${ico("crown",16)} ${t("Purchase Custom Coins")}</button>
   </div>`;
 }
@@ -2874,7 +2898,7 @@ function unlockPoints(){usePointsForUnlock()}
 function openServer(movieId,serverNo){
   if(!isMovieUnlocked(movieId)){toast(t("Unlock required"));return}
   const m=movies.find(x=>x.id===movieId||String(x.id)===String(movieId));
-  if(!m){toast("Movie not found");return}
+  if(!m){toast(t("Movie not found"));return}
   const title=(m.title||"").split("|")[0].trim()||"Movie";
   let url="", on=true;
   if(serverNo===1){ url=m.server1||m.server1_link||m.s1||""; on=m.server1_status!==false&&m.s1on!==false; }
@@ -3820,10 +3844,10 @@ function watchAd(mode){
           });
         }catch(e){}
         if(tk.rewardOnce){
-          if(finished) toast("+"+(tk.reward||0)+" points · "+t("Done"));
+          if(finished) toast("+"+(tk.reward||0)+" "+t("points")+" · "+t("Done"));
           else toast(t("Ad progress")+" "+next+"/"+st2.limit);
         }else{
-          toast("+"+(tk.reward||0)+" points"+(finished?" · "+t("Done"):" · "+t("Progress")));
+          toast("+"+(tk.reward||0)+" "+t("points")+(finished?" · "+t("Done"):" · "+t("Progress")));
         }
         setTimeout(function(){
           try{ save(); }catch(e){}
@@ -3862,7 +3886,7 @@ function watchAd(mode){
 function startVoiceSearch(){
   try{
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!SR){toast("Voice search not supported");return}
+    if(!SR){toast(t("Voice search not supported"));return}
     const r=new SR();
     r.lang=(localStorage.getItem("cinehub4_language")==="bn")?"bn-BD":"en-US";
     r.interimResults=false;
@@ -3878,11 +3902,11 @@ function startVoiceSearch(){
       if(q) q.value=t;
       if(state.page==="adultSearch") doAdultSearch(); else doSearch();
     };
-    r.onerror=function(){toast("Voice failed");if(mic){mic.classList.remove("listening");mic.style.background="";mic.style.color=""} if(bar) bar.classList.remove("listening");};
+    r.onerror=function(){toast(t("Voice failed"));if(mic){mic.classList.remove("listening");mic.style.background="";mic.style.color=""} if(bar) bar.classList.remove("listening");};
     r.onend=function(){if(mic){mic.classList.remove("listening");mic.style.background="";mic.style.color=""} if(bar) bar.classList.remove("listening");};
     r.start();
-    toast("Listening...");
-  }catch(e){toast("Voice error")}
+    toast(t("Listening..."));
+  }catch(e){toast(t("Voice error"))}
 }
 function doSearch(){
   const q=document.getElementById("q");
@@ -3964,10 +3988,10 @@ function searchPage(){
     <div class="search-bar-wrap">
       <input id="q" type="search" placeholder="${t("Search movies...")}" value="${(state.query||"").replace(/"/g,"&quot;")}"
         oninput="liveSearchInput(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();doSearch();}">
-      <button type="button" class="mic-btn" id="micBtn" title="Voice search" aria-label="Voice search">
+      <button type="button" class="mic-btn" id="micBtn" title="${t("Voice search")}" aria-label="${t("Voice search")}">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0" stroke="currentColor" stroke-width="2"/><path d="M12 18v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
-      <button type="button" class="search-go" onclick="doSearch()" aria-label="Search">${ico("search",18)}</button>
+      <button type="button" class="search-go" onclick="doSearch()" aria-label="${t("Search")}">${ico("search",18)}</button>
     </div>
   </div>
   <div id="searchResults" class="search-results">${searchResultsHTML()}</div>`;
@@ -4072,7 +4096,7 @@ function bindLangSwitch(){
       syncLangButtons();
       window.__cinehub_langSwitching = false;
       // Soft toast only (no layout shift)
-      toast(lang==="bn"?"ভাষা: বাংলা":"Language: English");
+      toast(lang==="bn"?t("Language: Bangla"):t("Language: English"));
     };
   });
   syncLangButtons();
@@ -4328,7 +4352,7 @@ if(window.__cinehub_blocked){ return; }
 if(window.__cinehub_maintenance){ return; }
 /* Skip paints while splash is covering the screen (prevents open-time jerk) */
 if(window.__cinehub_splashUp && !window.__cinehub_forcePaint){ window.__cinehub_needPaint=true; return; }
-try{const views={movies:moviesPage,search:searchPage,series,adult,adultSearch:adultSearchPage,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>Page error</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate && !state.firstPaint && !window.__cinehub_noAnim){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>{
+try{const views={movies:moviesPage,search:searchPage,series,adult,adultSearch:adultSearchPage,profile,points,tasks,settings,buy,detail:detailView,home:moviesPage};const screen=$("#screen");if(!screen){console.error("no #screen");return}const fn=views[state.page]||moviesPage;let html="";try{html=fn()}catch(err){html="<div class=\"panel\" style=\"padding:16px;color:#f88\"><b>"+t("Page error")+"</b><pre style=\"font-size:11px;white-space:pre-wrap\">"+String(err.message||err)+"</pre></div>";console.error(err)}screen.innerHTML=html;if(animate && !state.firstPaint && !window.__cinehub_noAnim){screen.classList.remove("page-enter");void screen.offsetWidth;screen.classList.add("page-enter")}$$(".nav-item").forEach(b=>{
   (function(){
   var navPage = state.page;
   if(state.page==="detail"){
@@ -4743,7 +4767,7 @@ function killSplash(){
     }catch(e){
       console.error("boot paint", e);
       var sc = document.getElementById("screen");
-      if(sc) sc.innerHTML = '<div style="padding:24px;color:#f88;text-align:center"><b>Boot error</b><br><small>'+String(e.message||e)+'</small></div>';
+      if(sc) sc.innerHTML = '<div style="padding:24px;color:#f88;text-align:center"><b>'+t("Boot error")+'</b><br><small>'+String(e.message||e)+'</small></div>';
     }
     window.__cinehub_forcePaint = false;
     try{
@@ -4772,7 +4796,7 @@ function killSplash(){
           setTimeout(function(){
             var sc = document.getElementById("screen");
             if(sc && (!sc.innerHTML || sc.innerHTML.trim().length < 20)){
-              sc.innerHTML = '<div style="padding:24px;color:#9ab;text-align:center"><b>Cine Hub4</b><br><small>Loading content…</small><br><button type="button" onclick="location.reload()" style="margin-top:12px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff">Reload</button></div>';
+              sc.innerHTML = '<div style="padding:24px;color:#9ab;text-align:center"><b>Cine Hub4</b><br><small>'+t("Loading content…")+'</small><br><button type="button" onclick="location.reload()" style="margin-top:12px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff">'+t("Reload")+'</button></div>';
               try{ render(false); }catch(e){}
             }
           }, 800);
