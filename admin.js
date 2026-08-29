@@ -17,6 +17,9 @@ const DEFAULT={
   unlockHours:15,
   adReward:2,
   dailyAdLimit:20,
+  dailyPaymentLimit:3,
+  paymentLimitReset:"midnight",
+  paymentLimitHours:24,
   joinBonus:10,
   welcomeEnabled:true,
   welcomeTitle:"Welcome to Cine Hub4",
@@ -1866,6 +1869,14 @@ function settings(){
     <div class="form-grid">
       <div class="field"><label>USDT Wallet Address</label><input id="s_usdt" value="${s.usdtWallet||""}"></div>
       <div class="field"><label>Network</label><input id="s_usdtNet" value="${s.usdtNetwork||"TRC20"}"></div>
+      <div class="field"><label>Payment requests limit (per user)</label><input id="s_dailyPayLimit" type="number" min="1" max="50" value="${s.dailyPaymentLimit!=null?s.dailyPaymentLimit:3}"><span class="muted smalltext">সর্বোচ্চ কতবার রিকোয়েস্ট (স্প্যাম বন্ধ)</span></div>
+      <div class="field"><label>Limit reset mode</label>
+        <select id="s_payResetMode">
+          <option value="midnight" ${(s.paymentLimitReset||"midnight")==="midnight"?"selected":""}>After midnight (12:00 AM)</option>
+          <option value="hours" ${(s.paymentLimitReset)==="hours"?"selected":""}>After X hours</option>
+        </select>
+      </div>
+      <div class="field"><label>Hours (if hours mode)</label><input id="s_payResetHours" type="number" min="1" max="168" value="${s.paymentLimitHours!=null?s.paymentLimitHours:24}"><span class="muted smalltext">যেমন ১, ২, ৫, ২০, ২৪ — শুধু Hours মোডে</span></div>
     </div>
   </div>
   <div class="card"><h3>Point Packages</h3>
@@ -1963,6 +1974,9 @@ function saveAllSettings(){
   if(g("s_refReward")) s.referralReward=Number(g("s_refReward").value)||20;
   if(g("s_usdt")) s.usdtWallet=g("s_usdt").value;
   if(g("s_usdtNet")) s.usdtNetwork=g("s_usdtNet").value;
+  if(g("s_dailyPayLimit")) s.dailyPaymentLimit=Math.max(1, Math.min(50, Number(g("s_dailyPayLimit").value)||3));
+  if(g("s_payResetMode")) s.paymentLimitReset=g("s_payResetMode").value==="hours"?"hours":"midnight";
+  if(g("s_payResetHours")) s.paymentLimitHours=Math.max(1, Math.min(168, Number(g("s_payResetHours").value)||24));
   if(g("s_cAccent")) s.themeAccent=g("s_cAccent").value;
   if(g("s_cAccent2")) s.themeAccent2=g("s_cAccent2").value;
   if(g("s_cOrange")) s.themeOrange=g("s_cOrange").value;
@@ -2034,7 +2048,15 @@ function openMovie(id=null){
     <div class="field"><label>Category</label><select id="mCat">${catOptionsHtml(isAdult, catEn(m&&m.category)||'')}</select></div>
     <div class="field"><label>Rating</label><input id="mRating" type="number" step=".1" value="${m?.rating||8}"></div>
     <div class="field"><label>Runtime (minutes)</label><input id="mRuntime" type="number" min="0" placeholder="e.g. 135 (empty = keep/TMDB)" value="${m && m.runtime ? m.runtime : ''}"></div>
-    <div class="field"><label>Poster URL</label><input id="mPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
+    <div class="field" style="grid-column:1/-1">
+      <label>Poster URL</label>
+      <input id="mPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://...">
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        <button type="button" class="btn" id="btnUploadPoster" onclick="pickAndUploadPoster('mPoster')">📷 Upload Poster</button>
+        <span class="muted smalltext" id="mPosterStatus">Gallery → auto URL (Firebase-এ শুধু URL সেভ)</span>
+      </div>
+      <div id="mPosterPreview" style="margin-top:8px">${m&&m.poster?'<img src="'+String(m.poster).replace(/"/g,'&quot;')+'" style="max-width:120px;max-height:160px;border-radius:8px;object-fit:cover;border:1px solid #333">':''}</div>
+    </div>
     <div class="field"><label>Unlock points (this movie)</label><input id="mUnlockPts" type="number" min="1" placeholder="Empty = admin default" value="${m && m.unlock_points != null && Number(m.unlock_points) > 0 ? m.unlock_points : ''}"></div>
     <div class="field"><label>Ads to unlock (this movie)</label><input id="mUnlockAds" type="number" min="1" placeholder="Empty = admin default" value="${m && m.unlock_ads != null && Number(m.unlock_ads) > 0 ? m.unlock_ads : ''}"></div>
     <div class="field" style="grid-column:1/-1"><label>Server 1 URL</label><input id="s1" value="${(m?.server1||m?.server1_link||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
@@ -2293,7 +2315,15 @@ function openAdultMovie(id=null){
     <div class="field"><label>Category</label><select id="adultCat">${catOpts}</select></div>
     <div class="field"><label>Rating</label><input id="adultRating" type="number" step=".1" value="${m?.rating||0}"></div>
     <div class="field"><label>Runtime (minutes)</label><input id="adultRuntime" type="number" min="0" placeholder="e.g. 90" value="${m && m.runtime ? m.runtime : ''}"></div>
-    <div class="field"><label>Poster URL</label><input id="adultPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
+    <div class="field" style="grid-column:1/-1">
+      <label>Poster URL</label>
+      <input id="adultPoster" value="${(m?.poster||'').replace(/"/g,'&quot;')}" placeholder="https://...">
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        <button type="button" class="btn" onclick="pickAndUploadPoster('adultPoster')">📷 Upload Poster</button>
+        <span class="muted smalltext">Gallery → auto URL (Firebase-এ শুধু URL সেভ)</span>
+      </div>
+      <div id="adultPosterPreview" style="margin-top:8px">${m&&m.poster?'<img src="'+String(m.poster).replace(/"/g,'&quot;')+'" style="max-width:120px;max-height:160px;border-radius:8px;object-fit:cover;border:1px solid #333">':''}</div>
+    </div>
     <div class="field"><label>Unlock points (this movie)</label><input id="adultUnlockPts" type="number" min="1" placeholder="Empty = admin default" value="${m && m.unlock_points != null && Number(m.unlock_points) > 0 ? m.unlock_points : ''}"></div>
     <div class="field"><label>Ads to unlock (this movie)</label><input id="adultUnlockAds" type="number" min="1" placeholder="Empty = admin default" value="${m && m.unlock_ads != null && Number(m.unlock_ads) > 0 ? m.unlock_ads : ''}"></div>
     <div class="field"><label>Server 1 URL</label><input id="adultS1" value="${(m?.server1||'').replace(/"/g,'&quot;')}" placeholder="https://..."></div>
@@ -2557,6 +2587,47 @@ function importTmdbMovie(tmdbId, cached){
     toast('TMDB error: '+(err&&err.message?err.message:err));
   }
 }
+
+/** Gallery pick → Firebase Storage → fill Poster URL input (only URL saved on movie) */
+function pickAndUploadPoster(inputId){
+  inputId = String(inputId || "mPoster");
+  var input = document.getElementById(inputId);
+  if(!input){ toast("Poster field not found"); return; }
+  if(!window.CineHubFB || typeof window.CineHubFB.uploadPoster !== "function"){
+    toast("Upload not ready — firebase-helper.js refresh করুন");
+    return;
+  }
+  var fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = "image/*";
+  // Mobile gallery / camera roll
+  try{ fileInput.setAttribute("capture", "environment"); }catch(e){}
+  fileInput.style.display = "none";
+  document.body.appendChild(fileInput);
+  fileInput.onchange = function(){
+    var file = fileInput.files && fileInput.files[0];
+    try{ document.body.removeChild(fileInput); }catch(e){}
+    if(!file) return;
+    toast("Uploading poster…");
+    window.CineHubFB.uploadPoster(file).then(function(url){
+      if(!url){ toast("Upload failed — empty URL"); return; }
+      input.value = url;
+      try{ input.dispatchEvent(new Event("input", {bubbles:true})); }catch(e){}
+      // Live preview under the field
+      var prevId = inputId === "adultPoster" ? "adultPosterPreview" : "mPosterPreview";
+      var prev = document.getElementById(prevId);
+      if(prev){
+        prev.innerHTML = '<img src="'+String(url).replace(/"/g,"&quot;")+'" style="max-width:120px;max-height:160px;border-radius:8px;object-fit:cover;border:1px solid #333">';
+      }
+      toast("✓ Poster URL set — Save Movie চাপুন");
+    }).catch(function(err){
+      console.error(err);
+      toast("Upload failed: "+(err&&err.message?err.message:err));
+    });
+  };
+  fileInput.click();
+}
+window.pickAndUploadPoster = pickAndUploadPoster;
 
 window.saveMovie=saveMovie;
 window.saveAdultMovie=saveAdultMovie;

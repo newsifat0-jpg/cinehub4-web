@@ -7,6 +7,12 @@
     try { if (!firebase.apps.length) firebase.initializeApp(firebaseConfig); } catch(e) {}
   }
   const db = window.firebase ? firebase.firestore() : null;
+  function getStorageSafe() {
+    try {
+      if (!window.firebase || !firebase.storage) return null;
+      return firebase.storage();
+    } catch (e) { return null; }
+  }
 
   function getUid() {
     try {
@@ -220,6 +226,44 @@
     loadMoviesApi:function(){
       return api("loadMovies",{}).then(function(list){
         return (list||[]).map(function(m){ return normalizeMovieDoc(m); }).filter(Boolean);
+      });
+    },
+    /**
+     * Upload a poster image to Firebase Storage and return a public download URL.
+     * Only the URL string is meant to be saved on the movie document (not the file bytes).
+     */
+    uploadPoster:function(file){
+      return new Promise(function(resolve, reject){
+        try{
+          if(!file) return reject(new Error("No file selected"));
+          if(!String(file.type||"").match(/^image\//i)) return reject(new Error("Please select an image file"));
+          if(file.size > 5 * 1024 * 1024) return reject(new Error("Image too large (max 5MB)"));
+          var storage = getStorageSafe();
+          if(!storage) return reject(new Error("Firebase Storage not available — enable Storage in Firebase Console"));
+          var ext = "jpg";
+          var t = String(file.type||"").toLowerCase();
+          if(t.indexOf("png")>=0) ext="png";
+          else if(t.indexOf("webp")>=0) ext="webp";
+          else if(t.indexOf("gif")>=0) ext="gif";
+          else if(t.indexOf("jpeg")>=0 || t.indexOf("jpg")>=0) ext="jpg";
+          var name = "posters/" + Date.now() + "_" + Math.random().toString(36).slice(2,8) + "." + ext;
+          var ref = storage.ref(name);
+          var task = ref.put(file, { contentType: file.type || ("image/" + ext) });
+          task.then(function(){
+            return ref.getDownloadURL();
+          }).then(function(url){
+            resolve(String(url||""));
+          }).catch(function(err){
+            var msg = (err && (err.message || err.code)) || String(err);
+            if(String(msg).indexOf("unauthorized")>=0 || String(msg).indexOf("permission")>=0){
+              reject(new Error("Storage permission denied — set Storage rules for posters/ (see IMPORTANT_REDEPLOY.txt)"));
+            } else {
+              reject(new Error(msg));
+            }
+          });
+        }catch(e){
+          reject(e);
+        }
       });
     }
   };
