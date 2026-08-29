@@ -1063,25 +1063,28 @@ function loadUserFromFB(){
       if(cached && typeof cached==="object"){
         var serverPts = Number(userData.points)||0;
         var localPts = Number(cached.points)||0;
-        // Prefer higher points / newer updated_at so a failed save does not wipe rewards
-        if(localPts > serverPts || (Number(cached.updated_at)||0) > (Number(userData.updated_at)||0)){
-          if(localPts > serverPts) userData.points = localPts;
-          if(cached.task_progress && typeof cached.task_progress==="object"){
-            userData.task_progress = Object.assign({}, userData.task_progress, cached.task_progress);
-          }
-          if(cached.unlock_prog && typeof cached.unlock_prog==="object"){
-            userData.unlock_prog = Object.assign({}, userData.unlock_prog, cached.unlock_prog);
-          }
-          if(cached.unlock_ad_prog && typeof cached.unlock_ad_prog==="object"){
-            userData.unlock_ad_prog = Object.assign({}, userData.unlock_ad_prog, cached.unlock_ad_prog);
-          }
-          if(cached.ads_today != null) userData.ads_today = Number(cached.ads_today)||0;
-          if(cached.ads_day) userData.ads_day = cached.ads_day;
-          if(cached.ads_total != null) userData.ads_total = Math.max(Number(userData.ads_total)||0, Number(cached.ads_total)||0);
-          // Push merged progress back to server
-          state.points = Number(userData.points)||0;
-          setTimeout(function(){ try{ save(); }catch(e){} }, 400);
+        // Progress maps: merge local (offline) with server
+        // Points: SERVER is authoritative after load — never Math.max local (caused 2x join bonus)
+        if(cached.task_progress && typeof cached.task_progress==="object"){
+          userData.task_progress = Object.assign({}, userData.task_progress, cached.task_progress);
         }
+        if(cached.unlock_prog && typeof cached.unlock_prog==="object"){
+          userData.unlock_prog = Object.assign({}, userData.unlock_prog, cached.unlock_prog);
+        }
+        if(cached.unlock_ad_prog && typeof cached.unlock_ad_prog==="object"){
+          userData.unlock_ad_prog = Object.assign({}, userData.unlock_ad_prog, cached.unlock_ad_prog);
+        }
+        // Only keep local points if server has none yet AND local is not from a stale double-grant
+        if(serverPts<=0 && localPts>0 && !userData.join_bonus_given){
+          userData.points = localPts;
+        }
+        if(cached.ads_today != null && userData.ads_day === cached.ads_day){
+          userData.ads_today = Math.max(Number(userData.ads_today)||0, Number(cached.ads_today)||0);
+        }
+        if(cached.ads_day && !userData.ads_day) userData.ads_day = cached.ads_day;
+        if(cached.ads_total != null) userData.ads_total = Math.max(Number(userData.ads_total)||0, Number(cached.ads_total)||0);
+        state.points = Number(userData.points)||0;
+        setTimeout(function(){ try{ save(); }catch(e){} }, 400);
       }
     }catch(e){}
     state.points = Number(userData.points) || 0;
@@ -1096,7 +1099,10 @@ function loadUserFromFB(){
       return;
     }
     hideBlockedScreen();
-    applyReferralReward().finally(function(){ safeRender(false); });
+    applyReferralReward().finally(function(){
+      safeRender(false);
+      setTimeout(function(){ try{ showWelcomePopup(false); }catch(e){} }, 350);
+    });
   }).catch(function(e){
     console.warn("loadUser failed", e);
     // Offline: restore last local progress so tasks/points still show
@@ -1111,41 +1117,64 @@ function loadUserFromFB(){
     }catch(e2){}
     state.userLoaded=true;
     safeRender(false);
+    setTimeout(function(){ try{ showWelcomePopup(false); }catch(e3){} }, 400);
   });
 }
 /** Credit join bonus + referrer reward (server). Falls back local if API missing. */
 function applyReferralReward(){
   var refFrom="";
   try{ refFrom=String(localStorage.getItem("cinehub4_ref_from")||"").trim(); }catch(e){}
+  // Already granted on server — never add again locally
+  if(userData && userData.join_bonus_given){
+    try{ localStorage.setItem("cinehub4_join_bonus_given","1"); }catch(e){}
+    return Promise.resolve();
+  }
   if(!window.CineHubFB || !window.CineHubFB.processReferral){
     tryApplyReferralLocal();
     return Promise.resolve();
   }
   var cfgSnap={
     joinBonus:Number(cfg.joinBonus||10),
-    referralReward:Number(cfg.referralReward||20)
+    referralReward:Number(cfg.referralReward||20),
+    miniAppLink:String(cfg.miniAppLink||cfg.miniAppUrl||""),
+    telegramBotLink:String(cfg.telegramBotLink||"")
   };
   return window.CineHubFB.processReferral(refFrom, cfgSnap).then(function(res){
     if(!res) return;
+    // Trust SERVER points after join/referral (do not Math.max with inflated local cache)
     if(res.user){
       userData = Object.assign(userData||{}, res.user);
-      if(res.points!=null) state.points = Number(res.points);
-      else if(userData.points!=null) state.points = Number(userData.points);
     }
-    if(res.joinBonus) toast("+"+res.joinBonus+" "+t("Join Bonus"));
+    if(res.points!=null){
+      state.points = Number(res.points)||0;
+      if(userData) userData.points = state.points;
+    } else if(userData && userData.points!=null){
+      state.points = Number(userData.points)||0;
+    }
+    if(res.joinBonus){
+      try{ localStorage.setItem("cinehub4_join_bonus_given","1"); }catch(e){}
+      if(userData) userData.join_bonus_given = true;
+      toast("+"+res.joinBonus+" "+t("Join Bonus"));
+    }
     if(res.applied && res.refReward){
-      // invitee sees confirmation; referrer gets points on their account
       toast(t("Welcome via referral"));
     }
     try{ if(refFrom) localStorage.removeItem("cinehub4_ref_from"); }catch(e){}
-    save();
-  }).catch(function(e){ console.warn("referral", e); tryApplyReferralLocal(); });
+    // Persist flags only — points already set on server
+    try{ save(); }catch(e){}
+  }).catch(function(e){
+    console.warn("referral", e);
+    // Only offline fallback if server never marked join_bonus_given
+    if(!(userData && userData.join_bonus_given)) tryApplyReferralLocal();
+  });
 }
 function tryApplyReferralLocal(){
-  // Offline/minimal fallback — only join bonus once
+  // Offline/minimal fallback — only join bonus once (never stacks on server grant)
   try{
     if(localStorage.getItem("cinehub4_join_bonus_given")) return;
+    if(userData && userData.join_bonus_given) return;
     var bonus=Number(cfg.joinBonus||10);
+    if(!(bonus>0)) return;
     state.points = Number(state.points||0) + bonus;
     localStorage.setItem("cinehub4_join_bonus_given","1");
     if(userData){ userData.points=state.points; userData.join_bonus_given=true; }
@@ -1153,7 +1182,7 @@ function tryApplyReferralLocal(){
   }catch(e){}
 }
 setTimeout(function(){loadMoviesFromFB();loadUserFromFB();try{applyDrawerBrand()}catch(e){}},150);
-setTimeout(function(){ try{ showWelcomePopup(false); }catch(e){} }, 900);
+// Welcome popup is triggered after loadUserFromFB (Firebase welcome_seen) — not on a blind timer
 /* toast redefined below */
 function showPageTransition(cb,opts){
   opts=opts||{};
@@ -1902,7 +1931,6 @@ function markTaskProgress(i,tk){
 }
 function tasks(){
   loadSharedSettings();
-  try{ resetDailyAdsIfNeeded(); }catch(e){}
   const watched=Number((userData&&userData.ads_today)||0);
   const limit=Number(cfg.dailyAdLimit||20);
   const rem=Math.max(0,limit-watched);
@@ -3550,26 +3578,6 @@ function resetDailyAdsIfNeeded(){
     }
   }
 }
-// While the "Cine Hub" earning page is open, keep checking the admin-configured
-// reset window (minutes/hours/midnight) and auto-flip Ads Watched/Remaining back
-// to 0/full the moment it elapses — without requiring the user to leave and
-// reopen the page or tap Watch Ad Now first.
-function tasksLiveResetTick_(){
-  try{
-    if(state.page!=="tasks") return;
-    const before=Number((userData&&userData.ads_today)||0);
-    resetDailyAdsIfNeeded();
-    const watched=Number((userData&&userData.ads_today)||0);
-    const limit=Number(cfg.dailyAdLimit||20);
-    const rem=Math.max(0,limit-watched);
-    if(watched!==before){
-      paintProgressInstant({watched:watched, remaining:rem, limit:limit});
-    }
-  }catch(e){}
-}
-if(!window.__tasksLiveResetPoll){
-  window.__tasksLiveResetPoll=setInterval(tasksLiveResetTick_, 3000);
-}
 function adCooldownKeyForMode(mode){
   if(mode==="adult") return "adult";
   if(mode==="task") return "task";
@@ -4308,10 +4316,6 @@ try{
     tg.ready();
     tg.expand();
     try{tg.setHeaderColor&&tg.setHeaderColor("#07090f")}catch(e){}
-    // Ask Telegram for permission to DM the user (join-bonus / task messages).
-    // On first grant, Telegram itself inserts "You allowed this bot to message
-    // you when you logged in on <app> app." into the chat — same as PRIME nCENE.
-    try{ if(tg.requestWriteAccess) tg.requestWriteAccess(function(){}); }catch(e){}
     try{tg.setBackgroundColor&&tg.setBackgroundColor("#07090f")}catch(e){}
     try{tg.setBottomBarColor&&tg.setBottomBarColor("#0c101c")}catch(e){}
     try{if(tg.disableVerticalSwipes)tg.disableVerticalSwipes()}catch(e){}
@@ -4343,10 +4347,25 @@ function welcomeSeenKey(){
   return "cinehub4_welcome_seen_"+(uid||"guest");
 }
 function hasSeenWelcome(){
-  try{ return localStorage.getItem(welcomeSeenKey())==="1"; }catch(e){ return false; }
+  // Firebase user flag is source of truth (works across devices)
+  try{
+    if(userData && userData.welcome_seen) return true;
+  }catch(e){}
+  return false;
 }
 function markWelcomeSeen(){
+  try{
+    if(!userData) userData={};
+    userData.welcome_seen = true;
+  }catch(e){}
   try{ localStorage.setItem(welcomeSeenKey(),"1"); }catch(e){}
+  // Persist to Firebase so popup does not reappear on other devices
+  try{
+    if(window.CineHubFB && window.CineHubFB.updateUserField){
+      window.CineHubFB.updateUserField(null,{ welcome_seen:true, updated_at:Date.now() }).catch(function(){});
+    }
+  }catch(e){}
+  try{ save(); }catch(e){}
 }
 function closeWelcomePopup(){
   var el=document.getElementById("welcomePopup");
@@ -4359,11 +4378,13 @@ function closeWelcomePopup(){
 function showWelcomePopup(force){
   try{
     loadSharedSettings();
-    if(cfg.welcomeEnabled===false) return;
+    // Admin can disable
+    if(cfg.welcomeEnabled===false || cfg.welcomeEnabled==="0" || cfg.welcomeEnabled===0) return;
     if(!force && hasSeenWelcome()) return;
     if(document.getElementById("welcomePopup")) return;
-    // Don't stack over share landing
+    // Don't stack over share landing / blocked
     if(document.getElementById("sharedLanding")) return;
+    if(window.__cinehub_blocked) return;
     var bn=false;
     try{ bn=typeof langIsBn==="function"?langIsBn():false; }catch(e){}
     var title = bn
@@ -4400,19 +4421,12 @@ function showWelcomePopup(force){
     document.body.appendChild(overlay);
     requestAnimationFrame(function(){ overlay.classList.add("wp-in"); });
     function dismiss(){ closeWelcomePopup(); }
-    document.getElementById("wpCancel").onclick=dismiss;
-    document.getElementById("wpOk").onclick=dismiss;
-    document.getElementById("wpBackdrop").onclick=dismiss;
-    // First tap anywhere on app content also dismisses (after a short grace)
-    setTimeout(function(){
-      var app=document.getElementById("app")||document.body;
-      if(!app) return;
-      var once=function(){
-        dismiss();
-        try{ app.removeEventListener("pointerdown", once, true); }catch(e){}
-      };
-      app.addEventListener("pointerdown", once, true);
-    }, 400);
+    var c1=document.getElementById("wpCancel");
+    var c2=document.getElementById("wpOk");
+    var c3=document.getElementById("wpBackdrop");
+    if(c1) c1.onclick=dismiss;
+    if(c2) c2.onclick=dismiss;
+    if(c3) c3.onclick=dismiss;
   }catch(e){ console.error(e); }
 }
 window.showWelcomePopup=showWelcomePopup;
