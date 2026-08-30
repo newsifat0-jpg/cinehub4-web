@@ -659,6 +659,49 @@ function showSocialShareSheet(opts){
   bindAppClicks(sheet);
 }
 window.showSocialShareSheet = showSocialShareSheet;
+
+/** Fill missing runtime/rating from TMDB for list cards (without opening detail) */
+function backfillTmdbMetaForList_(){
+  try{
+    if(!window.CineHubFB || !window.CineHubFB.refreshTmdbMeta) return;
+    if(window.__tmdbBackfillBusy) return;
+    var list = (typeof movies!=="undefined" && Array.isArray(movies)) ? movies : [];
+    var need = [];
+    for(var i=0;i<list.length;i++){
+      var m=list[i];
+      if(!m || !m.tmdb_id) continue;
+      var rt=Number(m.runtime||0);
+      var rat=Number(m.rating!=null?m.rating:m.vote_average)||0;
+      if(rt>0 && rat>0) continue;
+      var k="tmdb_bf_"+m.id;
+      if(sessionStorage.getItem(k)) continue;
+      need.push(m);
+      if(need.length>=5) break;
+    }
+    if(!need.length) return;
+    window.__tmdbBackfillBusy=true;
+    var idx=0;
+    function next(){
+      if(idx>=need.length){ window.__tmdbBackfillBusy=false; try{render(false)}catch(e){} return; }
+      var m=need[idx++];
+      try{ sessionStorage.setItem("tmdb_bf_"+m.id,"1"); }catch(e){}
+      window.CineHubFB.refreshTmdbMeta(m.id, m.tmdb_id).then(function(upd){
+        if(upd){
+          var j=movies.findIndex(function(x){return String(x.id)===String(m.id);});
+          if(j>=0){
+            if(upd.rating!=null) movies[j].rating=upd.rating;
+            if(upd.runtime!=null) movies[j].runtime=upd.runtime;
+            if(upd.overview) movies[j].overview=upd.overview;
+            if(upd.genres) movies[j].genres=upd.genres;
+          }
+        }
+        setTimeout(next, 400);
+      }).catch(function(){ setTimeout(next, 400); });
+    }
+    next();
+  }catch(e){ window.__tmdbBackfillBusy=false; }
+}
+
 function movieDurationLabel(m){
   if(!m) return "";
   var rt = Number(m.runtime || 0);
@@ -837,7 +880,8 @@ function safeRender(animate){
   try{render(false)}catch(e){console.error(e)}
 }
 function loadMoviesFromFB(){
-  if(!window.CineHubFB){state.moviesLoaded=true;safeRender(false);return}
+  if(!window.CineHubFB){state.moviesLoaded=true;
+    try{ backfillTmdbMetaForList_(); }catch(eBF){}safeRender(false);return}
   var got=false;
   window.CineHubFB.listenMovies(function(list){
     try{
@@ -860,6 +904,7 @@ function loadMoviesFromFB(){
     got=true;
     movies=list||[];
     state.moviesLoaded=true;
+    try{ backfillTmdbMetaForList_(); }catch(eBF){}
     // Share deep-link: re-apply when library arrives (ONLY on the first
     // realtime snapshot — later snapshots must never re-trigger this, or
     // any background movie-list update would force the user back Home)
@@ -900,6 +945,7 @@ function loadMoviesFromFB(){
         if(list&&list.length){
           movies=list;
           state.moviesLoaded=true;
+    try{ backfillTmdbMetaForList_(); }catch(eBF){}
           try{
             if(!window.__cinehub_startHandledOnce && !window.__deeplinkUserNav && typeof handleStartParam==="function"){
               window.__cinehub_startHandledOnce = true;
@@ -1345,12 +1391,15 @@ function card(m,idx){
   const sid=JSON.stringify(String(m.id));
   const rating=movieRatingLabel(m);
   const dur=movieDurationLabel(m);
+  const views=Math.max(0, Number(m.views||m.clicks||0)||0);
+  const viewsLbl=views>=1000?((views/1000).toFixed(views>=10000?0:1).replace(/\.0$/,"")+"K"):String(views);
   return `<article class="movie-card" onclick='detail(${sid})'>
     <div class="poster-wrap">
       ${top}
       ${rating?`<span class="movie-rating">★ ${rating}</span>`:""}
       ${posterHTML(m)}
       ${dur?`<span class="movie-dur"><span class="movie-dur-ico" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>${dur}</span>`:""}
+      ${views>0?`<span class="movie-views" title="Views"><span class="movie-views-ico" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></span>${viewsLbl}</span>`:""}
     </div>
     <div class="movie-body">
       <div class="movie-body-row">
@@ -2135,9 +2184,32 @@ function getPackages(){
   }));
 }
 function getWallets(){
-  if(cfg.wallets&&cfg.wallets.length) return cfg.wallets;
-  if(cfg.usdtWallet) return [{name:cfg.usdtNetwork||"USDT TRC20",address:cfg.usdtWallet,network:cfg.usdtNetwork||"TRC20"}];
-  return [{name:"USDT TRC20",address:"(Set wallet in Admin)",network:"TRC20"}];
+  var list = [];
+  try{
+    if(cfg.wallets && cfg.wallets.length){
+      for(var i=0;i<cfg.wallets.length;i++){
+        var w = cfg.wallets[i] || {};
+        var addr = String(w.address||"").trim();
+        if(!addr) continue;
+        list.push({
+          name: String(w.name||w.network||("Wallet "+(i+1))),
+          address: addr,
+          network: String(w.network||"TRC20")
+        });
+      }
+    }
+  }catch(e){}
+  if(!list.length && cfg.usdtWallet && String(cfg.usdtWallet).trim()){
+    list.push({
+      name: cfg.usdtNetwork || "USDT TRC20",
+      address: String(cfg.usdtWallet).trim(),
+      network: cfg.usdtNetwork || "TRC20"
+    });
+  }
+  if(!list.length){
+    list.push({name:"USDT TRC20",address:"(Set wallet in Admin)",network:"TRC20"});
+  }
+  return list;
 }
 function startBuy(name,price,points){
   state.buyOrder={name:name,price:Number(price),points:Number(points)};
@@ -2759,7 +2831,7 @@ function detailView(){
       </button>
     </div>
     <h1 class="ps-title">${title.replace(/</g,"&lt;")}</h1>
-    <div class="ps-sub">${[genre,year,rating?("★ "+rating):"",dur].filter(Boolean).join(" · ")}</div>
+    <div class="ps-sub">${[genre,year,rating?("★ "+rating):"",dur, clicks?((clicks>=1000?((clicks/1000).toFixed(1).replace(/\.0$/,"")+"K"):String(clicks))+" views"):""].filter(Boolean).join(" · ")}</div>
     ${overview?`<p class="ps-overview">${overview}${String(m.overview||"").length>280?"…":""}</p>`:""}`;
   }
 
@@ -4264,6 +4336,10 @@ function loadPublicAppConfig(forceRender){
         Object.keys(c).forEach(function(k){
           if(c[k]!==undefined && c[k]!==null) cfg[k]=c[k];
         });
+        // Payment wallets — force from server (admin Save All)
+        if(c.wallets && c.wallets.length) cfg.wallets = c.wallets;
+        if(c.usdtWallet!=null) cfg.usdtWallet = c.usdtWallet;
+        if(c.usdtNetwork!=null) cfg.usdtNetwork = c.usdtNetwork;
         if(c.adBlocks) cfg.adBlocks=Object.assign({},cfg.adBlocks||{},c.adBlocks);
         if(c.adSlots) cfg.adSlots=Object.assign({},cfg.adSlots||{},c.adSlots);
         if(c.adLinkSeconds!=null) cfg.adLinkSeconds=c.adLinkSeconds;

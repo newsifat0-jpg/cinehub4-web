@@ -271,6 +271,17 @@ function titleEl(){return el("pageTitle")}
 const toastEl=$("#toast");
 function save(silent){
   try{ensureBilingualSettings()}catch(e){}
+  // Always pull wallet rows from Settings UI if visible (prevents wiping address)
+  try{
+    if(typeof collectWalletsFromDom==="function"){
+      var wlDom = collectWalletsFromDom();
+      if(wlDom && wlDom.length){
+        A.settings.wallets = wlDom;
+        A.settings.usdtWallet = wlDom[0].address || A.settings.usdtWallet || "";
+        A.settings.usdtNetwork = wlDom[0].network || A.settings.usdtNetwork || "TRC20";
+      }
+    }
+  }catch(eW){}
   try{
     if(A.settings.wallets&&A.settings.wallets[0]){
       A.settings.usdtWallet=A.settings.wallets[0].address||A.settings.usdtWallet||"";
@@ -1865,10 +1876,26 @@ function settings(){
       <div class="field"><label>Referral Reward points</label><input id="s_refReward" type="number" value="${s.referralReward||20}"></div>
     </div>
   </div>
-  <div class="card"><h3>USDT Payment</h3>
+  <div class="card"><h3>USDT Payment / Wallets</h3>
     <div class="form-grid">
-      <div class="field"><label>USDT Wallet Address</label><input id="s_usdt" value="${s.usdtWallet||""}"></div>
-      <div class="field"><label>Network</label><input id="s_usdtNet" value="${s.usdtNetwork||"TRC20"}"></div>
+      <div class="field" style="grid-column:1/-1">
+        <label>Payment methods (wallets)</label>
+        <div id="walletRows" style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+          ${(function(){
+            var ws = (s.wallets && s.wallets.length) ? s.wallets : [{name:s.usdtNetwork||"USDT TRC20",address:s.usdtWallet||"",network:s.usdtNetwork||"TRC20"}];
+            return ws.map(function(w,i){
+              return '<div class="wallet-row" data-i="'+i+'" style="display:grid;grid-template-columns:1fr 1fr 1.4fr auto;gap:8px;align-items:end">'
+                +'<div class="field" style="margin:0"><label>Name</label><input class="w_name" value="'+(w.name||"").replace(/"/g,"&quot;")+'"></div>'
+                +'<div class="field" style="margin:0"><label>Network</label><input class="w_net" value="'+(w.network||"TRC20").replace(/"/g,"&quot;")+'"></div>'
+                +'<div class="field" style="margin:0"><label>Address</label><input class="w_addr" value="'+(w.address||"").replace(/"/g,"&quot;")+'"></div>'
+                +'<button type="button" class="btn" style="height:38px" onclick="removeWalletRow(this)">✕</button>'
+                +'</div>';
+            }).join("");
+          })()}
+        </div>
+        <button type="button" class="btn" style="margin-top:8px" onclick="addWalletRow()">+ Add payment method</button>
+        <span class="muted smalltext">ইউজার Buy Points এ এই ওয়ালেটগুলো সিলেক্ট করতে পারবে। Save All চাপতে ভুলবেন না।</span>
+      </div>
       <div class="field"><label>Payment requests limit (per user)</label><input id="s_dailyPayLimit" type="number" min="1" max="50" value="${s.dailyPaymentLimit!=null?s.dailyPaymentLimit:3}"><span class="muted smalltext">সর্বোচ্চ কতবার রিকোয়েস্ট (স্প্যাম বন্ধ)</span></div>
       <div class="field"><label>Limit reset mode</label>
         <select id="s_payResetMode">
@@ -1914,6 +1941,46 @@ function settings(){
   </div>
 </div>`;
 }
+
+function addWalletRow(){
+  var box=document.getElementById("walletRows");
+  if(!box) return;
+  var div=document.createElement("div");
+  div.className="wallet-row";
+  div.style.cssText="display:grid;grid-template-columns:1fr 1fr 1.4fr auto;gap:8px;align-items:end";
+  div.innerHTML='<div class="field" style="margin:0"><label>Name</label><input class="w_name" value="USDT TRC20"></div>'
+    +'<div class="field" style="margin:0"><label>Network</label><input class="w_net" value="TRC20"></div>'
+    +'<div class="field" style="margin:0"><label>Address</label><input class="w_addr" value="" placeholder="Wallet address"></div>'
+    +'<button type="button" class="btn" style="height:38px" onclick="removeWalletRow(this)">✕</button>';
+  box.appendChild(div);
+}
+function removeWalletRow(btn){
+  var row=btn && btn.closest ? btn.closest(".wallet-row") : null;
+  var box=document.getElementById("walletRows");
+  if(row && box){
+    if(box.querySelectorAll(".wallet-row").length<=1){
+      var a=row.querySelector(".w_addr"); if(a) a.value="";
+      return;
+    }
+    row.remove();
+  }
+}
+function collectWalletsFromDom(){
+  var box=document.getElementById("walletRows");
+  if(!box) return null;
+  var rows=box.querySelectorAll(".wallet-row");
+  var out=[];
+  rows.forEach(function(row){
+    var name=(row.querySelector(".w_name")||{}).value||"";
+    var network=(row.querySelector(".w_net")||{}).value||"TRC20";
+    var address=(row.querySelector(".w_addr")||{}).value||"";
+    out.push({name:String(name).trim()||(network+" Wallet"),network:String(network).trim()||"TRC20",address:String(address).trim()});
+  });
+  return out;
+}
+window.addWalletRow=addWalletRow;
+window.removeWalletRow=removeWalletRow;
+
 function saveAllSettings(){
   try{collectUiTexts()}catch(e){}
   const g=id=>document.getElementById(id);
@@ -1972,8 +2039,15 @@ function saveAllSettings(){
   if(g("s_welcomeBody")) s.welcomeBody=g("s_welcomeBody").value.trim();
   if(g("s_welcomeBodyBn")) s.welcomeBodyBn=g("s_welcomeBodyBn").value.trim();
   if(g("s_refReward")) s.referralReward=Number(g("s_refReward").value)||20;
-  if(g("s_usdt")) s.usdtWallet=g("s_usdt").value;
-  if(g("s_usdtNet")) s.usdtNetwork=g("s_usdtNet").value;
+  // Multi-wallet from DOM
+  try{
+    var wl = collectWalletsFromDom();
+    if(wl && wl.length){
+      s.wallets = wl;
+      s.usdtWallet = wl[0].address || "";
+      s.usdtNetwork = wl[0].network || "TRC20";
+    }
+  }catch(eW){}
   if(g("s_dailyPayLimit")) s.dailyPaymentLimit=Math.max(1, Math.min(50, Number(g("s_dailyPayLimit").value)||3));
   if(g("s_payResetMode")) s.paymentLimitReset=g("s_payResetMode").value==="hours"?"hours":"midnight";
   if(g("s_payResetHours")) s.paymentLimitHours=Math.max(1, Math.min(168, Number(g("s_payResetHours").value)||24));
@@ -2541,6 +2615,7 @@ function importTmdbMovie(tmdbId, cached){
       poster: (m&&m.poster) || "",
       overview: (m&&m.overview) || "",
       rating: Number((m&&m.rating) || 0) || 0,
+      runtime: Number((m&&m.runtime) || 0) || 0,
       category: "All Movies",
       type: "Movie",
       adult: false,
@@ -2556,29 +2631,27 @@ function importTmdbMovie(tmdbId, cached){
   function afterSaved(saved){
     if(!saved){ toast('Import failed: empty response'); return; }
     var sid = String(saved.id || ("tmdb_" + tmdbId));
+    // Prefer server fields (includes runtime from full TMDB movie API)
     var row = Object.assign({}, fromCache(cached||{tmdb_id:tmdbId}), saved, {id:sid});
+    if(saved.runtime!=null) row.runtime = Number(saved.runtime)||0;
+    if(saved.rating!=null) row.rating = Number(saved.rating)||0;
     A.movies = (A.movies||[]).filter(function(x){return String(x.id)!==sid;});
     A.movies.unshift(row);
-    try{save(true);}catch(e){}
+    // Do NOT call save() here — it can overwrite payment wallets in Firebase
     closeModal();
     render();
-    toast('✓ TMDB ইমপোর্ট হয়েছে — Server লিংক দাও');
+    toast('✓ TMDB ইমপোর্ট হয়েছে'+(row.runtime?(' · '+row.runtime+' min'):'')+' — Server লিংক দাও');
     setTimeout(function(){ try{ openMovie(sid); }catch(e){} }, 300);
   }
-  if(cached && cached.title){
-    window.CineHubFB.saveMovie(fromCache(cached)).then(afterSaved).catch(function(e){
-      toast('TMDB save failed: '+(e&&e.message?e.message:e));
-    });
-    return;
-  }
+  // ALWAYS use full TMDB movie API (search results have NO runtime)
   if(window.CineHubFB.importTmdbMovie){
     window.CineHubFB.importTmdbMovie(String(tmdbId)).then(afterSaved).catch(function(e){
-      window.CineHubFB.saveMovie(fromCache({tmdb_id:tmdbId,title:"TMDB "+tmdbId})).then(afterSaved).catch(function(e2){
+      window.CineHubFB.saveMovie(fromCache(cached||{tmdb_id:tmdbId,title:"TMDB "+tmdbId})).then(afterSaved).catch(function(e2){
         toast('TMDB failed: '+(e&&e.message?e.message:e));
       });
     });
   } else {
-    window.CineHubFB.saveMovie(fromCache({tmdb_id:tmdbId,title:"TMDB "+tmdbId})).then(afterSaved).catch(function(e){
+    window.CineHubFB.saveMovie(fromCache(cached||{tmdb_id:tmdbId,title:"TMDB "+tmdbId})).then(afterSaved).catch(function(e){
       toast('TMDB failed: '+(e&&e.message?e.message:e));
     });
   }
