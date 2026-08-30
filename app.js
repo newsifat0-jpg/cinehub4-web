@@ -660,23 +660,28 @@ function showSocialShareSheet(opts){
 }
 window.showSocialShareSheet = showSocialShareSheet;
 
-/** Fill missing runtime/rating from TMDB for list cards (without opening detail) */
+/** Soft-update rating/runtime from TMDB for list (missing OR stale > 24h). Max 8/session. */
 function backfillTmdbMetaForList_(){
   try{
     if(!window.CineHubFB || !window.CineHubFB.refreshTmdbMeta) return;
     if(window.__tmdbBackfillBusy) return;
     var list = (typeof movies!=="undefined" && Array.isArray(movies)) ? movies : [];
     var need = [];
+    var now = Date.now();
+    var STALE = 24 * 3600000; // 24 hours — auto rating update for already-added movies
     for(var i=0;i<list.length;i++){
       var m=list[i];
       if(!m || !m.tmdb_id) continue;
       var rt=Number(m.runtime||0);
       var rat=Number(m.rating!=null?m.rating:m.vote_average)||0;
-      if(rt>0 && rat>0) continue;
+      var synced=Number(m.tmdb_synced_at||0)||0;
+      var missing = !(rt>0 && rat>0);
+      var stale = !synced || (now - synced > STALE);
+      if(!missing && !stale) continue;
       var k="tmdb_bf_"+m.id;
-      if(sessionStorage.getItem(k)) continue;
+      try{ if(sessionStorage.getItem(k)==="1") continue; }catch(e){}
       need.push(m);
-      if(need.length>=5) break;
+      if(need.length>=8) break;
     }
     if(!need.length) return;
     window.__tmdbBackfillBusy=true;
@@ -693,6 +698,7 @@ function backfillTmdbMetaForList_(){
             if(upd.runtime!=null) movies[j].runtime=upd.runtime;
             if(upd.overview) movies[j].overview=upd.overview;
             if(upd.genres) movies[j].genres=upd.genres;
+            movies[j].tmdb_synced_at = Date.now();
           }
         }
         setTimeout(next, 400);
@@ -1391,15 +1397,12 @@ function card(m,idx){
   const sid=JSON.stringify(String(m.id));
   const rating=movieRatingLabel(m);
   const dur=movieDurationLabel(m);
-  const views=Math.max(0, Number(m.views||m.clicks||0)||0);
-  const viewsLbl=views>=1000?((views/1000).toFixed(views>=10000?0:1).replace(/\.0$/,"")+"K"):String(views);
   return `<article class="movie-card" onclick='detail(${sid})'>
     <div class="poster-wrap">
       ${top}
       ${rating?`<span class="movie-rating">★ ${rating}</span>`:""}
       ${posterHTML(m)}
       ${dur?`<span class="movie-dur"><span class="movie-dur-ico" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>${dur}</span>`:""}
-      ${views>0?`<span class="movie-views" title="Views"><span class="movie-views-ico" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></span>${viewsLbl}</span>`:""}
     </div>
     <div class="movie-body">
       <div class="movie-body-row">
@@ -2831,7 +2834,7 @@ function detailView(){
       </button>
     </div>
     <h1 class="ps-title">${title.replace(/</g,"&lt;")}</h1>
-    <div class="ps-sub">${[genre,year,rating?("★ "+rating):"",dur, clicks?((clicks>=1000?((clicks/1000).toFixed(1).replace(/\.0$/,"")+"K"):String(clicks))+" views"):""].filter(Boolean).join(" · ")}</div>
+    <div class="ps-sub">${[genre,year,rating?("★ "+rating):"",dur].filter(Boolean).join(" · ")}</div>
     ${overview?`<p class="ps-overview">${overview}${String(m.overview||"").length>280?"…":""}</p>`:""}`;
   }
 
@@ -4340,6 +4343,10 @@ function loadPublicAppConfig(forceRender){
         if(c.wallets && c.wallets.length) cfg.wallets = c.wallets;
         if(c.usdtWallet!=null) cfg.usdtWallet = c.usdtWallet;
         if(c.usdtNetwork!=null) cfg.usdtNetwork = c.usdtNetwork;
+        // Categories from Firebase (never wipe with local defaults)
+        if(c.categories && (Array.isArray(c.categories) ? c.categories.length : true)) cfg.categories = c.categories;
+        if(c.adultCategories && (Array.isArray(c.adultCategories) ? c.adultCategories.length : true)) cfg.adultCategories = c.adultCategories;
+        if(c.packages && c.packages.length) cfg.packages = c.packages;
         if(c.adBlocks) cfg.adBlocks=Object.assign({},cfg.adBlocks||{},c.adBlocks);
         if(c.adSlots) cfg.adSlots=Object.assign({},cfg.adSlots||{},c.adSlots);
         if(c.adLinkSeconds!=null) cfg.adLinkSeconds=c.adLinkSeconds;

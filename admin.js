@@ -408,8 +408,28 @@ function openAdmin(){
             A.settings=Object.assign({}, A.settings||{}, c);
             A.settings.adBlocks=Object.assign({}, (DEFAULT&&DEFAULT.adBlocks)||{}, A.settings.adBlocks||{});
             if(typeof ensureAdSlots==="function") ensureAdSlots();
-            A.settings.categories = normalizeCategories(A.settings.categories && A.settings.categories.length ? A.settings.categories : ((DEFAULT&&DEFAULT.categories)||[]));
-            A.settings.adultCategories = normalizeCategories(A.settings.adultCategories && A.settings.adultCategories.length ? A.settings.adultCategories : ((DEFAULT&&DEFAULT.adultCategories)||[]));
+            // Prefer Firebase categories — never replace with DEFAULT if server sent any
+            if(c.categories != null){
+              var nc = normalizeCategories(c.categories);
+              if(nc.length) A.settings.categories = nc;
+              else if(!(A.settings.categories && A.settings.categories.length))
+                A.settings.categories = normalizeCategories((DEFAULT&&DEFAULT.categories)||[]);
+            } else if(!(A.settings.categories && A.settings.categories.length)){
+              A.settings.categories = normalizeCategories((DEFAULT&&DEFAULT.categories)||[]);
+            } else {
+              A.settings.categories = normalizeCategories(A.settings.categories);
+            }
+            if(c.adultCategories != null){
+              var na = normalizeCategories(c.adultCategories);
+              if(na.length) A.settings.adultCategories = na;
+              else if(!(A.settings.adultCategories && A.settings.adultCategories.length))
+                A.settings.adultCategories = normalizeCategories((DEFAULT&&DEFAULT.adultCategories)||[]);
+            } else if(!(A.settings.adultCategories && A.settings.adultCategories.length)){
+              A.settings.adultCategories = normalizeCategories((DEFAULT&&DEFAULT.adultCategories)||[]);
+            } else {
+              A.settings.adultCategories = normalizeCategories(A.settings.adultCategories);
+            }
+            if(c.packages && c.packages.length) A.settings.packages = c.packages;
             try{ ensureBilingualSettings(); }catch(e2){}
             localStorage.setItem("cinehub4_settings", JSON.stringify(A.settings));
           }catch(e){ console.warn("merge config", e); }
@@ -589,7 +609,7 @@ function boot(){
   // Always re-verify with server (never trust old session alone)
   try{ loadAdminIdsFromFB(false); }catch(e){ console.warn(e); }
 }
-function sectionTitle(s){const map={dashboard:'Dashboard',movies:'Movies',categories:'Categories',users:'Users',points:'Points & Unlocks',ads:'Ads & Ad IDs',tasks:'Daily Tasks',payments:'Payments',adult:'Adult Library',requests:'Movie Requests',content:'Links & Videos',broadcast:'Broadcast',maintenance:'Maintenance',settings:'Settings'};return map[s]||s}
+function sectionTitle(s){const map={dashboard:'Dashboard',movies:'Movies',categories:'Categories',users:'Users',points:'Points & Unlocks',ads:'Ads & Ad IDs',tasks:'Daily Tasks',payments:'Payments',adult:'Adult Library',requests:'Movie Requests',content:'Links & Videos',broadcast:'Broadcast',maintenance:'Maintenance',settings:'Settings',paymethods:'Payment Methods'};return map[s]||s}
 function closeSidebar(){const sb=document.querySelector('.sidebar');if(sb)sb.classList.remove('open');const bd=document.getElementById('sideBackdrop');if(bd)bd.classList.add('hidden')}
 function openSidebar(){const sb=document.querySelector('.sidebar');if(sb)sb.classList.add('open');const bd=document.getElementById('sideBackdrop');if(bd)bd.classList.remove('hidden')}
 function setSection(s){ if(s==='payments') window.__payLoaded=false; if(s==='requests') window.__reqLoaded=false; 
@@ -634,6 +654,28 @@ function wireAdminNav(){
 }
 wireAdminNav();
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSidebar()});
+
+function topMoviesBy(field, limit){
+  limit = limit || 10;
+  var list = (A.movies||[]).slice().filter(function(m){ return m; });
+  list.sort(function(a,b){
+    var av = Number(a[field]||a.views||a.clicks||0)||0;
+    var bv = Number(b[field]||b.views||b.clicks||0)||0;
+    if(field==="downloads"){ av=Number(a.downloads||0)||0; bv=Number(b.downloads||0)||0; }
+    if(field==="unlocks"){ av=Number(a.unlocks||a.unlock_count||0)||0; bv=Number(b.unlocks||b.unlock_count||0)||0; }
+    if(field==="views"||field==="clicks"){ av=Number(a.views||a.clicks||0)||0; bv=Number(b.views||b.clicks||0)||0; }
+    return bv - av;
+  });
+  return list.slice(0, limit);
+}
+function topMoviesTable(title, field){
+  var rows = topMoviesBy(field, 10).map(function(m,i){
+    var v = field==="downloads" ? (m.downloads||0) : (field==="unlocks" ? (m.unlocks||m.unlock_count||0) : (m.views||m.clicks||0));
+    return '<tr><td>'+(i+1)+'</td><td>'+String(m.title||"").replace(/</g,"")+'</td><td><b>'+v+'</b></td></tr>';
+  }).join("") || '<tr><td colspan="3" class="muted">No data</td></tr>';
+  return '<div class="card"><h3>'+title+'</h3><table class="table"><thead><tr><th>#</th><th>Movie</th><th>Count</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+
 function dashboard(){
   if (!A.statsLoaded && window.CineHubFB) {
     A.statsLoaded = true;
@@ -668,6 +710,9 @@ function dashboard(){
       ${[38,55,48,72,66,91,76].map(function(x){return '<div class="bar" style="flex:1;height:'+x+'%;background:linear-gradient(180deg,#3b82f6,#7c5cff);border-radius:6px 6px 2px 2px;opacity:.85"></div>'}).join('')}
     </div>
   </div>
+  ${topMoviesTable("👁 Top by Views (admin only)","views")}
+  ${topMoviesTable("⬇ Top by Downloads (admin only)","downloads")}
+  ${topMoviesTable("🔓 Top by Unlocks (admin only)","unlocks")}
   <div class="card">
     <h3>Quick Controls</h3>
     <div class="quick-list" style="margin-top:10px">
@@ -705,13 +750,14 @@ function movies(){
     <div class="toolbar-actions">
       <button type="button" class="btn primary" onclick="openMovie()">＋ Add Movie</button>
       <button type="button" class="btn" onclick="openTmdbImport()">Import TMDB</button>
+    <button type="button" class="btn" onclick="refreshAllTmdbRatings()">★ Refresh TMDB ratings</button>
     </div>
     <input class="search" id="movieSearch" placeholder="Search movie..." oninput="filterMovies()">
   </div>
   <div class="card table-wrap">
     <table class="table movies-table">
       <thead><tr>
-        <th>Movie</th><th>Category</th><th>Rating</th><th>Clicks</th><th>Status</th><th></th>
+        <th>Movie</th><th>Category</th><th>Rating</th><th>Views</th><th>Downloads</th><th>Status</th><th></th>
       </tr></thead>
       <tbody id="movieBody">${movieRows(list)}</tbody>
     </table>
@@ -730,7 +776,7 @@ function movieRows(ms){return (ms||[]).map(function(m,idx){
     '<div class="movie-meta"><b class="movie-title">'+title+'</b><div class="muted">'+year+'</div></div></div></td>'+
     '<td>'+cat+'</td>'+
     '<td>⭐ '+(m.rating||0)+'</td>'+
-    '<td>'+money(m.clicks||0)+'</td>'+
+    '<td>'+money(m.views||m.clicks||0)+'</td>'+
     '<td>'+money(m.downloads||0)+'</td>'+
     '<td><span class="badge '+(st==="Published"?"green":"")+'">'+st+'</span></td>'+
     '<td class="action-cell"><button type="button" class="btn dots-btn" data-mid="'+id.replace(/"/g,"&quot;")+'" aria-label="Actions">⋮</button>'+
@@ -1394,6 +1440,86 @@ function tasks(){
   <div class="card" style="margin-top:8px"><p class="muted smalltext">User app → Tasks page. Types: <b>Daily Login</b> = one tap points. <b>Telegram Join</b> = points only after bot verifies membership (bot must be admin in channel). <b>Social / any link</b> = Facebook, YouTube, Instagram, Website… no timer; Claim or Cancel. <b>Open Link</b> = URL + countdown. <b>Telegram Join</b> = public or private channel/group (bot must be Admin; private → use chat id -100…). <b>Watch Ads</b> = complete after Limit ads. <b>Refer</b> = real joins count. Top “Watch Ad Now” is separate (Points settings: reward + daily limit + reset). Permanent = stays Done until you delete the task.</p></div>`;
 }
 
+
+function paymethods(){
+  var s = A.settings || {};
+  var ws = (s.wallets && s.wallets.length) ? s.wallets : [{name:s.usdtNetwork||"USDT TRC20",address:s.usdtWallet||"",network:s.usdtNetwork||"TRC20"}];
+  var rows = ws.map(function(w,i){
+    return '<div class="wallet-row card" data-i="'+i+'" style="display:grid;grid-template-columns:1fr 1fr 1.5fr auto;gap:10px;align-items:end;padding:12px;margin-bottom:10px">'
+      +'<div class="field" style="margin:0"><label>Name / Label</label><input class="w_name" value="'+(String(w.name||"").replace(/"/g,"&quot;"))+'" placeholder="bKash / USDT TRC20"></div>'
+      +'<div class="field" style="margin:0"><label>Network / Type</label><input class="w_net" value="'+(String(w.network||"").replace(/"/g,"&quot;"))+'" placeholder="TRC20 / bKash"></div>'
+      +'<div class="field" style="margin:0"><label>Address / Number</label><input class="w_addr" value="'+(String(w.address||"").replace(/"/g,"&quot;"))+'" placeholder="Wallet address or phone"></div>'
+      +'<button type="button" class="btn" style="height:38px" onclick="removeWalletRow(this)">✕</button>'
+      +'</div>';
+  }).join("");
+  var pkgs = (s.packages||[]).map(function(p,i){
+    return '<div class="card" style="padding:12px;margin-bottom:10px">'
+      +'<div class="form-grid">'
+      +'<div class="field"><label>Name (EN)</label><input data-pkg="'+i+'" data-k="name" value="'+(String(p.name||"").replace(/"/g,"&quot;"))+'"></div>'
+      +'<div class="field"><label>Name (বাংলা)</label><input data-pkg="'+i+'" data-k="nameBn" value="'+(String(p.nameBn||"").replace(/"/g,"&quot;"))+'"></div>'
+      +'<div class="field"><label>USDT price</label><input data-pkg="'+i+'" data-k="price" type="number" step="0.01" value="'+(p.price||0)+'"></div>'
+      +'<div class="field"><label>Points</label><input data-pkg="'+i+'" data-k="points" type="number" value="'+(p.points||0)+'"></div>'
+      +'<div class="field"><label>Tag (EN)</label><input data-pkg="'+i+'" data-k="tag" value="'+(String(p.tag||"").replace(/"/g,"&quot;"))+'"></div>'
+      +'<div class="field"><label>Tag (বাংলা)</label><input data-pkg="'+i+'" data-k="tagBn" value="'+(String(p.tagBn||"").replace(/"/g,"&quot;"))+'"></div>'
+      +'</div>'
+      +'<button type="button" class="btn danger" style="margin-top:8px" onclick="A.settings.packages.splice('+i+',1);savePayMethodsOnly();">× Delete package</button>'
+      +'</div>';
+  }).join("") || '<div class="muted">No packages yet</div>';
+  return '<div class="grid">'
+    +'<div class="card" style="grid-column:1/-1"><h3>💳 Payment Methods</h3>'
+    +'<p class="muted smalltext">ইউজার Buy Points এ এই মেথডগুলো দেখবে। এডিট করে <b>Save</b> চাপুন।</p>'
+    +'<div id="walletRows">'+rows+'</div>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">'
+    +'<button type="button" class="btn" onclick="addWalletRow()">+ Add / edit method</button>'
+    +'<button type="button" class="btn primary" onclick="savePayMethodsOnly()">💾 Save Payment Methods</button>'
+    +'</div></div>'
+    +'<div class="card" style="grid-column:1/-1"><h3>📦 Point Packages</h3>'
+    +'<p class="muted smalltext">ইউজার যে প্যাকেজ কিনবে — নাম, দাম, পয়েন্ট এডিট করুন।</p>'
+    +pkgs
+    +'<button type="button" class="btn" style="margin-top:8px" onclick="A.settings.packages=A.settings.packages||[];A.settings.packages.push({name:\'New Package\',nameBn:\'\',price:1,points:100,tag:\'\',tagBn:\'\'});render()">+ Add Package</button>'
+    +'<button type="button" class="btn primary" style="margin-top:8px;margin-left:8px" onclick="savePayMethodsOnly()">💾 Save Packages</button>'
+    +'</div>'
+    +'<div class="card"><h3>Payment request limits</h3><div class="form-grid">'
+    +'<div class="field"><label>Requests per user</label><input id="s_dailyPayLimit" type="number" min="1" max="50" value="'+(s.dailyPaymentLimit!=null?s.dailyPaymentLimit:3)+'"></div>'
+    +'<div class="field"><label>Reset mode</label><select id="s_payResetMode">'
+    +'<option value="midnight" '+((s.paymentLimitReset||"midnight")==="midnight"?"selected":"")+'>After midnight (12:00 AM)</option>'
+    +'<option value="hours" '+(s.paymentLimitReset==="hours"?"selected":"")+'>After X hours</option>'
+    +'</select></div>'
+    +'<div class="field"><label>Hours (if hours mode)</label><input id="s_payResetHours" type="number" min="1" max="168" value="'+(s.paymentLimitHours!=null?s.paymentLimitHours:24)+'"></div>'
+    +'</div>'
+    +'<button type="button" class="btn primary" style="margin-top:10px" onclick="savePayMethodsOnly()">💾 Save limits too</button>'
+    +'</div></div>';
+}
+function savePayMethodsOnly(){
+  var s = A.settings;
+  try{
+    var wl = collectWalletsFromDom();
+    if(wl && wl.length){
+      s.wallets = wl;
+      s.usdtWallet = (wl[0] && wl[0].address) || "";
+      s.usdtNetwork = (wl[0] && wl[0].network) || "TRC20";
+    }
+  }catch(e){}
+  // Packages from DOM
+  try{
+    document.querySelectorAll("[data-pkg]").forEach(function(inp){
+      var i = Number(inp.getAttribute("data-pkg"));
+      var k = inp.getAttribute("data-k");
+      if(!s.packages) s.packages = [];
+      if(!s.packages[i]) s.packages[i] = {};
+      s.packages[i][k] = inp.type==="number" ? Number(inp.value) : inp.value;
+    });
+  }catch(eP){}
+  var g = function(id){ return document.getElementById(id); };
+  if(g("s_dailyPayLimit")) s.dailyPaymentLimit = Math.max(1, Math.min(50, Number(g("s_dailyPayLimit").value)||3));
+  if(g("s_payResetMode")) s.paymentLimitReset = g("s_payResetMode").value==="hours" ? "hours" : "midnight";
+  if(g("s_payResetHours")) s.paymentLimitHours = Math.max(1, Math.min(168, Number(g("s_payResetHours").value)||24));
+  save();
+  toast("Payment methods & packages saved");
+}
+window.savePayMethodsOnly = savePayMethodsOnly;
+
+
 function payments(){
   if (!window.__payLoaded) {
     window.__payLoaded = true;
@@ -1876,35 +2002,9 @@ function settings(){
       <div class="field"><label>Referral Reward points</label><input id="s_refReward" type="number" value="${s.referralReward||20}"></div>
     </div>
   </div>
-  <div class="card"><h3>USDT Payment / Wallets</h3>
-    <div class="form-grid">
-      <div class="field" style="grid-column:1/-1">
-        <label>Payment methods (wallets)</label>
-        <div id="walletRows" style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
-          ${(function(){
-            var ws = (s.wallets && s.wallets.length) ? s.wallets : [{name:s.usdtNetwork||"USDT TRC20",address:s.usdtWallet||"",network:s.usdtNetwork||"TRC20"}];
-            return ws.map(function(w,i){
-              return '<div class="wallet-row" data-i="'+i+'" style="display:grid;grid-template-columns:1fr 1fr 1.4fr auto;gap:8px;align-items:end">'
-                +'<div class="field" style="margin:0"><label>Name</label><input class="w_name" value="'+(w.name||"").replace(/"/g,"&quot;")+'"></div>'
-                +'<div class="field" style="margin:0"><label>Network</label><input class="w_net" value="'+(w.network||"TRC20").replace(/"/g,"&quot;")+'"></div>'
-                +'<div class="field" style="margin:0"><label>Address</label><input class="w_addr" value="'+(w.address||"").replace(/"/g,"&quot;")+'"></div>'
-                +'<button type="button" class="btn" style="height:38px" onclick="removeWalletRow(this)">✕</button>'
-                +'</div>';
-            }).join("");
-          })()}
-        </div>
-        <button type="button" class="btn" style="margin-top:8px" onclick="addWalletRow()">+ Add payment method</button>
-        <span class="muted smalltext">ইউজার Buy Points এ এই ওয়ালেটগুলো সিলেক্ট করতে পারবে। Save All চাপতে ভুলবেন না।</span>
-      </div>
-      <div class="field"><label>Payment requests limit (per user)</label><input id="s_dailyPayLimit" type="number" min="1" max="50" value="${s.dailyPaymentLimit!=null?s.dailyPaymentLimit:3}"><span class="muted smalltext">সর্বোচ্চ কতবার রিকোয়েস্ট (স্প্যাম বন্ধ)</span></div>
-      <div class="field"><label>Limit reset mode</label>
-        <select id="s_payResetMode">
-          <option value="midnight" ${(s.paymentLimitReset||"midnight")==="midnight"?"selected":""}>After midnight (12:00 AM)</option>
-          <option value="hours" ${(s.paymentLimitReset)==="hours"?"selected":""}>After X hours</option>
-        </select>
-      </div>
-      <div class="field"><label>Hours (if hours mode)</label><input id="s_payResetHours" type="number" min="1" max="168" value="${s.paymentLimitHours!=null?s.paymentLimitHours:24}"><span class="muted smalltext">যেমন ১, ২, ৫, ২০, ২৪ — শুধু Hours মোডে</span></div>
-    </div>
+  <div class="card"><h3>Payment Methods</h3>
+    <p class="muted smalltext">ওয়ালেট / পেমেন্ট মেথড এখন আলাদা মেনুতে: সাইডবার → <b>Payment Methods</b></p>
+    <button type="button" class="btn primary" onclick="setSection('paymethods')">Open Payment Methods →</button>
   </div>
   <div class="card"><h3>Point Packages</h3>
     <div class="form-grid">${pkgs||'<div class="muted">No packages</div>'}
@@ -2480,7 +2580,7 @@ function render(){
   try{
     const box=contentEl();
     if(!box){console.error('content missing');return}
-    const views={dashboard,movies,categories,users,points,ads,tasks,payments,adult,requests,content:contentPage,broadcast,maintenance:maintenancePage,settings};
+    const views={dashboard,movies,categories,users,points,ads,tasks,payments,paymethods,adult,requests,content:contentPage,broadcast,maintenance:maintenancePage,settings};
     const fn=views[A.section];
     if(typeof fn!=='function'){box.innerHTML='<div class="card"><p>Unknown section: '+A.section+'</p></div>';return}
     box.innerHTML=fn();
@@ -2595,6 +2695,36 @@ function searchTmdb(){
     if(box)box.innerHTML='<p style="color:#f88">'+(e&&e.message?e.message:e)+'</p>';
   });
 }
+
+function refreshAllTmdbRatings(){
+  if(!window.CineHubFB || !window.CineHubFB.refreshTmdbMeta){ toast('API missing'); return; }
+  var list = (A.movies||[]).filter(function(m){ return m && m.tmdb_id; });
+  if(!list.length){ toast('No TMDB movies'); return; }
+  toast('Refreshing TMDB ratings… ('+list.length+')');
+  var i = 0, ok = 0, fail = 0;
+  function next(){
+    if(i >= list.length){
+      toast('TMDB refresh done: '+ok+' updated, '+fail+' failed');
+      try{ if(window.CineHubFB.loadMoviesApi) window.CineHubFB.loadMoviesApi().then(function(L){ if(L){ A.movies=L; render(); } }); }catch(e){}
+      return;
+    }
+    var m = list[i++];
+    window.CineHubFB.refreshTmdbMeta(m.id, m.tmdb_id).then(function(upd){
+      if(upd){
+        ok++;
+        var j = (A.movies||[]).findIndex(function(x){ return String(x.id)===String(m.id); });
+        if(j>=0){
+          if(upd.rating!=null) A.movies[j].rating = upd.rating;
+          if(upd.runtime!=null) A.movies[j].runtime = upd.runtime;
+        }
+      } else fail++;
+      setTimeout(next, 350);
+    }).catch(function(){ fail++; setTimeout(next, 350); });
+  }
+  next();
+}
+window.refreshAllTmdbRatings = refreshAllTmdbRatings;
+
 function importTmdbByIndex(i){
   const list = window.__tmdbSearchCache || [];
   const m = list[i];

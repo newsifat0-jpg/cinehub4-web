@@ -69,6 +69,7 @@
       status: d.status || "Published", added_by: d.added_by || "",
       added_time: added, updated_time: Number(d.updated_time) || added,
       source: d.source || (d.manual_movie ? "manual" : "tmdb"),
+      tmdb_synced_at: Number(d.tmdb_synced_at) || 0,
       // Per-movie unlock overrides (null = use admin defaults)
       unlock_points: (function(){
         var n = Number(d.unlock_points);
